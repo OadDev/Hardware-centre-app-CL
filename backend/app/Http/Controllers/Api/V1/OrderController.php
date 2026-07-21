@@ -1,0 +1,118 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Http\Controllers\Controller;
+use App\Http\Resources\OrderResource;
+use App\Models\Coupon;
+use App\Models\Order;
+use App\Support\CartCalculator;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+
+class OrderController extends Controller
+{
+    public function index(Request $request)
+    {
+        $orders = $request->user()->orders()
+            ->with(['items.product.brand'])
+            ->orderByDesc('placed_at')
+            ->get();
+
+        return OrderResource::collection($orders);
+    }
+
+    public function show(Request $request, Order $order)
+    {
+        abort_unless($order->customer_id === $request->user()->id, 404);
+
+        $order->load(['items.product.brand']);
+
+        return new OrderResource($order);
+    }
+
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'address_id' => ['required', 'integer', Rule::exists('addresses', 'id')->where('customer_id', $request->user()->id)],
+            'shipping_method' => ['required', Rule::in(['standard', 'express'])],
+            'payment_method' => ['required', Rule::in(['upi', 'card', 'netbanking', 'cod'])],
+            'coupon_code' => ['nullable', 'string'],
+        ]);
+
+        $customer = $request->user();
+        $items = $customer->cartItems()->with('product.seller')->get();
+
+        if ($items->isEmpty()) {
+            return response()->json(['message' => 'Your cart is empty'], 422);
+        }
+
+        $coupon = null;
+        if (! empty($data['coupon_code'])) {
+            $coupon = Coupon::where('code', strtoupper($data['coupon_code']))->where('status', 'Active')->first();
+        }
+
+        $totals = CartCalculator::totals($items, $coupon);
+
+        $order = Order::create([
+            'order_no' => 'HC-'.now()->format('Y').'-'.str_pad((string) (Order::count() + 501), 5, '0', STR_PAD_LEFT),
+            'customer_id' => $customer->id,
+            'address_id' => $data['address_id'],
+            'coupon_id' => $coupon?->id,
+            'subtotal' => $totals['sub'],
+            'discount' => $totals['disc'],
+            'gst_amount' => $totals['gst'],
+            'delivery_charge' => $totals['deliv'],
+            'total' => $totals['total'],
+            'shipping_method' => $data['shipping_method'],
+            'payment_method' => $data['payment_method'],
+            'payment_status' => $data['payment_method'] === 'cod' ? 'Pending' : 'Paid',
+            'status' => 'Confirmed',
+            'placed_at' => now(),
+        ]);
+
+        foreach ($items as $item) {
+            $product = $item->product;
+            $seller = $product->seller;
+            $lineTotal = (float) $product->price * $item->quantity;
+            $commissionPct = (float) $seller->commission_pct;
+
+            $order->items()->create([
+                'product_id' => $product->id,
+                'seller_id' => $seller->id,
+                'quantity' => $item->quantity,
+                'unit_price' => $product->price,
+                'line_total' => $lineTotal,
+                'commission_pct' => $commissionPct,
+                'commission_amount' => round($lineTotal * $commissionPct / 100, 2),
+            ]);
+
+            $product->increment('sold_count', $item->quantity);
+            $product->decrement('stock', min($item->quantity, $product->stock));
+        }
+
+        if ($coupon) {
+            $coupon->increment('used_count');
+        }
+
+        $customer->cartItems()->delete();
+
+        $order->load(['items.product.brand']);
+
+        return new OrderResource($order);
+    }
+
+    public function reorder(Request $request, Order $order)
+    {
+        abort_unless($order->customer_id === $request->user()->id, 404);
+
+        $order->load('items');
+        foreach ($order->items as $item) {
+            $cartItem = $request->user()->cartItems()->firstOrNew(['product_id' => $item->product_id]);
+            $cartItem->quantity = ($cartItem->exists ? $cartItem->quantity : 0) + $item->quantity;
+            $cartItem->save();
+        }
+
+        return response()->json(['message' => 'Items added to cart']);
+    }
+}

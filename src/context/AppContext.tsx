@@ -1,54 +1,25 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Address, Order, User } from './types';
-import { COUPONS, findProduct } from '../data/catalog';
-import { computeTotals, CartMap } from '../utils/totals';
+import { Address, Customer, Order, User } from './types';
+import { ApiError, getToken, setToken } from '../api/client';
+import {
+  AddressApi,
+  AuthApi,
+  CartApi,
+  CouponApi,
+  HomeApi,
+  CategoryApi,
+  OrderApi,
+  WishlistApi,
+} from '../api/endpoints';
+import { CartResponse, Category, HomeData, Totals } from '../api/types';
 
-const STORAGE_KEY = 'hc_app_state_v1';
+const ONBOARD_KEY = 'hc_onboarded_v1';
 
-const SEED_ORDERS: Order[] = [
-  { no: 'HC-2026-00519', status: 'ongoing', stage: 'Out for delivery', date: 'Placed 24 Jun 2026', sub: 'Arrives by 27 Jun', items: [{ id: 'p1', q: 1 }, { id: 'p9', q: 2 }], total: 4520 },
-  { no: 'HC-2026-00481', status: 'delivered', stage: 'Delivered', date: 'Delivered 12 Jun 2026', sub: 'Rate your order', items: [{ id: 'p6', q: 2 }, { id: 'p4', q: 3 }], total: 2898 },
-  { no: 'HC-2026-00342', status: 'cancelled', stage: 'Cancelled by you', date: '24 May 2026', sub: 'Refund of ₹1,180 completed', items: [{ id: 'p2', q: 1 }], total: 1180 },
-  { no: 'HC-2026-00298', status: 'returned', stage: 'Return completed', date: '10 May 2026', sub: 'Refund of ₹1,850 processed', items: [{ id: 'p8', q: 1 }], total: 1850 },
-];
+const EMPTY_CART: CartResponse = { items: [], totals: { sub: 0, disc: 0, gst: 0, deliv: 0, total: 0, count: 0 } };
 
-const DEFAULT_USER: User = {
-  name: 'Kumar Hardware',
-  email: 'rajesh@kumarhardware.in',
-  gst: '07AABCK1234M1Z5',
-  isGuest: false,
-};
-
-export const ADDRESSES: Address[] = [
-  { id: 0, label: 'Shop', name: 'Kumar Hardware & Tools', line: 'Shop 14, Bhagirath Palace, Chandni Chowk', city: 'New Delhi, Delhi 110006' },
-  { id: 1, label: 'Warehouse', name: 'Kumar Hardware (Godown)', line: 'Plot 22, Sector 18, Udyog Vihar', city: 'Gurugram, Haryana 122015' },
-];
-
-type PersistedState = {
-  hasOnboarded: boolean;
-  session: 'guest' | 'user' | null;
-  user: User;
-  cart: CartMap;
-  wishlist: Record<string, boolean>;
-  orders: Order[];
-  addrId: number;
-  ship: 'standard' | 'express';
-  pay: 'upi' | 'card' | 'netbanking' | 'cod';
-};
-
-const DEFAULT_STATE: PersistedState = {
-  hasOnboarded: false,
-  session: null,
-  user: DEFAULT_USER,
-  cart: {},
-  wishlist: { p6: true, p1: true },
-  orders: SEED_ORDERS,
-  addrId: 0,
-  ship: 'standard',
-  pay: 'upi',
-};
-
+type ShippingMethod = 'standard' | 'express';
+type PaymentMethod = 'upi' | 'card' | 'netbanking' | 'cod';
 type ToastState = { message: string; key: number } | null;
 
 type AppContextValue = {
@@ -56,226 +27,395 @@ type AppContextValue = {
   hasOnboarded: boolean;
   session: 'guest' | 'user' | null;
   user: User;
-  cart: CartMap;
+  home: HomeData | null;
+  categories: Category[];
+  cart: CartResponse;
   wishlist: Record<string, boolean>;
+  addresses: Address[];
+  selectedAddressId: number | null;
   orders: Order[];
-  addrId: number;
-  ship: 'standard' | 'express';
-  pay: 'upi' | 'card' | 'netbanking' | 'cod';
+  ship: ShippingMethod;
+  pay: PaymentMethod;
   toast: ToastState;
   couponCode: string;
   couponApplied: boolean;
-  couponVal: number;
   couponErr: string;
 
   completeOnboarding: () => void;
-  loginAs: (email: string) => void;
-  enterAsGuest: () => void;
-  logout: () => void;
+  requestOtp: (email: string) => Promise<string | null>;
+  verifyOtp: (email: string, otp: string) => Promise<boolean>;
+  enterAsGuest: () => Promise<void>;
+  logout: () => Promise<void>;
 
-  addToCart: (id: string, q?: number) => void;
-  incCart: (id: string) => void;
-  decCart: (id: string) => void;
-  removeCart: (id: string) => void;
-  clearCart: () => void;
-  toggleWish: (id: string) => void;
+  addToCart: (id: string, q?: number) => Promise<void>;
+  incCart: (id: string) => Promise<void>;
+  decCart: (id: string) => Promise<void>;
+  removeCart: (id: string) => Promise<void>;
+  toggleWish: (id: string) => Promise<void>;
 
   setCouponCode: (v: string) => void;
-  applyCoupon: () => void;
+  applyCoupon: () => Promise<void>;
 
-  setAddrId: (id: number) => void;
-  setShip: (id: 'standard' | 'express') => void;
-  setPay: (id: 'upi' | 'card' | 'netbanking' | 'cod') => void;
+  setSelectedAddressId: (id: number) => void;
+  addAddress: (payload: {
+    label?: string;
+    name: string;
+    line: string;
+    city: string;
+    state: string;
+    pincode: string;
+    is_default?: boolean;
+  }) => Promise<Address>;
+  setShip: (id: ShippingMethod) => void;
+  setPay: (id: PaymentMethod) => void;
 
-  placeOrder: () => string;
-  reorder: (order: Order) => void;
+  placeOrder: () => Promise<string>;
+  reorder: (order: Order) => Promise<void>;
 
-  totals: ReturnType<typeof computeTotals>;
+  totals: Totals;
   showToast: (msg: string) => void;
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
 
+const GUEST_USER: User = { name: 'Guest', email: '', gst: '', isGuest: true };
+
+function toUser(customer: Customer | null): User {
+  if (!customer) return GUEST_USER;
+  return {
+    name: customer.name || 'Guest',
+    email: customer.email,
+    gst: customer.gst || '',
+    isGuest: customer.is_guest,
+  };
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
-  const [state, setState] = useState<PersistedState>(DEFAULT_STATE);
+  const [hasOnboarded, setHasOnboarded] = useState(false);
+  const [session, setSession] = useState<'guest' | 'user' | null>(null);
+  const [customer, setCustomer] = useState<Customer | null>(null);
+
+  const [home, setHome] = useState<HomeData | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [cart, setCart] = useState<CartResponse>(EMPTY_CART);
+  const [wishlist, setWishlist] = useState<Record<string, boolean>>({});
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+
+  const [ship, setShip] = useState<ShippingMethod>('standard');
+  const [pay, setPay] = useState<PaymentMethod>('upi');
+
   const [couponCode, setCouponCodeState] = useState('');
   const [couponApplied, setCouponApplied] = useState(false);
-  const [couponVal, setCouponVal] = useState(0);
   const [couponErr, setCouponErr] = useState('');
-  const [toast, setToast] = useState<ToastState>(null);
+  const [couponTotals, setCouponTotals] = useState<Totals | null>(null);
+
+  const [toast, setToastState] = useState<ToastState>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastKey = useRef(0);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          setState((s) => ({ ...s, ...parsed }));
-        }
-      } catch {
-        // ignore corrupt storage
-      } finally {
-        setReady(true);
-      }
-    })();
-  }, []);
-
-  useEffect(() => {
-    if (!ready) return;
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch(() => {});
-  }, [state, ready]);
 
   const showToast = useCallback((msg: string) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastKey.current += 1;
-    setToast({ message: msg, key: toastKey.current });
-    toastTimer.current = setTimeout(() => setToast(null), 1900);
+    setToastState({ message: msg, key: toastKey.current });
+    toastTimer.current = setTimeout(() => setToastState(null), 1900);
   }, []);
+
+  const loadUserData = useCallback(async () => {
+    const [homeRes, categoriesRes, cartRes, wishlistRes, addressesRes, ordersRes] = await Promise.allSettled([
+      HomeApi.get(),
+      CategoryApi.list(),
+      CartApi.get(),
+      WishlistApi.list(),
+      AddressApi.list(),
+      OrderApi.list(),
+    ]);
+
+    if (homeRes.status === 'fulfilled') setHome(homeRes.value);
+    if (categoriesRes.status === 'fulfilled') setCategories(categoriesRes.value);
+    if (cartRes.status === 'fulfilled') setCart(cartRes.value);
+    if (wishlistRes.status === 'fulfilled') {
+      const map: Record<string, boolean> = {};
+      wishlistRes.value.forEach((p) => {
+        map[p.id] = true;
+      });
+      setWishlist(map);
+    }
+    if (addressesRes.status === 'fulfilled') {
+      setAddresses(addressesRes.value);
+      const def = addressesRes.value.find((a) => a.is_default) || addressesRes.value[0];
+      if (def) setSelectedAddressId(def.id);
+    }
+    if (ordersRes.status === 'fulfilled') setOrders(ordersRes.value);
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const onboarded = await AsyncStorage.getItem(ONBOARD_KEY);
+        setHasOnboarded(onboarded === '1');
+
+        const token = await getToken();
+        if (token) {
+          try {
+            const me = await AuthApi.me();
+            setCustomer(me);
+            setSession(me.is_guest ? 'guest' : 'user');
+            await loadUserData();
+          } catch (err) {
+            if (err instanceof ApiError && (err.status === 401 || err.status === 419)) {
+              await setToken(null);
+            }
+            setCustomer(null);
+            setSession(null);
+          }
+        }
+      } finally {
+        setReady(true);
+      }
+    })();
+  }, [loadUserData]);
 
   const completeOnboarding = useCallback(() => {
-    setState((s) => ({ ...s, hasOnboarded: true }));
+    setHasOnboarded(true);
+    AsyncStorage.setItem(ONBOARD_KEY, '1').catch(() => {});
   }, []);
 
-  const loginAs = useCallback((email: string) => {
-    setState((s) => ({ ...s, session: 'user', user: { ...s.user, email, isGuest: false }, hasOnboarded: true }));
-  }, []);
-
-  const enterAsGuest = useCallback(() => {
-    setState((s) => ({ ...s, session: 'guest', user: { ...s.user, isGuest: true }, hasOnboarded: true }));
-  }, []);
-
-  const logout = useCallback(() => {
-    setState((s) => ({ ...s, session: null, cart: {} }));
-  }, []);
-
-  const addToCart = useCallback((id: string, q: number = 1) => {
-    setState((s) => ({ ...s, cart: { ...s.cart, [id]: (s.cart[id] || 0) + q } }));
-    showToast('Added to cart');
+  const requestOtp = useCallback(async (email: string): Promise<string | null> => {
+    try {
+      const res = await AuthApi.requestOtp(email);
+      return res.debug_otp;
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not send verification code');
+      return null;
+    }
   }, [showToast]);
 
-  const incCart = useCallback((id: string) => {
-    setState((s) => ({ ...s, cart: { ...s.cart, [id]: (s.cart[id] || 0) + 1 } }));
+  const verifyOtp = useCallback(async (email: string, otp: string): Promise<boolean> => {
+    try {
+      const res = await AuthApi.verifyOtp(email, otp);
+      await setToken(res.token);
+      setCustomer(res.customer);
+      setSession(res.customer.is_guest ? 'guest' : 'user');
+      setHasOnboarded(true);
+      AsyncStorage.setItem(ONBOARD_KEY, '1').catch(() => {});
+      await loadUserData();
+      return true;
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Verification failed');
+      return false;
+    }
+  }, [loadUserData, showToast]);
+
+  const enterAsGuest = useCallback(async () => {
+    try {
+      const res = await AuthApi.guest();
+      await setToken(res.token);
+      setCustomer(res.customer);
+      setSession('guest');
+      setHasOnboarded(true);
+      AsyncStorage.setItem(ONBOARD_KEY, '1').catch(() => {});
+      await loadUserData();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not start guest session');
+    }
+  }, [loadUserData, showToast]);
+
+  const logout = useCallback(async () => {
+    try {
+      await AuthApi.logout();
+    } catch {
+      // best-effort; proceed to clear local session regardless
+    }
+    await setToken(null);
+    setCustomer(null);
+    setSession(null);
+    setHome(null);
+    setCategories([]);
+    setCart(EMPTY_CART);
+    setWishlist({});
+    setAddresses([]);
+    setSelectedAddressId(null);
+    setOrders([]);
+    setCouponApplied(false);
+    setCouponCodeState('');
+    setCouponTotals(null);
   }, []);
 
-  const decCart = useCallback((id: string) => {
-    setState((s) => {
-      const q = (s.cart[id] || 0) - 1;
-      const c = { ...s.cart };
-      if (q <= 0) delete c[id];
-      else c[id] = q;
-      return { ...s, cart: c };
+  const resetCoupon = useCallback(() => {
+    setCouponApplied(false);
+    setCouponTotals(null);
+    setCouponErr('');
+  }, []);
+
+  const addToCart = useCallback(async (id: string, q: number = 1) => {
+    try {
+      const res = await CartApi.add(id, q);
+      setCart(res);
+      resetCoupon();
+      showToast('Added to cart');
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not add to cart');
+    }
+  }, [resetCoupon, showToast]);
+
+  const incCart = useCallback(async (id: string) => {
+    const current = cart.items.find((i) => i.product.id === id);
+    const nextQty = (current?.quantity || 0) + 1;
+    try {
+      const res = await CartApi.update(id, nextQty);
+      setCart(res);
+      resetCoupon();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not update cart');
+    }
+  }, [cart.items, resetCoupon, showToast]);
+
+  const decCart = useCallback(async (id: string) => {
+    const current = cart.items.find((i) => i.product.id === id);
+    const nextQty = (current?.quantity || 0) - 1;
+    try {
+      const res = nextQty <= 0 ? await CartApi.remove(id) : await CartApi.update(id, nextQty);
+      setCart(res);
+      resetCoupon();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not update cart');
+    }
+  }, [cart.items, resetCoupon, showToast]);
+
+  const removeCart = useCallback(async (id: string) => {
+    try {
+      const res = await CartApi.remove(id);
+      setCart(res);
+      resetCoupon();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not remove item');
+    }
+  }, [resetCoupon, showToast]);
+
+  const toggleWish = useCallback(async (id: string) => {
+    const wasWished = !!wishlist[id];
+    setWishlist((w) => {
+      const next = { ...w };
+      if (wasWished) delete next[id];
+      else next[id] = true;
+      return next;
     });
-  }, []);
-
-  const removeCart = useCallback((id: string) => {
-    setState((s) => {
-      const c = { ...s.cart };
-      delete c[id];
-      return { ...s, cart: c };
-    });
-  }, []);
-
-  const clearCart = useCallback(() => {
-    setState((s) => ({ ...s, cart: {} }));
-  }, []);
-
-  const toggleWish = useCallback((id: string) => {
-    setState((s) => {
-      const w = { ...s.wishlist };
-      if (w[id]) delete w[id];
-      else w[id] = true;
-      return { ...s, wishlist: w };
-    });
-  }, []);
+    try {
+      if (wasWished) await WishlistApi.remove(id);
+      else await WishlistApi.add(id);
+    } catch (err) {
+      setWishlist((w) => {
+        const next = { ...w };
+        if (wasWished) next[id] = true;
+        else delete next[id];
+        return next;
+      });
+      showToast(err instanceof ApiError ? err.message : 'Could not update wishlist');
+    }
+  }, [wishlist, showToast]);
 
   const setCouponCode = useCallback((v: string) => {
     setCouponCodeState(v);
     setCouponErr('');
   }, []);
 
-  const applyCoupon = useCallback(() => {
+  const applyCoupon = useCallback(async () => {
     const code = (couponCode || '').trim().toUpperCase();
-    const val = COUPONS[code];
-    if (val) {
+    if (!code) {
+      setCouponErr('Enter a coupon code');
+      return;
+    }
+    try {
+      const res = await CouponApi.apply(code);
       setCouponApplied(true);
-      setCouponVal(val);
+      setCouponTotals(res.totals);
       setCouponErr('');
       showToast('Coupon applied');
-    } else {
+    } catch (err) {
       setCouponApplied(false);
-      setCouponVal(0);
-      setCouponErr('Invalid coupon code');
+      setCouponTotals(null);
+      setCouponErr(err instanceof ApiError ? err.message : 'Invalid coupon code');
     }
   }, [couponCode, showToast]);
 
-  const setAddrId = useCallback((id: number) => setState((s) => ({ ...s, addrId: id })), []);
-  const setShip = useCallback((id: 'standard' | 'express') => setState((s) => ({ ...s, ship: id })), []);
-  const setPay = useCallback((id: 'upi' | 'card' | 'netbanking' | 'cod') => setState((s) => ({ ...s, pay: id })), []);
-
-  const totals = useMemo(() => computeTotals(state.cart, couponApplied, couponVal), [state.cart, couponApplied, couponVal]);
-
-  const placeOrder = useCallback((): string => {
-    const no = 'HC-2026-00' + (520 + Math.floor(Math.random() * 80));
-    const items = Object.entries(state.cart).map(([id, q]) => ({ id, q }));
-    const t = computeTotals(state.cart, couponApplied, couponVal);
-    const newOrder: Order = {
-      no,
-      status: 'ongoing',
-      stage: 'Order confirmed',
-      date: 'Placed 26 Jun 2026',
-      sub: 'Arrives by 29 Jun',
-      items,
-      total: t.total,
-    };
-    setState((s) => ({ ...s, orders: [newOrder, ...s.orders], cart: {} }));
-    setCouponApplied(false);
-    setCouponVal(0);
-    setCouponCodeState('');
-    return no;
-  }, [state.cart, couponApplied, couponVal]);
-
-  const reorder = useCallback((order: Order) => {
-    setState((s) => {
-      const c = { ...s.cart };
-      order.items.forEach((it) => {
-        c[it.id] = (c[it.id] || 0) + it.q;
-      });
-      return { ...s, cart: c };
-    });
+  const addAddress = useCallback(async (payload: {
+    label?: string;
+    name: string;
+    line: string;
+    city: string;
+    state: string;
+    pincode: string;
+    is_default?: boolean;
+  }): Promise<Address> => {
+    const address = await AddressApi.create(payload);
+    setAddresses((prev) => [...prev, address]);
+    setSelectedAddressId(address.id);
+    return address;
   }, []);
+
+  const totals: Totals = useMemo(() => (couponApplied && couponTotals ? couponTotals : cart.totals), [couponApplied, couponTotals, cart.totals]);
+
+  const placeOrder = useCallback(async (): Promise<string> => {
+    if (!selectedAddressId) throw new Error('Select a delivery address first');
+    const order = await OrderApi.create({
+      address_id: selectedAddressId,
+      shipping_method: ship,
+      payment_method: pay,
+      coupon_code: couponApplied ? couponCode.trim().toUpperCase() : undefined,
+    });
+    setOrders((prev) => [order, ...prev]);
+    setCart(EMPTY_CART);
+    resetCoupon();
+    setCouponCodeState('');
+    return order.no;
+  }, [selectedAddressId, ship, pay, couponApplied, couponCode, resetCoupon]);
+
+  const reorder = useCallback(async (order: Order) => {
+    try {
+      await OrderApi.reorder(order.no);
+      const res = await CartApi.get();
+      setCart(res);
+      showToast('Items added to cart');
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not reorder');
+    }
+  }, [showToast]);
 
   const value: AppContextValue = {
     ready,
-    hasOnboarded: state.hasOnboarded,
-    session: state.session,
-    user: state.user,
-    cart: state.cart,
-    wishlist: state.wishlist,
-    orders: state.orders,
-    addrId: state.addrId,
-    ship: state.ship,
-    pay: state.pay,
+    hasOnboarded,
+    session,
+    user: toUser(customer),
+    home,
+    categories,
+    cart,
+    wishlist,
+    addresses,
+    selectedAddressId,
+    orders,
+    ship,
+    pay,
     toast,
     couponCode,
     couponApplied,
-    couponVal,
     couponErr,
     completeOnboarding,
-    loginAs,
+    requestOtp,
+    verifyOtp,
     enterAsGuest,
     logout,
     addToCart,
     incCart,
     decCart,
     removeCart,
-    clearCart,
     toggleWish,
     setCouponCode,
     applyCoupon,
-    setAddrId,
+    setSelectedAddressId,
+    addAddress,
     setShip,
     setPay,
     placeOrder,
@@ -291,9 +431,4 @@ export function useApp(): AppContextValue {
   const ctx = useContext(AppContext);
   if (!ctx) throw new Error('useApp must be used within AppProvider');
   return ctx;
-}
-
-export function decoProduct(id: string, wishlist: Record<string, boolean>) {
-  const p = findProduct(id);
-  return { ...p, wished: !!wishlist[id] };
 }

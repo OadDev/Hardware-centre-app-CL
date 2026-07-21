@@ -25,8 +25,8 @@ export default function ProfileScreen() {
   const navigation = useNavigation<Nav>();
   const { user, orders, wishlist, logout, showToast } = useApp();
 
-  const onLogout = () => {
-    logout();
+  const onLogout = async () => {
+    await logout();
     navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
   };
 

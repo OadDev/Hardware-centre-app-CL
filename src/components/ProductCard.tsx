@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Product } from '../data/catalog';
+import { Product } from '../api/types';
 import { colors, fonts, radii, shadow } from '../theme/theme';
 import { discountPct, inr } from '../utils/format';
 import { IconHeart, IconPlus, IconStar } from './Icons';

@@ -1,11 +1,12 @@
-import React, { useMemo, useState } from 'react';
-import { Dimensions, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Dimensions, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/types';
 import { useApp } from '../context/AppContext';
 import { colors, fonts, radii } from '../theme/theme';
-import { HOME_SECTIONS, PRODUCTS, byIds } from '../data/catalog';
+import { ProductApi } from '../api/endpoints';
+import { Product } from '../api/types';
 import ProductCard from '../components/ProductCard';
 import { BackButton } from '../components/UI';
 import { IconBoltFilled, IconClock, IconMic, IconSearch } from '../components/Icons';
@@ -17,16 +18,38 @@ const { width: SCREEN_W } = Dimensions.get('window');
 const CARD_W = (SCREEN_W - 40 - 13) / 2;
 
 export default function SearchScreen({ navigation }: Props) {
-  const { wishlist, addToCart, toggleWish } = useApp();
+  const { wishlist, addToCart, toggleWish, home } = useApp();
   const [query, setQuery] = useState('');
   const [recent, setRecent] = useState(['impact drill', 'cpvc pipe', 'havells wire', 'safety helmet']);
+  const [results, setResults] = useState<Product[] | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const trending = byIds(HOME_SECTIONS.trending);
+  const trending = home?.trending || [];
 
-  const results = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return null;
-    return PRODUCTS.filter((p) => p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q) || p.cat.toLowerCase().includes(q));
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) {
+      setResults(null);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    const t = setTimeout(() => {
+      ProductApi.list({ q })
+        .then((res) => {
+          if (!cancelled) setResults(res);
+        })
+        .catch(() => {
+          if (!cancelled) setResults([]);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
   }, [query]);
 
   const runSearch = (term: string) => {
@@ -53,7 +76,11 @@ export default function SearchScreen({ navigation }: Props) {
         </View>
       </View>
 
-      {results ? (
+      {query.trim() && loading && !results ? (
+        <View style={{ paddingTop: 60, alignItems: 'center' }}>
+          <ActivityIndicator color={colors.accent} />
+        </View>
+      ) : results ? (
         <FlatList
           data={results}
           keyExtractor={(p) => p.id}

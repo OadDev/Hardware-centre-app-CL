@@ -7,7 +7,6 @@ import { RootStackParamList } from '../navigation/types';
 import { useApp } from '../context/AppContext';
 import { OrderStatus } from '../context/types';
 import { colors, fonts, radii, shadow } from '../theme/theme';
-import { findProduct } from '../data/catalog';
 import { inr } from '../utils/format';
 import PlaceholderImage from '../components/PlaceholderImage';
 import { IconEmptyOrders } from '../components/Icons';
@@ -44,8 +43,7 @@ export default function OrdersScreen() {
 
   const runAction = (order: (typeof orders)[number]) => {
     if (order.status === 'delivered' || order.status === 'cancelled') {
-      reorder(order);
-      navigation.navigate('Main', { screen: 'Cart' });
+      reorder(order).then(() => navigation.navigate('Main', { screen: 'Cart' }));
     } else if (order.status === 'ongoing') {
       showToast('Tracking ' + order.no);
     } else {
@@ -80,7 +78,7 @@ export default function OrdersScreen() {
       ) : (
         <ScrollView contentContainerStyle={styles.list}>
           {filtered.map((o) => {
-            const first = findProduct(o.items[0].id);
+            const first = o.items[0];
             const count = o.items.reduce((a, it) => a + it.q, 0);
             const stage = STAGE_COLORS[o.status];
             return (

@@ -1,0 +1,49 @@
+<?php
+
+namespace App\Http\Resources;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class ProductResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        /** @var \App\Models\Product $this */
+        $customer = $request->user();
+        $wished = false;
+        if ($customer) {
+            $wished = $this->relationLoaded('wishlistedBy')
+                ? $this->wishlistedBy->isNotEmpty()
+                : $customer->wishlist()->where('product_id', $this->id)->exists();
+        }
+
+        return [
+            'id' => $this->product_code,
+            'sku' => $this->sku,
+            'name' => $this->name,
+            'brand' => $this->brand->name,
+            'cat' => $this->category->icon,
+            'category_name' => $this->category->name,
+            'price' => (float) $this->price,
+            'mrp' => (float) $this->mrp,
+            'discount_pct' => $this->discount_pct,
+            'rating' => (float) $this->rating,
+            'reviews' => $this->reviews_count,
+            'supplier' => $this->seller->store_name,
+            'seller_id' => $this->seller->seller_code,
+            'seller_rating' => (float) $this->seller->rating,
+            'seller_years' => $this->seller->joined_at ? (int) now()->diffInYears($this->seller->joined_at, true) : 0,
+            'loc' => $this->seller->city,
+            'eta' => $this->eta_days,
+            'unit' => $this->unit,
+            'tag' => $this->tag ?? '',
+            'stock' => $this->stock,
+            'stock_status' => $this->stock_status,
+            'featured' => (bool) $this->featured,
+            'wished' => $wished,
+            'specs' => $this->specs->map(fn ($s) => [$s->label, $s->value])->all(),
+            'desc' => $this->description,
+        ];
+    }
+}

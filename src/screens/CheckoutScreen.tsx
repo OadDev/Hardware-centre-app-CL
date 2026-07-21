@@ -1,12 +1,12 @@
-import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/types';
-import { useApp, ADDRESSES } from '../context/AppContext';
+import { useApp } from '../context/AppContext';
 import { colors, fonts, radii, shadow } from '../theme/theme';
 import { inr } from '../utils/format';
-import { BackButton } from '../components/UI';
+import { BackButton, PrimaryButton } from '../components/UI';
 import { IconPlus } from '../components/Icons';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Checkout'>;
@@ -32,11 +32,51 @@ function RadioDot({ active }: { active: boolean }) {
 }
 
 export default function CheckoutScreen({ navigation }: Props) {
-  const { addrId, setAddrId, ship, setShip, pay, setPay, totals, placeOrder } = useApp();
+  const { addresses, selectedAddressId, setSelectedAddressId, ship, setShip, pay, setPay, totals, placeOrder, addAddress, showToast } = useApp();
+  const [placing, setPlacing] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [form, setForm] = useState({ name: '', line: '', city: '', state: '', pincode: '', label: 'Home' });
+  const [saving, setSaving] = useState(false);
 
-  const onPlaceOrder = () => {
-    const orderNo = placeOrder();
-    navigation.replace('OrderSuccess', { orderNo });
+  const onPlaceOrder = async () => {
+    if (!selectedAddressId) {
+      showToast('Add a delivery address first');
+      return;
+    }
+    setPlacing(true);
+    try {
+      const orderNo = await placeOrder();
+      navigation.replace('OrderSuccess', { orderNo });
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not place order');
+    } finally {
+      setPlacing(false);
+    }
+  };
+
+  const onSaveAddress = async () => {
+    if (!form.name.trim() || !form.line.trim() || !form.city.trim() || !form.state.trim() || !form.pincode.trim()) {
+      showToast('Fill in all address fields');
+      return;
+    }
+    setSaving(true);
+    try {
+      await addAddress({
+        label: form.label || 'Home',
+        name: form.name.trim(),
+        line: form.line.trim(),
+        city: form.city.trim(),
+        state: form.state.trim(),
+        pincode: form.pincode.trim(),
+        is_default: addresses.length === 0,
+      });
+      setShowAddForm(false);
+      setForm({ name: '', line: '', city: '', state: '', pincode: '', label: 'Home' });
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not save address');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -50,12 +90,12 @@ export default function CheckoutScreen({ navigation }: Props) {
         <View style={styles.section}>
           <Text style={styles.h2}>Delivery Address</Text>
           <View style={{ gap: 11 }}>
-            {ADDRESSES.map((a) => {
-              const active = a.id === addrId;
+            {addresses.map((a) => {
+              const active = a.id === selectedAddressId;
               return (
                 <Pressable
                   key={a.id}
-                  onPress={() => setAddrId(a.id)}
+                  onPress={() => setSelectedAddressId(a.id)}
                   style={[styles.addressCard, { borderColor: active ? colors.accent : colors.borderStrong, backgroundColor: active ? colors.accentLight : '#fff' }]}
                 >
                   <RadioDot active={active} />
@@ -66,12 +106,12 @@ export default function CheckoutScreen({ navigation }: Props) {
                         <Text style={styles.addressLabelText}>{a.label}</Text>
                       </View>
                     </View>
-                    <Text style={styles.addressLine}>{a.line}, {a.city}</Text>
+                    <Text style={styles.addressLine}>{a.line}, {a.city}, {a.state} {a.pincode}</Text>
                   </View>
                 </Pressable>
               );
             })}
-            <Pressable style={styles.addAddressBtn}>
+            <Pressable style={styles.addAddressBtn} onPress={() => setShowAddForm(true)}>
               <IconPlus size={17} color={colors.textSub} strokeWidth={2.2} />
               <Text style={styles.addAddressText}>Add New Address</Text>
             </Pressable>
@@ -133,7 +173,7 @@ export default function CheckoutScreen({ navigation }: Props) {
               </View>
             )}
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>GST (18%)</Text>
+              <Text style={styles.summaryLabel}>GST</Text>
               <Text style={styles.summaryVal}>{inr(totals.gst)}</Text>
             </View>
             <View style={[styles.summaryRow, { marginBottom: 12 }]}>
@@ -155,10 +195,34 @@ export default function CheckoutScreen({ navigation }: Props) {
           <Text style={styles.stickyLabel}>Payable</Text>
           <Text style={styles.stickyVal}>{inr(totals.total)}</Text>
         </View>
-        <Pressable style={styles.placeOrderBtn} onPress={onPlaceOrder}>
-          <Text style={styles.placeOrderText}>Place Order</Text>
+        <Pressable style={[styles.placeOrderBtn, placing ? { opacity: 0.7 } : null]} onPress={onPlaceOrder} disabled={placing}>
+          <Text style={styles.placeOrderText}>{placing ? 'Placing…' : 'Place Order'}</Text>
         </Pressable>
       </SafeAreaView>
+
+      <Modal visible={showAddForm} animationType="slide" transparent onRequestClose={() => setShowAddForm(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>Add New Address</Text>
+            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 12 }}>
+              <TextInput style={styles.modalInput} placeholder="Label (Home / Shop / Warehouse)" value={form.label} onChangeText={(v) => setForm((f) => ({ ...f, label: v }))} placeholderTextColor={colors.textFaint} />
+              <TextInput style={styles.modalInput} placeholder="Contact name" value={form.name} onChangeText={(v) => setForm((f) => ({ ...f, name: v }))} placeholderTextColor={colors.textFaint} />
+              <TextInput style={styles.modalInput} placeholder="Address line" value={form.line} onChangeText={(v) => setForm((f) => ({ ...f, line: v }))} placeholderTextColor={colors.textFaint} />
+              <TextInput style={styles.modalInput} placeholder="City" value={form.city} onChangeText={(v) => setForm((f) => ({ ...f, city: v }))} placeholderTextColor={colors.textFaint} />
+              <TextInput style={styles.modalInput} placeholder="State" value={form.state} onChangeText={(v) => setForm((f) => ({ ...f, state: v }))} placeholderTextColor={colors.textFaint} />
+              <TextInput style={styles.modalInput} placeholder="Pincode" value={form.pincode} onChangeText={(v) => setForm((f) => ({ ...f, pincode: v }))} keyboardType="number-pad" placeholderTextColor={colors.textFaint} />
+            </ScrollView>
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+              <Pressable style={styles.modalCancelBtn} onPress={() => setShowAddForm(false)}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </Pressable>
+              <View style={{ flex: 1 }}>
+                <PrimaryButton label="Save Address" onPress={onSaveAddress} loading={saving} />
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -218,4 +282,19 @@ const styles = StyleSheet.create({
   stickyVal: { fontSize: 19, fontFamily: fonts.displayExtra, color: colors.text },
   placeOrderBtn: { flex: 1, height: 52, borderRadius: radii.md, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   placeOrderText: { fontSize: 15.5, fontFamily: fonts.bodyBold, color: '#fff' },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(15,20,28,0.5)', justifyContent: 'flex-end' },
+  modalSheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%' },
+  modalTitle: { fontSize: 18, fontFamily: fonts.displayExtra, color: colors.text, marginBottom: 16 },
+  modalInput: {
+    height: 48,
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
+    borderRadius: radii.md,
+    paddingHorizontal: 14,
+    fontSize: 14,
+    color: colors.text,
+    backgroundColor: colors.bgAlt,
+  },
+  modalCancelBtn: { height: 54, paddingHorizontal: 20, borderRadius: radii.md, borderWidth: 1.5, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center' },
+  modalCancelText: { fontSize: 15, fontFamily: fonts.bodyBold, color: colors.textSub },
 });

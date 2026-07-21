@@ -1,11 +1,12 @@
-import React, { useMemo, useState } from 'react';
-import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/types';
 import { useApp } from '../context/AppContext';
 import { colors, fonts, radii, shadow } from '../theme/theme';
-import { PRODUCTS, catName } from '../data/catalog';
+import { CategoryApi } from '../api/endpoints';
+import { Product } from '../api/types';
 import { discountPct, inr } from '../utils/format';
 import ProductCard from '../components/ProductCard';
 import PlaceholderImage from '../components/PlaceholderImage';
@@ -28,25 +29,35 @@ export default function CategoryListingScreen({ navigation, route }: Props) {
   const { wishlist, addToCart, toggleWish, totals } = useApp();
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [sort, setSort] = useState<SortKey>('pop');
+  const [title, setTitle] = useState('');
+  const [listing, setListing] = useState<Product[] | null>(null);
 
-  const listing = useMemo(() => {
-    const matched = PRODUCTS.filter((p) => p.cat === catId);
-    const others = PRODUCTS.filter((p) => p.cat !== catId);
-    let items = [...matched, ...others].slice(0, 8);
-    if (sort === 'low') items = [...items].sort((a, b) => a.price - b.price);
-    if (sort === 'high') items = [...items].sort((a, b) => b.price - a.price);
-    if (sort === 'rating') items = [...items].sort((a, b) => b.rating - a.rating);
-    return items;
+  useEffect(() => {
+    let cancelled = false;
+    setListing(null);
+    CategoryApi.products(catId, sort)
+      .then((res) => {
+        if (cancelled) return;
+        setTitle(res.category.name);
+        setListing(res.products);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setTitle('Products');
+        setListing([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [catId, sort]);
 
-  const title = catName(catId);
   const cardW = (SCREEN_W - 40 - 13) / 2;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.topBar}>
         <BackButton onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Main', { screen: 'Categories' }))} />
-        <Text style={styles.topTitle}>{title}</Text>
+        <Text style={styles.topTitle}>{title || 'Products'}</Text>
         <Pressable style={styles.iconBtnSmall} onPress={() => navigation.navigate('Search')}>
           <IconSearch size={20} color={colors.bgDark} />
         </Pressable>
@@ -60,6 +71,11 @@ export default function CategoryListingScreen({ navigation, route }: Props) {
         </Pressable>
       </View>
 
+      {listing === null ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={colors.accent} />
+        </View>
+      ) : (
       <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
         <View style={{ paddingHorizontal: 20, paddingTop: 14 }}>
           <View style={styles.banner}>
@@ -151,6 +167,7 @@ export default function CategoryListingScreen({ navigation, route }: Props) {
           </View>
         )}
       </ScrollView>
+      )}
     </SafeAreaView>
   );
 }

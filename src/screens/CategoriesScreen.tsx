@@ -1,11 +1,11 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/types';
+import { useApp } from '../context/AppContext';
 import { colors, fonts, radii } from '../theme/theme';
-import { CATS } from '../data/catalog';
 import { iconForCat } from '../components/CategoryIcon';
 import { IconSearch } from '../components/Icons';
 
@@ -13,36 +13,36 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function CategoriesScreen() {
   const navigation = useNavigation<Nav>();
+  const { categories } = useApp();
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 28 }}>
         <Text style={styles.title}>Categories</Text>
-        <Text style={styles.sub}>Browse 8,000+ products across 12 categories</Text>
+        <Text style={styles.sub}>Browse products across {categories.length} categories</Text>
 
         <Pressable style={styles.searchBar} onPress={() => navigation.navigate('Search')}>
           <IconSearch size={19} />
           <Text style={styles.searchPlaceholder}>Search in categories…</Text>
         </Pressable>
 
-        <View style={styles.grid}>
-          {CATS.map((c, i) => {
-            const isMore = c.id === 'more';
-            return (
+        {categories.length === 0 ? (
+          <ActivityIndicator color={colors.accent} style={{ marginTop: 24 }} />
+        ) : (
+          <View style={styles.grid}>
+            {categories.map((c) => (
               <Pressable
-                key={c.id + i}
-                style={[styles.tile, isMore ? styles.tileDark : null]}
-                onPress={() => {
-                  if (!isMore) navigation.navigate('CategoryListing', { catId: c.id });
-                }}
+                key={c.id}
+                style={styles.tile}
+                onPress={() => navigation.navigate('CategoryListing', { catId: c.id })}
               >
-                <View style={[styles.iconBox, isMore ? styles.iconBoxDark : null]}>{iconForCat(c.id)}</View>
-                <Text style={[styles.tileLabel, isMore ? styles.tileLabelDark : null]}>{c.name}</Text>
-                <Text style={styles.tileCount}>{isMore ? 'View all' : `${c.count.toLocaleString('en-IN')} items`}</Text>
+                <View style={styles.iconBox}>{iconForCat(c.id)}</View>
+                <Text style={styles.tileLabel}>{c.name}</Text>
+                <Text style={styles.tileCount}>{c.count.toLocaleString('en-IN')} items</Text>
               </Pressable>
-            );
-          })}
-        </View>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

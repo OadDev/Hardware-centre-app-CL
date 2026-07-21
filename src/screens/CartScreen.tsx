@@ -6,7 +6,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/types';
 import { useApp } from '../context/AppContext';
 import { colors, fonts, radii, shadow } from '../theme/theme';
-import { findProduct } from '../data/catalog';
 import { inr } from '../utils/format';
 import PlaceholderImage from '../components/PlaceholderImage';
 import { PrimaryButton } from '../components/UI';
@@ -18,7 +17,7 @@ export default function CartScreen() {
   const navigation = useNavigation<Nav>();
   const { cart, incCart, decCart, removeCart, totals, couponCode, setCouponCode, applyCoupon, couponApplied, couponErr } = useApp();
 
-  const items = Object.entries(cart).map(([id, q]) => ({ product: findProduct(id), id, q }));
+  const items = cart.items.map((item) => ({ product: item.product, id: item.product.id, q: item.quantity }));
   const isEmpty = totals.count === 0;
 
   return (

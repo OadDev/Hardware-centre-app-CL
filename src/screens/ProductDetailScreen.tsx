@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/types';
 import { useApp } from '../context/AppContext';
 import { colors, fonts, radii, shadow } from '../theme/theme';
-import { findProduct, findSupplier, REVIEWS } from '../data/catalog';
+import { ProductApi } from '../api/endpoints';
+import { ProductDetail } from '../api/types';
 import { discountPct, inr } from '../utils/format';
 import PlaceholderImage from '../components/PlaceholderImage';
 import {
@@ -22,25 +23,37 @@ import {
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProductDetail'>;
 
-const RATING_BARS = [
-  { stars: 5, pct: 78 },
-  { stars: 4, pct: 54 },
-  { stars: 3, pct: 22 },
-  { stars: 2, pct: 8 },
-];
-
 export default function ProductDetailScreen({ navigation, route }: Props) {
   const { id } = route.params;
   const { wishlist, toggleWish, addToCart } = useApp();
   const [qty, setQty] = useState(1);
   const [gallery, setGallery] = useState(0);
+  const [detail, setDetail] = useState<ProductDetail | null>(null);
 
-  const product = findProduct(id);
-  const supplier = findSupplier(product.supplier);
-  const off = discountPct(product.price, product.mrp);
-  const wished = !!wishlist[product.id];
+  useEffect(() => {
+    let cancelled = false;
+    setDetail(null);
+    ProductApi.show(id).then((res) => {
+      if (!cancelled) setDetail(res);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   const back = () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Main', { screen: 'Home' }));
+
+  if (!detail) {
+    return (
+      <View style={[styles.container, { alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator color={colors.accent} />
+      </View>
+    );
+  }
+
+  const { product, reviews, rating_breakdown: ratingBars } = detail;
+  const off = discountPct(product.price, product.mrp);
+  const wished = !!wishlist[product.id];
 
   return (
     <View style={styles.container}>
@@ -101,7 +114,7 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
             <View style={[styles.infoCard, { backgroundColor: colors.successBg }]}>
               <IconCheckCircle />
               <View>
-                <Text style={styles.infoCardTitle}>In Stock</Text>
+                <Text style={styles.infoCardTitle}>{product.stock_status}</Text>
                 <Text style={styles.infoCardSub}>Ready to ship</Text>
               </View>
             </View>
@@ -146,7 +159,7 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
                 <IconVerified />
               </View>
               <Text style={styles.supplierMeta}>
-                {product.loc} · ⭐ {supplier.rating.toFixed(1)} · {supplier.years} yrs in business
+                {product.loc} · ⭐ {product.seller_rating.toFixed(1)} · {product.seller_years} yrs in business
               </Text>
             </View>
           </Pressable>
@@ -164,7 +177,7 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
               <Text style={styles.ratingBigCount}>{product.reviews.toLocaleString('en-IN')} reviews</Text>
             </View>
             <View style={{ flex: 1, gap: 5 }}>
-              {RATING_BARS.map((b) => (
+              {ratingBars.map((b) => (
                 <View key={b.stars} style={styles.barRow}>
                   <Text style={styles.barLabel}>{b.stars}</Text>
                   <View style={styles.barTrack}>
@@ -174,7 +187,7 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
               ))}
             </View>
           </View>
-          {REVIEWS.map((r) => (
+          {reviews.map((r) => (
             <View key={r.name} style={styles.reviewRow}>
               <View style={styles.reviewHeader}>
                 <View style={styles.reviewAvatar}>

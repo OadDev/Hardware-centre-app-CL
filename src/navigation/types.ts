@@ -13,10 +13,10 @@ export type RootStackParamList = {
   Onboarding: undefined;
   Welcome: undefined;
   Login: undefined;
-  Otp: { email: string };
+  Otp: { email: string; debugOtp?: string | null };
   Main: NavigatorScreenParams<MainTabParamList>;
   Search: undefined;
-  CategoryListing: { catId: string | null };
+  CategoryListing: { catId: string };
   ProductDetail: { id: string };
   Checkout: undefined;
   OrderSuccess: { orderNo: string };

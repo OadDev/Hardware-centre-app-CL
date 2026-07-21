@@ -17,13 +17,18 @@ function maskEmail(email: string): string {
 }
 
 export default function OtpScreen({ navigation, route }: Props) {
-  const { email } = route.params;
-  const { loginAs, showToast } = useApp();
+  const { email, debugOtp } = route.params;
+  const { requestOtp, verifyOtp, showToast } = useApp();
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [resend, setResend] = useState(60);
   const [success, setSuccess] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const inputs = useRef<Array<TextInput | null>>([]);
   const successAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (debugOtp) showToast(`Dev OTP: ${debugOtp}`);
+  }, []);
 
   useEffect(() => {
     if (resend <= 0) return;
@@ -43,21 +48,26 @@ export default function OtpScreen({ navigation, route }: Props) {
     if (key === 'Backspace' && !otp[i] && i > 0) inputs.current[i - 1]?.focus();
   };
 
-  const resendOtp = () => {
+  const resendOtp = async () => {
     setOtp(['', '', '', '', '', '']);
     setResend(60);
-    showToast('Code resent to your email');
+    const newDebugOtp = await requestOtp(email);
+    showToast(newDebugOtp ? `Dev OTP: ${newDebugOtp}` : 'Code resent to your email');
   };
 
-  const verify = () => {
+  const verify = async () => {
     if (otp.some((d) => !d)) {
       showToast('Enter the 6-digit code');
       return;
     }
+    setVerifying(true);
+    const ok = await verifyOtp(email, otp.join(''));
+    setVerifying(false);
+    if (!ok) return;
+
     setSuccess(true);
     Animated.spring(successAnim, { toValue: 1, useNativeDriver: true, friction: 5 }).start();
     setTimeout(() => {
-      loginAs(email);
       navigation.reset({ index: 0, routes: [{ name: 'Main', params: { screen: 'Home' } }] });
     }, 1300);
   };
@@ -105,7 +115,7 @@ export default function OtpScreen({ navigation, route }: Props) {
           )}
         </View>
 
-        <PrimaryButton label="Verify Email" onPress={verify} disabled={!otpDone} style={{ marginTop: 24 }} />
+        <PrimaryButton label="Verify Email" onPress={verify} disabled={!otpDone} loading={verifying} style={{ marginTop: 24 }} />
         <Text style={styles.changeEmail} onPress={() => navigation.goBack()}>
           Change Email
         </Text>

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Dimensions,
   FlatList,
   Pressable,
@@ -14,7 +15,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/types';
 import { useApp } from '../context/AppContext';
 import { colors, fonts, radii, shadow } from '../theme/theme';
-import { BANNERS, BRANDS, HOME_SECTIONS, SUPPLIERS, byIds, CATS } from '../data/catalog';
 import { initials } from '../utils/format';
 import ProductCard from '../components/ProductCard';
 import { IconBell, IconBolt, IconChevronDown, IconLocation, IconMic, IconSearch, IconStar, IconVerified } from '../components/Icons';
@@ -39,30 +39,43 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function HomeScreen() {
   const navigation = useNavigation<Nav>();
-  const { wishlist, addToCart, toggleWish, user } = useApp();
+  const { wishlist, addToCart, toggleWish, user, home, categories } = useApp();
   const [bannerIdx, setBannerIdx] = useState(0);
   const bannerRef = useRef<FlatList>(null);
   const countdown = useCountdown(23091);
 
+  const banners = home?.banners || [];
+
   useEffect(() => {
+    if (banners.length === 0) return;
     const t = setInterval(() => {
       setBannerIdx((i) => {
-        const next = (i + 1) % BANNERS.length;
+        const next = (i + 1) % banners.length;
         bannerRef.current?.scrollToOffset({ offset: next * (SCREEN_W - 40), animated: true });
         return next;
       });
     }, 3800);
     return () => clearInterval(t);
-  }, []);
-
-  const popular = byIds(HOME_SECTIONS.popular);
-  const deals = byIds(HOME_SECTIONS.deals);
-  const trending = byIds(HOME_SECTIONS.trending);
-  const recommended = byIds(HOME_SECTIONS.recommended);
-  const topCats = CATS.slice(0, 7);
+  }, [banners.length]);
 
   const goProduct = (id: string) => navigation.navigate('ProductDetail', { id });
   const goCat = (id: string) => navigation.navigate('CategoryListing', { catId: id });
+
+  if (!home) {
+    return (
+      <SafeAreaView style={[styles.container, { alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator color={colors.accent} />
+      </SafeAreaView>
+    );
+  }
+
+  const popular = home.popular;
+  const deals = home.deals;
+  const trending = home.trending;
+  const recommended = home.recommended;
+  const suppliers = home.suppliers;
+  const brands = home.brands;
+  const topCats = categories.slice(0, 7);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -102,11 +115,11 @@ export default function HomeScreen() {
           <View style={styles.bannerWrap}>
             <FlatList
               ref={bannerRef}
-              data={BANNERS}
+              data={banners}
               horizontal
               pagingEnabled
               showsHorizontalScrollIndicator={false}
-              keyExtractor={(b) => b.id}
+              keyExtractor={(b) => String(b.id)}
               onMomentumScrollEnd={(e) => {
                 const i = Math.round(e.nativeEvent.contentOffset.x / (SCREEN_W - 40));
                 setBannerIdx(i);
@@ -122,7 +135,7 @@ export default function HomeScreen() {
               )}
             />
             <View style={styles.bannerDots}>
-              {BANNERS.map((_, i) => (
+              {banners.map((_, i) => (
                 <View key={i} style={[styles.bannerDot, i === bannerIdx ? styles.bannerDotActive : null]} />
               ))}
             </View>
@@ -159,7 +172,7 @@ export default function HomeScreen() {
         {/* featured brands */}
         <SectionHeader title="Featured Brands" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingLeft: 20 }} contentContainerStyle={{ paddingRight: 20, gap: 11 }}>
-          {BRANDS.map((b) => (
+          {brands.map((b) => (
             <View key={b} style={styles.brandCard}>
               <View style={styles.brandIcon}>
                 <Text style={styles.brandIconText}>{initials(b)}</Text>
@@ -212,8 +225,8 @@ export default function HomeScreen() {
         {/* suppliers */}
         <SectionHeader title="Top Suppliers" action="See all" />
         <View style={{ paddingHorizontal: 20, gap: 11 }}>
-          {SUPPLIERS.map((s) => (
-            <Pressable key={s.name} style={styles.supplierRow}>
+          {suppliers.map((s) => (
+            <Pressable key={s.id} style={styles.supplierRow}>
               <View style={styles.supplierIcon}>
                 <IconVerified size={22} color={colors.bgDark} />
               </View>

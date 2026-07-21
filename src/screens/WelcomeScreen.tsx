@@ -26,8 +26,8 @@ export default function WelcomeScreen({ navigation }: Props) {
         <SecondaryButton label="Create Account" onPress={() => navigation.navigate('Login')} style={{ marginTop: 12 }} />
         <Text
           style={styles.guest}
-          onPress={() => {
-            enterAsGuest();
+          onPress={async () => {
+            await enterAsGuest();
             navigation.reset({ index: 0, routes: [{ name: 'Main', params: { screen: 'Home' } }] });
           }}
         >

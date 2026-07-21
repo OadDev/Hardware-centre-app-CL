@@ -17,6 +17,10 @@ export default function OrderSuccessScreen({ navigation, route }: Props) {
     Animated.spring(scale, { toValue: 1, useNativeDriver: true, friction: 5 }).start();
   }, []);
 
+  const eta = new Date();
+  eta.setDate(eta.getDate() + 5);
+  const etaLabel = eta.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <Animated.View style={[styles.circle, { transform: [{ scale }] }]}>
@@ -32,7 +36,7 @@ export default function OrderSuccessScreen({ navigation, route }: Props) {
 
       <View style={styles.etaRow}>
         <IconTruck size={17} color={colors.successDark} strokeWidth={2} />
-        <Text style={styles.etaText}>Estimated delivery by 29 Jun 2026</Text>
+        <Text style={styles.etaText}>Estimated delivery by {etaLabel}</Text>
       </View>
 
       <View style={styles.buttons}>

@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/types';
+import { useApp } from '../context/AppContext';
 import { colors, fonts, radii } from '../theme/theme';
 import { BackButton, PrimaryButton } from '../components/UI';
 import { IconGoogle, IconLock, IconMail } from '../components/Icons';
@@ -12,19 +13,24 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export default function LoginScreen({ navigation }: Props) {
+  const { requestOtp } = useApp();
   const [email, setEmail] = useState('rajesh@kumarhardware.in');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [remember, setRemember] = useState(true);
+  const [sending, setSending] = useState(false);
 
-  const doLogin = () => {
+  const doLogin = async () => {
     const e = email.trim();
     if (!EMAIL_RE.test(e)) {
       setError('Enter a valid email address.');
       return;
     }
     setError('');
-    navigation.navigate('Otp', { email: e });
+    setSending(true);
+    const debugOtp = await requestOtp(e);
+    setSending(false);
+    navigation.navigate('Otp', { email: e, debugOtp });
   };
 
   return (
@@ -76,7 +82,7 @@ export default function LoginScreen({ navigation }: Props) {
           <Text style={styles.forgot}>Forgot Password?</Text>
         </View>
 
-        <PrimaryButton label="Login" onPress={doLogin} style={{ marginTop: 28 }} />
+        <PrimaryButton label="Login" onPress={doLogin} loading={sending} style={{ marginTop: 28 }} />
 
         <View style={styles.dividerRow}>
           <View style={styles.divider} />
