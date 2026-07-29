@@ -27,6 +27,8 @@ jobs:
             [ -f ~/.bash_profile ] && source ~/.bash_profile
             set -euo pipefail
 
+            export SETUP_TOKEN=${{ secrets.SETUP_TOKEN }}
+
             APP_DIR="$HOME/domains/hardwarecenters.com/app"
             BRANCH="claude/android-ios-app-functional-q69j7k"
             REPO_URL="https://github.com/OadDev/Hardware-centre-app-CL.git"

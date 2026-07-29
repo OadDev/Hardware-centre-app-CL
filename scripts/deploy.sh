@@ -13,10 +13,16 @@ cd "$BACKEND_DIR"
 composer install --no-dev --optimize-autoloader --no-interaction
 
 if [ ! -f .env ]; then
-  echo "No .env in $BACKEND_DIR yet. SSH in once and run:"
-  echo "  cp .env.example .env && php artisan key:generate --force"
-  echo "then set SETUP_TOKEN in .env, and re-run this deploy."
-  exit 1
+  if [ -z "${SETUP_TOKEN:-}" ]; then
+    echo "No .env in $BACKEND_DIR yet, and no SETUP_TOKEN was passed in to create one."
+    echo "SSH in once and run:"
+    echo "  cp .env.example .env && php artisan key:generate --force"
+    echo "then set SETUP_TOKEN in .env, and re-run this deploy."
+    exit 1
+  fi
+  cp .env.example .env
+  php artisan key:generate --force
+  sed -i "s|^SETUP_TOKEN=.*|SETUP_TOKEN=${SETUP_TOKEN}|" .env
 fi
 
 mkdir -p storage/framework/sessions storage/framework/views storage/framework/cache storage/logs bootstrap/cache
