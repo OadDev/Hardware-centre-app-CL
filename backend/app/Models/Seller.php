@@ -10,7 +10,7 @@ class Seller extends Model
 {
     protected $fillable = [
         'seller_code', 'user_id', 'store_name', 'owner_name', 'email', 'phone',
-        'city', 'state', 'warehouse_address', 'gst_number', 'commission_pct',
+        'city', 'state', 'warehouse_address', 'category_interest', 'gst_number', 'commission_pct',
         'wallet_balance', 'rating', 'approval_status', 'account_status',
         'kyc_status', 'joined_at',
     ];

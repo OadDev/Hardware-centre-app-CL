@@ -9,12 +9,21 @@ use App\Http\Controllers\Api\V1\HomeController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\SupplierController;
+use App\Http\Controllers\Api\V1\WebLeadController;
+use App\Http\Controllers\Api\V1\WebOrderLookupController;
 use App\Http\Controllers\Api\V1\WishlistController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('auth/otp/request', [AuthController::class, 'requestOtp']);
 Route::post('auth/otp/verify', [AuthController::class, 'verifyOtp']);
 Route::post('auth/guest', [AuthController::class, 'guest']);
+
+Route::post('web/contact', [WebLeadController::class, 'contact'])->name('api.web.contact');
+Route::post('web/support-ticket', [WebLeadController::class, 'supportTicket'])->name('api.web.support-ticket');
+Route::post('web/sell', [WebLeadController::class, 'sell'])->name('api.web.sell');
+Route::post('web/newsletter', [WebLeadController::class, 'newsletter'])->name('api.web.newsletter');
+Route::post('web/track-order', [WebOrderLookupController::class, 'track'])->name('api.web.track-order');
+Route::post('web/my-orders', [WebOrderLookupController::class, 'myOrders'])->name('api.web.my-orders');
 
 Route::middleware('customer.optional')->group(function () {
     Route::get('home', HomeController::class);

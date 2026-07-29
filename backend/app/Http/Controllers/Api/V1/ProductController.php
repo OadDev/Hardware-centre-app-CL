@@ -29,6 +29,13 @@ class ProductController extends Controller
             $query->whereHas('category', fn ($c) => $c->where('icon', $cat));
         }
 
+        if ($brands = $request->query('brands')) {
+            $brandNames = array_filter(array_map('trim', explode(',', $brands)));
+            if ($brandNames) {
+                $query->whereHas('brand', fn ($b) => $b->whereIn('name', $brandNames));
+            }
+        }
+
         match ($request->query('sort', 'pop')) {
             'low' => $query->orderBy('price'),
             'high' => $query->orderByDesc('price'),

@@ -1,0 +1,39 @@
+@extends('web.layout')
+
+@section('title', 'My Orders · Hardware Centre')
+@section('description', 'View your Hardware Centre order history and track shipments.')
+
+@section('content')
+<section class="page-hero" style="padding:44px 0 34px;">
+  <div class="container">
+    <div class="crumb"><a href="{{ route('web.home') }}">Home</a> <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg> <span style="color:#fff;">My Orders</span></div>
+    <h1 style="font-size:28px;">Order History</h1>
+    <p>Enter the email or phone number you used at checkout to see your order history.</p>
+  </div>
+</section>
+
+<section class="section-tight">
+  <div class="container" style="max-width:560px;">
+    <div class="card" style="padding:24px;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+      <div class="field" style="flex:1;min-width:220px;margin:0;"><label>Email or phone used at checkout</label><input type="text" data-my-orders-input placeholder="rajesh@kumarhardware.in" /></div>
+      <button type="button" class="btn btn-primary" data-my-orders-submit="{{ route('api.web.my-orders') }}" style="height:48px;">Find My Orders</button>
+    </div>
+    <div data-my-orders-error style="display:none;margin-top:12px;font-size:13px;color:#EF4444;font-weight:600;"></div>
+  </div>
+</section>
+
+<section class="section-tight" style="background:var(--surface);padding-top:8px;display:none;" data-my-orders-results>
+  <div class="container" style="padding-top:24px;">
+    <div class="tab-row" data-order-tabs>
+      <button class="tab-btn active" data-order-tab="all">All Orders</button>
+      <button class="tab-btn" data-order-tab="ongoing">Ongoing</button>
+      <button class="tab-btn" data-order-tab="Delivered">Delivered</button>
+      <button class="tab-btn" data-order-tab="Cancelled">Cancelled</button>
+    </div>
+  </div>
+  <div class="container" style="max-width:720px;margin-top:22px;">
+    <div style="display:flex;flex-direction:column;gap:14px;" data-my-orders-list></div>
+    <div data-my-orders-empty style="display:none;padding:40px 0;text-align:center;color:var(--muted);">No orders found for this contact.</div>
+  </div>
+</section>
+@endsection

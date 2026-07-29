@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             NotificationSeeder::class,
             AppSettingSeeder::class,
             ActivitySeeder::class,
+            BlogPostSeeder::class,
         ]);
     }
 }
