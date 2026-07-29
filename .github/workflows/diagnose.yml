@@ -1,0 +1,67 @@
+name: Diagnose Hostinger deploy
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install sshpass
+        run: sudo apt-get update -y && sudo apt-get install -y sshpass
+
+      - name: Collect diagnostics over SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          SSHPASS: ${{ secrets.DEPLOY_PASSWORD }}
+        run: |
+          sshpass -e ssh -p "$DEPLOY_PORT" \
+            -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            "$DEPLOY_USER@$DEPLOY_HOST" '
+            set -x
+            APP_DIR="$HOME/domains/hardwarecenters.com/app"
+            BACKEND_DIR="$APP_DIR/backend"
+            PUBLIC_DIR="$HOME/domains/hardwarecenters.com/public_html"
+
+            echo "=== PHP version ==="
+            php -v
+
+            echo "=== public_html listing ==="
+            ls -la "$PUBLIC_DIR" || true
+
+            echo "=== public_html/index.php ==="
+            cat "$PUBLIC_DIR/index.php" || true
+
+            echo "=== public_html/.htaccess ==="
+            cat "$PUBLIC_DIR/.htaccess" || true
+
+            echo "=== backend .env (redacted) ==="
+            if [ -f "$BACKEND_DIR/.env" ]; then
+              grep -Ev "PASSWORD|SETUP_TOKEN|APP_KEY" "$BACKEND_DIR/.env" || true
+            else
+              echo "NO .env FOUND"
+            fi
+
+            echo "=== vendor/autoload.php exists? ==="
+            ls -la "$BACKEND_DIR/vendor/autoload.php" || true
+
+            echo "=== storage/bootstrap permissions ==="
+            ls -la "$BACKEND_DIR/storage" || true
+            ls -la "$BACKEND_DIR/bootstrap/cache" || true
+
+            echo "=== php artisan about (direct, bypasses web server) ==="
+            cd "$BACKEND_DIR" && php artisan about 2>&1 | head -80 || true
+
+            echo "=== tail storage/logs/laravel.log ==="
+            tail -n 100 "$BACKEND_DIR/storage/logs/laravel.log" 2>&1 || echo "no laravel.log"
+
+            echo "=== common web server error log locations ==="
+            for f in "$HOME/logs/hardwarecenters.com.error.log" "$HOME/domains/hardwarecenters.com/logs/error_log" "$HOME/public_html/error_log" "$PUBLIC_DIR/error_log"; do
+              if [ -f "$f" ]; then
+                echo "--- $f ---"
+                tail -n 60 "$f"
+              fi
+            done
+          '
