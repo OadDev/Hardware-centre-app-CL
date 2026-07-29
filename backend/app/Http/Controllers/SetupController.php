@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use PDO;
 use PDOException;
@@ -55,17 +56,33 @@ class SetupController extends Controller
             return back()->withInput()->withErrors(['setup_token' => 'Incorrect setup token.']);
         }
 
+        // Shared hosts (e.g. Hostinger) typically only grant the app's DB user
+        // privileges on a database their control panel already created — not a
+        // global CREATE privilege. So creating the database is best-effort; the
+        // real check is whether we can connect directly to the named database.
         try {
-            $pdo = new PDO(
+            $server = new PDO(
                 sprintf('mysql:host=%s;port=%s', $data['db_host'], $data['db_port']),
                 $data['db_username'],
                 $data['db_password'] ?? '',
                 [PDO::ATTR_TIMEOUT => 5]
             );
-            $pdo->exec('CREATE DATABASE IF NOT EXISTS `'.str_replace('`', '', $data['db_database']).'`');
+            $server->exec('CREATE DATABASE IF NOT EXISTS `'.str_replace('`', '', $data['db_database']).'`');
+        } catch (PDOException $e) {
+            // Ignore here — fall through to the direct per-database connection
+            // check below, which is the check that actually matters.
+        }
+
+        try {
+            new PDO(
+                sprintf('mysql:host=%s;port=%s;dbname=%s', $data['db_host'], $data['db_port'], $data['db_database']),
+                $data['db_username'],
+                $data['db_password'] ?? '',
+                [PDO::ATTR_TIMEOUT => 5]
+            );
         } catch (PDOException $e) {
             return back()->withInput()->withErrors([
-                'db_host' => 'Could not connect to MySQL with these credentials: '.$e->getMessage(),
+                'db_host' => 'Could not connect to database "'.$data['db_database'].'" with these credentials: '.$e->getMessage(),
             ]);
         }
 
@@ -83,12 +100,40 @@ class SetupController extends Controller
 
         Artisan::call('config:clear');
 
-        if (empty(env('APP_KEY'))) {
+        // Laravel already parsed the old .env at the start of this request, so
+        // the file rewrite above has no effect on this request's config/env()
+        // until we override it explicitly and reconnect the DB manager.
+        config([
+            'app.env' => 'production',
+            'app.debug' => false,
+            'app.url' => $data['app_url'],
+            'database.default' => 'mysql',
+            'database.connections.mysql.host' => $data['db_host'],
+            'database.connections.mysql.port' => $data['db_port'],
+            'database.connections.mysql.database' => $data['db_database'],
+            'database.connections.mysql.username' => $data['db_username'],
+            'database.connections.mysql.password' => $data['db_password'] ?? '',
+        ]);
+        DB::purge('mysql');
+        DB::reconnect('mysql');
+
+        if (empty(config('app.key'))) {
             Artisan::call('key:generate', ['--force' => true]);
         }
 
-        Artisan::call('migrate', ['--force' => true]);
-        Artisan::call('db:seed', ['--force' => true]);
+        $migrateExit = Artisan::call('migrate', ['--force' => true]);
+        if ($migrateExit !== 0) {
+            return back()->withInput()->withErrors([
+                'db_host' => 'Migration failed: '.Artisan::output(),
+            ]);
+        }
+
+        $seedExit = Artisan::call('db:seed', ['--force' => true]);
+        if ($seedExit !== 0) {
+            return back()->withInput()->withErrors([
+                'db_host' => 'Seeding failed: '.Artisan::output(),
+            ]);
+        }
 
         $admin = User::where('email', 'admin@hardwarecentre.in')->first();
         if ($admin) {
