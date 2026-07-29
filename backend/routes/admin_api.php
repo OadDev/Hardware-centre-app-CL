@@ -30,6 +30,9 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::apiResource('products', ProductController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::post('products/{product}/images', [ProductController::class, 'storeImages']);
     Route::delete('products/{product}/images/{image}', [ProductController::class, 'destroyImage']);
+    Route::post('products/{product}/variants', [ProductController::class, 'storeVariant']);
+    Route::patch('products/{product}/variants/{variant}', [ProductController::class, 'updateVariant']);
+    Route::delete('products/{product}/variants/{variant}', [ProductController::class, 'destroyVariant']);
     Route::apiResource('categories', CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::post('categories/{category}/icon', [CategoryController::class, 'uploadIcon']);
     Route::post('categories/{category}/icon-class', [CategoryController::class, 'setIconClass']);

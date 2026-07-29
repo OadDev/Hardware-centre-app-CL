@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\AppSetting;
+use App\Models\CartItem;
 use App\Models\Coupon;
 use App\Models\ShippingConfig;
 use Illuminate\Support\Collection;
@@ -10,11 +11,11 @@ use Illuminate\Support\Collection;
 class CartCalculator
 {
     /**
-     * @param  Collection<int, \App\Models\CartItem>  $items
+     * @param  Collection<int, CartItem>  $items
      */
     public static function totals(Collection $items, ?Coupon $coupon = null): array
     {
-        $subtotal = $items->sum(fn ($item) => (float) $item->product->price * $item->quantity);
+        $subtotal = $items->sum(fn ($item) => $item->unit_price * $item->quantity);
         $count = $items->sum('quantity');
 
         $discount = 0.0;

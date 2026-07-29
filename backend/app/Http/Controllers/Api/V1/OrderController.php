@@ -41,7 +41,7 @@ class OrderController extends Controller
         ]);
 
         $customer = $request->user();
-        $items = $customer->cartItems()->with('product.seller')->get();
+        $items = $customer->cartItems()->with(['product.seller', 'productVariant'])->get();
 
         if ($items->isEmpty()) {
             return response()->json(['message' => 'Your cart is empty'], 422);
@@ -73,22 +73,31 @@ class OrderController extends Controller
 
         foreach ($items as $item) {
             $product = $item->product;
+            $variant = $item->productVariant;
             $seller = $product->seller;
-            $lineTotal = (float) $product->price * $item->quantity;
+            $unitPrice = $item->unit_price;
+            $lineTotal = $unitPrice * $item->quantity;
             $commissionPct = (float) $seller->commission_pct;
 
             $order->items()->create([
                 'product_id' => $product->id,
+                'product_variant_id' => $variant?->id,
+                'variant_label' => $variant?->label,
                 'seller_id' => $seller->id,
                 'quantity' => $item->quantity,
-                'unit_price' => $product->price,
+                'unit_price' => $unitPrice,
                 'line_total' => $lineTotal,
                 'commission_pct' => $commissionPct,
                 'commission_amount' => round($lineTotal * $commissionPct / 100, 2),
             ]);
 
             $product->increment('sold_count', $item->quantity);
-            $product->decrement('stock', min($item->quantity, $product->stock));
+
+            if ($variant) {
+                $variant->decrement('stock', min($item->quantity, $variant->stock));
+            } else {
+                $product->decrement('stock', min($item->quantity, $product->stock));
+            }
         }
 
         if ($coupon) {
@@ -108,7 +117,10 @@ class OrderController extends Controller
 
         $order->load('items');
         foreach ($order->items as $item) {
-            $cartItem = $request->user()->cartItems()->firstOrNew(['product_id' => $item->product_id]);
+            $cartItem = $request->user()->cartItems()->firstOrNew([
+                'product_id' => $item->product_id,
+                'product_variant_id' => $item->product_variant_id,
+            ]);
             $cartItem->quantity = ($cartItem->exists ? $cartItem->quantity : 0) + $item->quantity;
             $cartItem->save();
         }

@@ -1,3 +1,12 @@
+export type ProductVariant = {
+  id: string;
+  sku: string;
+  attributes: Record<string, string>;
+  label: string;
+  price: number;
+  stock: number;
+};
+
 export type Product = {
   id: string;
   sku: string;
@@ -26,6 +35,7 @@ export type Product = {
   desc: string;
   images: string[];
   video_url: string | null;
+  variants: ProductVariant[];
 };
 
 export type Category = {
@@ -87,7 +97,7 @@ export type Customer = {
 
 export type OrderStatus = 'ongoing' | 'delivered' | 'cancelled' | 'returned';
 
-export type OrderItem = { id: string; q: number; name: string; brand: string };
+export type OrderItem = { id: string; q: number; name: string; brand: string; variant: string | null };
 
 export type Order = {
   no: string;
@@ -115,8 +125,16 @@ export type Totals = {
   count: number;
 };
 
+export type CartItemVariant = {
+  id: string;
+  label: string;
+  price: number;
+  stock: number;
+};
+
 export type CartItem = {
   product: Product;
+  variant: CartItemVariant | null;
   quantity: number;
   line_total: number;
 };

@@ -338,6 +338,28 @@ function openProductProfile(p) {
       <button id="drawer-upload-images-btn" class="mt-2 w-full py-2 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700">Upload Photos</button>
       ${p.videoUrl ? `<a href="${p.videoUrl}" target="_blank" class="block mt-3 text-sm text-brand-600 font-medium">▶ Watch product video</a>` : ''}
     `)}
+    ${drawerSection('Options (Color, Size, etc.)', `
+      <div class="space-y-2 mb-3">
+        ${(p.variants||[]).map(v => `
+          <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-ink-200 dark:border-ink-700">
+            <div class="min-w-0">
+              <div class="text-sm font-medium text-ink-900 dark:text-white truncate">${v.label || v.sku}</div>
+              <div class="text-xs text-ink-400">${v.sku} · ${v.price !== null ? fmtINR(v.price) : 'Base price'} · Stock ${v.stock} · ${v.status}</div>
+            </div>
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+              <button data-toggle-variant="${v.id}" data-variant-status="${v.status}" class="px-2 py-1 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700">${v.status==='Active'?'Deactivate':'Activate'}</button>
+              <button data-remove-variant="${v.id}" class="w-6 h-6 rounded-full bg-rose-600 text-white text-xs leading-none flex items-center justify-center">×</button>
+            </div>
+          </div>`).join('') || `<p class="text-xs text-ink-400">No options yet — customers buy the base product.</p>`}
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <input id="drawer-variant-color" placeholder="Color" class="px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
+        <input id="drawer-variant-size" placeholder="Size" class="px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
+        <input id="drawer-variant-price" type="number" step="0.01" placeholder="Price override (₹)" class="px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
+        <input id="drawer-variant-stock" type="number" placeholder="Stock" class="px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
+      </div>
+      <button id="drawer-add-variant-btn" class="mt-2 w-full py-2 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700">Add Option</button>
+    `)}
     <div class="flex gap-2.5 mt-6 pt-5 border-t border-ink-100 dark:border-ink-800">
       ${p.approval!=='Approved' ? `<button id="approve-product-btn" class="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl">Approve</button>` : ''}
       <button id="toggle-featured-btn" class="flex-1 px-4 py-2.5 bg-white dark:bg-ink-800 border border-ink-200 dark:border-ink-700 text-sm font-medium rounded-xl">${p.featured?'Unfeature':'Feature'} Product</button>
@@ -355,6 +377,28 @@ function openProductProfile(p) {
   document.querySelectorAll('[data-remove-image]').forEach(btn => btn.addEventListener('click', withErr(async () => {
     await api('DELETE', '/products/'+p.id+'/images/'+btn.dataset.removeImage);
     toast('Photo removed'); await refreshProducts(); navigateTo('products');
+  })));
+  document.getElementById('drawer-add-variant-btn')?.addEventListener('click', withErr(async () => {
+    const color = document.getElementById('drawer-variant-color').value.trim();
+    const size = document.getElementById('drawer-variant-size').value.trim();
+    if (!color && !size) { toast('Enter at least a color or size', 'warn'); return; }
+    const priceVal = document.getElementById('drawer-variant-price').value;
+    await api('POST', '/products/'+p.id+'/variants', {
+      color: color || undefined,
+      size: size || undefined,
+      price: priceVal ? parseFloat(priceVal) : undefined,
+      stock: parseInt(document.getElementById('drawer-variant-stock').value || 0),
+    });
+    toast('Option added'); await refreshProducts(); navigateTo('products');
+  }));
+  document.querySelectorAll('[data-toggle-variant]').forEach(btn => btn.addEventListener('click', withErr(async () => {
+    const nextStatus = btn.dataset.variantStatus === 'Active' ? 'Inactive' : 'Active';
+    await api('PATCH', '/products/'+p.id+'/variants/'+btn.dataset.toggleVariant, { status: nextStatus });
+    toast('Option updated'); await refreshProducts(); navigateTo('products');
+  })));
+  document.querySelectorAll('[data-remove-variant]').forEach(btn => btn.addEventListener('click', withErr(async () => {
+    await api('DELETE', '/products/'+p.id+'/variants/'+btn.dataset.removeVariant);
+    toast('Option removed'); await refreshProducts(); navigateTo('products');
   })));
   document.getElementById('approve-product-btn')?.addEventListener('click', withErr(async () => {
     await api('PATCH', '/products/'+p.id, { approval_status:'Approved' });

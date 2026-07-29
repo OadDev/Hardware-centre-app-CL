@@ -7,6 +7,7 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\ProductVariant;
 use App\Models\Seller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -17,7 +18,7 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Product::query()->with(['brand', 'category', 'seller', 'images']);
+        $query = Product::query()->with(['brand', 'category', 'seller', 'images', 'variants']);
 
         if ($search = $request->query('q')) {
             $query->where('name', 'like', "%{$search}%");
@@ -47,7 +48,7 @@ class ProductController extends Controller
             'slug' => Str::slug($data['name']).'-'.Str::random(4),
         ]);
 
-        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images'])), 201);
+        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants'])), 201);
     }
 
     public function update(Request $request, Product $product)
@@ -56,7 +57,7 @@ class ProductController extends Controller
         $data = $this->resolveRelations($data);
         $product->update($data);
 
-        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images'])));
+        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants'])));
     }
 
     public function destroy(Product $product)
@@ -75,7 +76,7 @@ class ProductController extends Controller
 
         ProductImage::storeUploads($product, $request->file('images', []));
 
-        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images'])), 201);
+        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants'])), 201);
     }
 
     public function destroyImage(Product $product, ProductImage $image)
@@ -86,6 +87,73 @@ class ProductController extends Controller
         $image->delete();
 
         return response()->json(['message' => 'Image removed']);
+    }
+
+    public function storeVariant(Request $request, Product $product)
+    {
+        $data = $this->validatedVariant($request);
+
+        $variant = $product->variants()->create([
+            'variant_code' => 'VAR-'.strtoupper(Str::random(8)),
+            'sku' => ($data['sku'] ?? null) ?: 'SKU'.strtoupper(Str::random(6)),
+            'options' => $data['options'],
+            'price' => $data['price'] ?? null,
+            'stock' => $data['stock'],
+            'status' => $data['status'] ?? 'Active',
+        ]);
+
+        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants'])), 201);
+    }
+
+    public function updateVariant(Request $request, Product $product, ProductVariant $variant)
+    {
+        abort_unless($variant->product_id === $product->id, 404);
+
+        $data = $this->validatedVariant($request, isUpdate: true);
+        if (array_key_exists('sku', $data) && $data['sku'] === '') {
+            unset($data['sku']);
+        }
+        $variant->update($data);
+
+        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants'])));
+    }
+
+    public function destroyVariant(Product $product, ProductVariant $variant)
+    {
+        abort_unless($variant->product_id === $product->id, 404);
+        $variant->delete();
+
+        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants'])));
+    }
+
+    private function validatedVariant(Request $request, bool $isUpdate = false): array
+    {
+        $required = $isUpdate ? 'sometimes' : 'required';
+
+        $data = $request->validate([
+            'color' => ['nullable', 'string', 'max:60'],
+            'size' => ['nullable', 'string', 'max:60'],
+            'sku' => ['nullable', 'string', 'max:60'],
+            'price' => ['nullable', 'numeric', 'min:0'],
+            'stock' => [$required, 'integer', 'min:0'],
+            'status' => ['sometimes', Rule::in(['Active', 'Inactive'])],
+        ]);
+
+        $options = array_filter([
+            'Color' => $data['color'] ?? null,
+            'Size' => $data['size'] ?? null,
+        ]);
+
+        if (! $isUpdate) {
+            abort_if(empty($options), 422, 'Enter at least a color or size for the variant.');
+        }
+
+        unset($data['color'], $data['size']);
+        if (! $isUpdate || ! empty($options)) {
+            $data['options'] = $options;
+        }
+
+        return $data;
     }
 
     private function validated(Request $request, bool $isUpdate = false): array
@@ -143,6 +211,15 @@ class ProductController extends Controller
             'sold' => $p->sold_count,
             'images' => $p->images->map(fn (ProductImage $img) => ['id' => $img->id, 'url' => $img->url])->all(),
             'videoUrl' => $p->video_url,
+            'variants' => $p->variants->map(fn (ProductVariant $v) => [
+                'id' => $v->variant_code,
+                'sku' => $v->sku,
+                'attributes' => $v->options,
+                'label' => $v->label,
+                'price' => $v->price !== null ? (float) $v->price : null,
+                'stock' => $v->stock,
+                'status' => $v->status,
+            ])->all(),
         ];
     }
 }

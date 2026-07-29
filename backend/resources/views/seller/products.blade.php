@@ -63,8 +63,9 @@
             {{ $p->approval_status }}
           </span>
         </td>
-        <td>
-          <form method="POST" action="{{ route('seller.products.destroy', $p) }}" onsubmit="return confirm('Remove this product?');">
+        <td class="whitespace-nowrap">
+          <a href="{{ route('seller.products.variants', $p) }}" class="text-brand-600 text-xs font-semibold mr-3">Options{{ $p->variants->count() ? ' ('.$p->variants->count().')' : '' }}</a>
+          <form method="POST" action="{{ route('seller.products.destroy', $p) }}" onsubmit="return confirm('Remove this product?');" class="inline">
             @csrf @method('DELETE')
             <button type="submit" class="text-rose-600 text-xs font-semibold">Remove</button>
           </form>

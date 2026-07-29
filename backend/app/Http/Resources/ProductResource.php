@@ -47,6 +47,14 @@ class ProductResource extends JsonResource
             'desc' => $this->description,
             'images' => $this->images->pluck('url')->filter()->values()->all(),
             'video_url' => $this->video_url,
+            'variants' => $this->variants->where('status', 'Active')->values()->map(fn ($v) => [
+                'id' => $v->variant_code,
+                'sku' => $v->sku,
+                'attributes' => $v->options,
+                'label' => $v->label,
+                'price' => $v->effective_price,
+                'stock' => $v->stock,
+            ])->all(),
         ];
     }
 }

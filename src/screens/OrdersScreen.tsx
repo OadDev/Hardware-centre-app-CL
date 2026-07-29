@@ -94,7 +94,9 @@ export default function OrdersScreen() {
                   <PlaceholderImage seed={first.id} label={first.brand} radius={11} style={styles.itemImage} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={styles.itemTitle} numberOfLines={1}>{first.name}</Text>
-                    <Text style={styles.itemSub}>{count > 1 ? `${count} items` : `${count} item`} · {o.sub}</Text>
+                    <Text style={styles.itemSub}>
+                      {count > 1 ? `${count} items` : first.variant ? first.variant : `${count} item`} · {o.sub}
+                    </Text>
                   </View>
                 </View>
                 <View style={styles.cardBottomRow}>

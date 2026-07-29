@@ -7,9 +7,11 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\ProductVariant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
@@ -18,7 +20,7 @@ class ProductController extends Controller
         $seller = $request->user()->seller;
 
         $products = $seller->products()
-            ->with(['brand', 'category', 'images'])
+            ->with(['brand', 'category', 'images', 'variants'])
             ->orderByDesc('id')
             ->paginate(15);
 
@@ -108,6 +110,85 @@ class ProductController extends Controller
         $image->delete();
 
         return back()->with('status', 'Image removed.');
+    }
+
+    public function variants(Request $request, Product $product)
+    {
+        $this->authorizeOwnership($request, $product);
+
+        return view('seller.product-variants', [
+            'seller' => $request->user()->seller,
+            'product' => $product->load('variants'),
+        ]);
+    }
+
+    public function storeVariant(Request $request, Product $product)
+    {
+        $this->authorizeOwnership($request, $product);
+        $data = $this->validatedVariant($request);
+
+        $product->variants()->create([
+            'variant_code' => 'VAR-'.strtoupper(Str::random(8)),
+            'sku' => ($data['sku'] ?? null) ?: 'SKU'.strtoupper(Str::random(6)),
+            'options' => $data['options'],
+            'price' => $data['price'] ?? null,
+            'stock' => $data['stock'],
+        ]);
+
+        return back()->with('status', 'Variant added.');
+    }
+
+    public function updateVariant(Request $request, Product $product, ProductVariant $variant)
+    {
+        $this->authorizeOwnership($request, $product);
+        abort_unless($variant->product_id === $product->id, 404);
+
+        $data = $this->validatedVariant($request, isUpdate: true);
+        if (array_key_exists('sku', $data) && $data['sku'] === '') {
+            unset($data['sku']);
+        }
+        $variant->update($data);
+
+        return back()->with('status', 'Variant updated.');
+    }
+
+    public function destroyVariant(Request $request, Product $product, ProductVariant $variant)
+    {
+        $this->authorizeOwnership($request, $product);
+        abort_unless($variant->product_id === $product->id, 404);
+        $variant->delete();
+
+        return back()->with('status', 'Variant removed.');
+    }
+
+    private function validatedVariant(Request $request, bool $isUpdate = false): array
+    {
+        $required = $isUpdate ? 'sometimes' : 'required';
+
+        $data = $request->validate([
+            'color' => ['nullable', 'string', 'max:60'],
+            'size' => ['nullable', 'string', 'max:60'],
+            'sku' => ['nullable', 'string', 'max:60'],
+            'price' => ['nullable', 'numeric', 'min:0'],
+            'stock' => [$required, 'integer', 'min:0'],
+            'status' => ['sometimes', Rule::in(['Active', 'Inactive'])],
+        ]);
+
+        $options = array_filter([
+            'Color' => $data['color'] ?? null,
+            'Size' => $data['size'] ?? null,
+        ]);
+
+        if (! $isUpdate) {
+            abort_if(empty($options), 422, 'Enter at least a color or size for the variant.');
+        }
+
+        unset($data['color'], $data['size']);
+        if (! $isUpdate || ! empty($options)) {
+            $data['options'] = $options;
+        }
+
+        return $data;
     }
 
     private function authorizeOwnership(Request $request, Product $product): void

@@ -60,7 +60,7 @@ export default function ProductCard({
             <Text style={styles.price}>{inr(product.price)}</Text>
             {off > 0 && <Text style={styles.mrp}>{inr(product.mrp)}</Text>}
           </View>
-          <Pressable onPress={onAdd} style={styles.addBtn} hitSlop={6}>
+          <Pressable onPress={product.variants?.length ? onPress : onAdd} style={styles.addBtn} hitSlop={6}>
             <IconPlus size={17} />
           </Pressable>
         </View>

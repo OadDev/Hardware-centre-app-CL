@@ -18,7 +18,7 @@ class HomeController extends Controller
 {
     public function __invoke(Request $request)
     {
-        $base = Product::query()->approved()->with(['brand', 'category', 'seller', 'specs', 'images']);
+        $base = Product::query()->approved()->with(['brand', 'category', 'seller', 'specs', 'images', 'variants']);
 
         return response()->json([
             'banners' => BannerResource::collection(Banner::where('status', 'Active')->orderBy('sort_order')->get()),

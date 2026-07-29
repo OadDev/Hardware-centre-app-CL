@@ -24,18 +24,27 @@ import {
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProductDetail'>;
 
+const ATTRIBUTE_ORDER = ['Color', 'Size'];
+
 export default function ProductDetailScreen({ navigation, route }: Props) {
   const { id } = route.params;
   const { wishlist, toggleWish, addToCart } = useApp();
   const [qty, setQty] = useState(1);
   const [gallery, setGallery] = useState(0);
   const [detail, setDetail] = useState<ProductDetail | null>(null);
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let cancelled = false;
     setDetail(null);
+    setGallery(0);
+    setSelectedOptions({});
     ProductApi.show(id).then((res) => {
-      if (!cancelled) setDetail(res);
+      if (cancelled) return;
+      setDetail(res);
+      if (res.product.variants?.[0]) {
+        setSelectedOptions(res.product.variants[0].attributes);
+      }
     });
     return () => {
       cancelled = true;
@@ -53,10 +62,23 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
   }
 
   const { product, reviews, rating_breakdown: ratingBars } = detail;
-  const off = discountPct(product.price, product.mrp);
+  const variants = product.variants ?? [];
+  const attributeGroups = ATTRIBUTE_ORDER.map((key) => ({
+    key,
+    values: Array.from(new Set(variants.map((v) => v.attributes[key]).filter((v): v is string => !!v))),
+  })).filter((g) => g.values.length > 0);
+  const selectedVariant = variants.find((v) =>
+    attributeGroups.every((g) => v.attributes[g.key] === selectedOptions[g.key])
+  );
+  const effectivePrice = selectedVariant ? selectedVariant.price : product.price;
+  const off = discountPct(effectivePrice, product.mrp);
   const wished = !!wishlist[product.id];
   const images = product.images ?? [];
   const heroImage = images[gallery] ?? images[0];
+  const outOfStock = variants.length > 0 ? !selectedVariant || selectedVariant.stock <= 0 : product.stock <= 0;
+  const stockLabel = variants.length > 0
+    ? (selectedVariant ? (selectedVariant.stock > 0 ? `${selectedVariant.stock} in stock` : 'Out of Stock') : 'Select an option')
+    : product.stock_status;
 
   return (
     <View style={styles.container}>
@@ -133,18 +155,38 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
           </View>
           <Text style={styles.name}>{product.name}</Text>
           <View style={styles.priceRow}>
-            <Text style={styles.price}>{inr(product.price)}</Text>
+            <Text style={styles.price}>{inr(effectivePrice)}</Text>
             <Text style={styles.mrp}>{inr(product.mrp)}</Text>
             {off > 0 && <Text style={styles.offText}>-{off}%</Text>}
           </View>
           <Text style={styles.taxNote}>Inclusive of all taxes · per {product.unit}</Text>
 
+          {attributeGroups.map((group) => (
+            <View key={group.key} style={styles.optionGroup}>
+              <Text style={styles.optionLabel}>{group.key}</Text>
+              <View style={styles.optionRow}>
+                {group.values.map((value) => {
+                  const active = selectedOptions[group.key] === value;
+                  return (
+                    <Pressable
+                      key={value}
+                      onPress={() => setSelectedOptions((prev) => ({ ...prev, [group.key]: value }))}
+                      style={[styles.optionChip, active ? styles.optionChipActive : null]}
+                    >
+                      <Text style={[styles.optionChipText, active ? styles.optionChipTextActive : null]}>{value}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          ))}
+
           <View style={styles.infoCards}>
-            <View style={[styles.infoCard, { backgroundColor: colors.successBg }]}>
-              <IconCheckCircle />
+            <View style={[styles.infoCard, { backgroundColor: outOfStock ? colors.dangerBg : colors.successBg }]}>
+              <IconCheckCircle color={outOfStock ? colors.danger : undefined} />
               <View>
-                <Text style={styles.infoCardTitle}>{product.stock_status}</Text>
-                <Text style={styles.infoCardSub}>Ready to ship</Text>
+                <Text style={styles.infoCardTitle}>{stockLabel}</Text>
+                <Text style={styles.infoCardSub}>{outOfStock ? 'Currently unavailable' : 'Ready to ship'}</Text>
               </View>
             </View>
             <View style={[styles.infoCard, { backgroundColor: colors.bgAlt, borderWidth: 1, borderColor: colors.border }]}>
@@ -243,13 +285,18 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
             <IconPlus size={17} color={colors.textSub} />
           </Pressable>
         </View>
-        <Pressable style={styles.addCartBtn} onPress={() => addToCart(product.id, qty)}>
+        <Pressable
+          style={[styles.addCartBtn, outOfStock ? styles.btnDisabled : null]}
+          disabled={outOfStock}
+          onPress={() => addToCart(product.id, qty, selectedVariant?.id)}
+        >
           <Text style={styles.addCartText}>Add to Cart</Text>
         </Pressable>
         <Pressable
-          style={styles.buyNowBtn}
+          style={[styles.buyNowBtn, outOfStock ? styles.btnDisabled : null]}
+          disabled={outOfStock}
           onPress={() => {
-            addToCart(product.id, qty);
+            addToCart(product.id, qty, selectedVariant?.id);
             navigation.navigate('Main', { screen: 'Cart' });
           }}
         >
@@ -319,6 +366,20 @@ const styles = StyleSheet.create({
   mrp: { fontSize: 15, color: colors.textFaint, textDecorationLine: 'line-through' },
   offText: { fontSize: 13, color: colors.successDark, fontFamily: fonts.bodyBold },
   taxNote: { fontSize: 12, color: colors.textMuted, marginTop: 3 },
+  optionGroup: { marginTop: 16 },
+  optionLabel: { fontSize: 12.5, fontFamily: fonts.bodyBold, color: colors.textSub, marginBottom: 8 },
+  optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  optionChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radii.md,
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
+  },
+  optionChipActive: { borderColor: colors.accent, backgroundColor: colors.accentLight },
+  optionChipText: { fontSize: 13, fontFamily: fonts.bodySemibold, color: colors.textSub },
+  optionChipTextActive: { color: colors.accentDark },
+  btnDisabled: { opacity: 0.45 },
   infoCards: { flexDirection: 'row', gap: 10, marginTop: 16 },
   infoCard: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, padding: 11 },
   infoCardTitle: { fontSize: 12.5, fontFamily: fonts.bodyBold, color: colors.text },

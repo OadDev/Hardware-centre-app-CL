@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CartItem extends Model
 {
-    protected $fillable = ['customer_id', 'product_id', 'quantity'];
+    protected $fillable = ['customer_id', 'product_id', 'product_variant_id', 'quantity'];
 
     public function customer(): BelongsTo
     {
@@ -17,5 +17,15 @@ class CartItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function productVariant(): BelongsTo
+    {
+        return $this->belongsTo(ProductVariant::class);
+    }
+
+    public function getUnitPriceAttribute(): float
+    {
+        return $this->productVariant ? $this->productVariant->effective_price : (float) $this->product->price;
     }
 }

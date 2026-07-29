@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -20,7 +21,7 @@ class OrderResource extends JsonResource
 
     public function toArray(Request $request): array
     {
-        /** @var \App\Models\Order $this */
+        /** @var Order $this */
         return [
             'no' => $this->order_no,
             'status' => self::STATUS_BUCKET[$this->status] ?? 'ongoing',
@@ -32,6 +33,7 @@ class OrderResource extends JsonResource
                 'q' => $item->quantity,
                 'name' => $item->product->name,
                 'brand' => $item->product->brand->name,
+                'variant' => $item->variant_label,
             ])->all(),
             'subtotal' => (float) $this->subtotal,
             'discount' => (float) $this->discount,

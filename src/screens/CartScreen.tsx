@@ -17,7 +17,14 @@ export default function CartScreen() {
   const navigation = useNavigation<Nav>();
   const { cart, incCart, decCart, removeCart, totals, couponCode, setCouponCode, applyCoupon, couponApplied, couponErr } = useApp();
 
-  const items = cart.items.map((item) => ({ product: item.product, id: item.product.id, q: item.quantity }));
+  const items = cart.items.map((item) => ({
+    product: item.product,
+    variant: item.variant,
+    id: item.product.id,
+    variantId: item.variant?.id,
+    q: item.quantity,
+    lineTotal: item.line_total,
+  }));
   const isEmpty = totals.count === 0;
 
   return (
@@ -39,27 +46,28 @@ export default function CartScreen() {
       ) : (
         <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
           <View style={styles.itemsWrap}>
-            {items.map(({ product, id, q }) => (
-              <View key={id} style={styles.itemRow}>
+            {items.map(({ product, variant, id, variantId, q, lineTotal }) => (
+              <View key={id + (variantId ?? '')} style={styles.itemRow}>
                 <PlaceholderImage seed={product.id} label={product.brand} radius={12} style={styles.itemImage} />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={styles.itemTopRow}>
                     <View style={{ minWidth: 0, flex: 1 }}>
                       <Text style={styles.itemBrand}>{product.brand.toUpperCase()}</Text>
                       <Text style={styles.itemName} numberOfLines={2}>{product.name}</Text>
+                      {!!variant && <Text style={styles.itemVariant}>{variant.label}</Text>}
                     </View>
-                    <Pressable onPress={() => removeCart(id)} hitSlop={8}>
+                    <Pressable onPress={() => removeCart(id, variantId)} hitSlop={8}>
                       <IconTrash />
                     </Pressable>
                   </View>
                   <View style={styles.itemBottomRow}>
-                    <Text style={styles.itemPrice}>{inr(product.price * q)}</Text>
+                    <Text style={styles.itemPrice}>{inr(lineTotal)}</Text>
                     <View style={styles.stepper}>
-                      <Pressable style={styles.stepperBtn} onPress={() => decCart(id)}>
+                      <Pressable style={styles.stepperBtn} onPress={() => decCart(id, variantId)}>
                         <IconMinus size={16} />
                       </Pressable>
                       <Text style={styles.stepperText}>{q}</Text>
-                      <Pressable style={styles.stepperBtn} onPress={() => incCart(id)}>
+                      <Pressable style={styles.stepperBtn} onPress={() => incCart(id, variantId)}>
                         <IconPlus size={15} color={colors.textSub} />
                       </Pressable>
                     </View>
@@ -154,6 +162,7 @@ const styles = StyleSheet.create({
   itemTopRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
   itemBrand: { fontSize: 10, fontFamily: fonts.bodyBold, color: colors.textFaint, letterSpacing: 0.5 },
   itemName: { fontSize: 13, fontFamily: fonts.bodySemibold, color: colors.text, lineHeight: 18, marginTop: 2 },
+  itemVariant: { fontSize: 11, color: colors.textFaint, marginTop: 2 },
   itemBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
   itemPrice: { fontSize: 16, fontFamily: fonts.displayExtra, color: colors.text },
   stepper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: colors.borderStrong, borderRadius: 10, height: 34 },

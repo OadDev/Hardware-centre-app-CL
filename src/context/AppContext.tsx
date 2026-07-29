@@ -49,10 +49,10 @@ type AppContextValue = {
   enterAsGuest: () => Promise<void>;
   logout: () => Promise<void>;
 
-  addToCart: (id: string, q?: number) => Promise<void>;
-  incCart: (id: string) => Promise<void>;
-  decCart: (id: string) => Promise<void>;
-  removeCart: (id: string) => Promise<void>;
+  addToCart: (id: string, q?: number, variantId?: string) => Promise<void>;
+  incCart: (id: string, variantId?: string) => Promise<void>;
+  decCart: (id: string, variantId?: string) => Promise<void>;
+  removeCart: (id: string, variantId?: string) => Promise<void>;
   toggleWish: (id: string) => Promise<void>;
 
   setCouponCode: (v: string) => void;
@@ -259,9 +259,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setCouponErr('');
   }, []);
 
-  const addToCart = useCallback(async (id: string, q: number = 1) => {
+  const addToCart = useCallback(async (id: string, q: number = 1, variantId?: string) => {
     try {
-      const res = await CartApi.add(id, q);
+      const res = await CartApi.add(id, q, variantId);
       setCart(res);
       resetCoupon();
       showToast('Added to cart');
@@ -270,11 +270,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [resetCoupon, showToast]);
 
-  const incCart = useCallback(async (id: string) => {
-    const current = cart.items.find((i) => i.product.id === id);
+  const incCart = useCallback(async (id: string, variantId?: string) => {
+    const current = cart.items.find((i) => i.product.id === id && (i.variant?.id ?? undefined) === variantId);
     const nextQty = (current?.quantity || 0) + 1;
     try {
-      const res = await CartApi.update(id, nextQty);
+      const res = await CartApi.update(id, nextQty, variantId);
       setCart(res);
       resetCoupon();
     } catch (err) {
@@ -282,11 +282,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [cart.items, resetCoupon, showToast]);
 
-  const decCart = useCallback(async (id: string) => {
-    const current = cart.items.find((i) => i.product.id === id);
+  const decCart = useCallback(async (id: string, variantId?: string) => {
+    const current = cart.items.find((i) => i.product.id === id && (i.variant?.id ?? undefined) === variantId);
     const nextQty = (current?.quantity || 0) - 1;
     try {
-      const res = nextQty <= 0 ? await CartApi.remove(id) : await CartApi.update(id, nextQty);
+      const res = nextQty <= 0 ? await CartApi.remove(id, variantId) : await CartApi.update(id, nextQty, variantId);
       setCart(res);
       resetCoupon();
     } catch (err) {
@@ -294,9 +294,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [cart.items, resetCoupon, showToast]);
 
-  const removeCart = useCallback(async (id: string) => {
+  const removeCart = useCallback(async (id: string, variantId?: string) => {
     try {
-      const res = await CartApi.remove(id);
+      const res = await CartApi.remove(id, variantId);
       setCart(res);
       resetCoupon();
     } catch (err) {

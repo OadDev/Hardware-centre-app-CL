@@ -64,11 +64,17 @@ export const SupplierApi = {
 
 export const CartApi = {
   get: () => http.get<CartResponse>('/cart'),
-  add: (productCode: string, quantity: number = 1) =>
-    http.post<CartResponse>('/cart/items', { product_code: productCode, quantity }),
-  update: (productCode: string, quantity: number) =>
-    http.patch<CartResponse>(`/cart/items/${encodeURIComponent(productCode)}`, { quantity }),
-  remove: (productCode: string) => http.delete<CartResponse>(`/cart/items/${encodeURIComponent(productCode)}`),
+  add: (productCode: string, quantity: number = 1, variantCode?: string) =>
+    http.post<CartResponse>('/cart/items', { product_code: productCode, variant_code: variantCode, quantity }),
+  update: (productCode: string, quantity: number, variantCode?: string) =>
+    http.patch<CartResponse>(
+      `/cart/items/${encodeURIComponent(productCode)}${variantCode ? `?variant=${encodeURIComponent(variantCode)}` : ''}`,
+      { quantity }
+    ),
+  remove: (productCode: string, variantCode?: string) =>
+    http.delete<CartResponse>(
+      `/cart/items/${encodeURIComponent(productCode)}${variantCode ? `?variant=${encodeURIComponent(variantCode)}` : ''}`
+    ),
 };
 
 export const WishlistApi = {
