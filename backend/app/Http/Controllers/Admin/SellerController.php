@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Seller;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 
 class SellerController extends Controller
@@ -27,6 +29,52 @@ class SellerController extends Controller
         $sellers->getCollection()->transform(fn (Seller $s) => $this->transform($s));
 
         return response()->json($sellers);
+    }
+
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'store_name' => ['required', 'string', 'max:255'],
+            'owner_name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'unique:users,email'],
+            'phone' => ['required', 'string', 'max:20'],
+            'password' => ['required', 'string', 'min:8'],
+            'city' => ['required', 'string', 'max:120'],
+            'state' => ['required', 'string', 'max:120'],
+            'warehouse_address' => ['nullable', 'string'],
+            'gst_number' => ['nullable', 'string', 'max:20'],
+            'category_interest' => ['nullable', 'string', 'max:255'],
+            'commission_pct' => ['nullable', 'numeric', 'min:0', 'max:100'],
+        ]);
+
+        $user = User::create([
+            'name' => $data['owner_name'],
+            'email' => $data['email'],
+            'phone' => $data['phone'],
+            'password' => Hash::make($data['password']),
+        ]);
+        $user->assignRole('Seller');
+
+        $seller = Seller::create([
+            'seller_code' => 'SLR-'.(1000 + Seller::count()),
+            'user_id' => $user->id,
+            'store_name' => $data['store_name'],
+            'owner_name' => $data['owner_name'],
+            'email' => $data['email'],
+            'phone' => $data['phone'],
+            'city' => $data['city'],
+            'state' => $data['state'],
+            'warehouse_address' => $data['warehouse_address'] ?? null,
+            'gst_number' => $data['gst_number'] ?? null,
+            'category_interest' => $data['category_interest'] ?? null,
+            'commission_pct' => $data['commission_pct'] ?? 10,
+            'approval_status' => 'Approved',
+            'account_status' => 'Active',
+            'kyc_status' => 'Verified',
+            'joined_at' => now(),
+        ]);
+
+        return response()->json($this->transform($seller->loadCount('products')), 201);
     }
 
     public function show(Seller $seller)

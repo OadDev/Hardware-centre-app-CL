@@ -78,7 +78,7 @@ SECTION_RENDERERS.sellers = async function(main) {
   const totalPending = DATA.sellers.filter(s=>s.approval==='Pending').length;
   const totalSuspended = DATA.sellers.filter(s=>s.status==='Suspended').length;
   main.innerHTML = `
-    ${pageHeader('Seller Management', 'Onboard, verify and monitor vendors on your marketplace', btnSecondary('Export CSV','download'))}
+    ${pageHeader('Seller Management', 'Onboard, verify and monitor vendors on your marketplace', btnPrimary('Add Seller','plus','add-seller-btn')+btnSecondary('Export CSV','download'))}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       ${kpiCard({label:'Total Sellers', value: fmtNum(DATA.sellers.length), icon:'store', accent:'brand'})}
       ${kpiCard({label:'Active Sellers', value: fmtNum(totalActive), icon:'check-circle', accent:'emerald'})}
@@ -87,6 +87,35 @@ SECTION_RENDERERS.sellers = async function(main) {
     </div>
     ${tableCard('sellers-table-inner')}
   `;
+  document.getElementById('add-seller-btn').addEventListener('click', () => {
+    openModal({ title:'Add Seller', wide:true, body:`<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        ${formField('Store Name','text','e.g. Kumar Hardware','','ns-store')}
+        ${formField('Owner Name','text','e.g. Rajesh Kumar','','ns-owner')}
+        ${formField('Email','email','owner@store.in','','ns-email')}
+        ${formField('Phone','tel','9876543210','','ns-phone')}
+        ${formField('Login Password','password','At least 8 characters','','ns-password')}
+        ${formField('City','text','','','ns-city')}
+        ${formField('State','text','','','ns-state')}
+        ${formField('GST Number (optional)','text','','','ns-gst')}
+        ${formField('Commission %','number','10','10','ns-commission')}
+        <div class="sm:col-span-2">${formTextarea('Warehouse Address (optional)','',2,'ns-warehouse')}</div>
+      </div>`,
+      confirmLabel:'Create Seller', onConfirm: withErr(async () => {
+        await api('POST', '/sellers', {
+          store_name: document.getElementById('ns-store').value,
+          owner_name: document.getElementById('ns-owner').value,
+          email: document.getElementById('ns-email').value,
+          phone: document.getElementById('ns-phone').value,
+          password: document.getElementById('ns-password').value,
+          city: document.getElementById('ns-city').value,
+          state: document.getElementById('ns-state').value,
+          gst_number: document.getElementById('ns-gst').value || undefined,
+          commission_pct: parseFloat(document.getElementById('ns-commission').value || 10),
+          warehouse_address: document.getElementById('ns-warehouse').value || undefined,
+        });
+        closeModal(); toast('Seller account created'); await refreshSellers(); navigateTo('sellers');
+      }) });
+  });
   renderDataTable('sellers-table-inner', {
     title: 'All Sellers', subtitle: `${DATA.sellers.length} sellers registered on the marketplace`,
     data: DATA.sellers, searchKeys: ['store','name','city','email'],

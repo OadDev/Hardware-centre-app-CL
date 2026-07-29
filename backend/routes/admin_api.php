@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('api')->name('api.')->group(function () {
     Route::get('dashboard', [DashboardController::class, 'stats']);
 
-    Route::apiResource('sellers', SellerController::class)->only(['index', 'show', 'update']);
+    Route::apiResource('sellers', SellerController::class)->only(['index', 'store', 'show', 'update']);
     Route::apiResource('customers', CustomerController::class)->only(['index', 'update']);
     Route::apiResource('products', ProductController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::apiResource('categories', CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
