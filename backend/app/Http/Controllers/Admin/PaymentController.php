@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\PaymentGatewayConfig;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Throwable;
 
 class PaymentController extends Controller
 {
@@ -43,6 +45,30 @@ class PaymentController extends Controller
             return response()->json(['message' => 'Add API credentials before testing the connection.'], 422);
         }
 
-        return response()->json(['message' => 'Credentials saved. Live verification requires a real '.$config->display_name.' sandbox account.']);
+        if (in_array($config->provider, ['razorpay', 'razorpay_route'])) {
+            return $this->testRazorpay($config);
+        }
+
+        return response()->json(['message' => 'Credentials saved. Live verification isn\'t implemented yet for '.$config->display_name.'.']);
+    }
+
+    protected function testRazorpay(PaymentGatewayConfig $config)
+    {
+        try {
+            $response = Http::withBasicAuth($config->key_id, $config->secret)
+                ->get('https://api.razorpay.com/v1/payments', ['count' => 1]);
+        } catch (Throwable $e) {
+            return response()->json(['message' => 'Could not reach Razorpay: '.$e->getMessage()], 502);
+        }
+
+        if ($response->status() === 401) {
+            return response()->json(['message' => 'Razorpay rejected these credentials. Double-check the Key ID and Secret Key.'], 422);
+        }
+
+        if (! $response->successful()) {
+            return response()->json(['message' => 'Razorpay returned an unexpected error (HTTP '.$response->status().').'], 502);
+        }
+
+        return response()->json(['message' => 'Razorpay credentials verified successfully.']);
     }
 }
