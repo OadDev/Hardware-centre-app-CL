@@ -2,6 +2,13 @@
 
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Seller\AuthController as SellerAuthController;
+use App\Http\Controllers\Seller\DashboardController as SellerDashboardController;
+use App\Http\Controllers\Seller\OrderController as SellerOrderController;
+use App\Http\Controllers\Seller\ProductController as SellerProductController;
+use App\Http\Controllers\Seller\ProfileController as SellerProfileController;
+use App\Http\Controllers\Seller\ReturnController as SellerReturnController;
+use App\Http\Controllers\Seller\SettlementController as SellerSettlementController;
 use App\Http\Controllers\Web\AboutController;
 use App\Http\Controllers\Web\BlogController;
 use App\Http\Controllers\Web\CategoriesController;
@@ -35,8 +42,30 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('login', [AuthController::class, 'login'])->name('login.attempt');
     Route::post('logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
-    Route::middleware('auth')->group(function () {
+    Route::middleware(['auth', 'role:Admin|Manager|Support|Accounts'])->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::group([], base_path('routes/admin_api.php'));
+    });
+});
+
+Route::prefix('seller')->name('seller.')->group(function () {
+    Route::get('login', [SellerAuthController::class, 'showLogin'])->name('login');
+    Route::post('login', [SellerAuthController::class, 'login'])->name('login.attempt');
+    Route::post('logout', [SellerAuthController::class, 'logout'])->middleware('auth')->name('logout');
+
+    Route::middleware(['auth', 'role:Seller'])->group(function () {
+        Route::get('/', [SellerDashboardController::class, 'index'])->name('dashboard');
+
+        Route::get('products', [SellerProductController::class, 'index'])->name('products');
+        Route::post('products', [SellerProductController::class, 'store'])->name('products.store');
+        Route::patch('products/{product:product_code}', [SellerProductController::class, 'update'])->name('products.update');
+        Route::delete('products/{product:product_code}', [SellerProductController::class, 'destroy'])->name('products.destroy');
+
+        Route::get('orders', [SellerOrderController::class, 'index'])->name('orders');
+        Route::get('settlements', [SellerSettlementController::class, 'index'])->name('settlements');
+        Route::get('returns', [SellerReturnController::class, 'index'])->name('returns');
+
+        Route::get('profile', [SellerProfileController::class, 'edit'])->name('profile');
+        Route::patch('profile', [SellerProfileController::class, 'update'])->name('profile.update');
     });
 });

@@ -95,6 +95,8 @@
           </select>
         </div>
         <div class="field full"><label>Business Address</label><textarea name="warehouse_address" placeholder="Warehouse / shop address"></textarea></div>
+        <div class="field"><label>Create a Password</label><input type="password" name="password" minlength="8" placeholder="At least 8 characters" required /></div>
+        <div class="field full" style="font-size:12px;color:var(--muted);margin-top:-6px;">You'll use this to sign in to your Seller Centre at <a href="{{ route('seller.login') }}" style="color:var(--orange-dark);font-weight:700;">/seller/login</a> and track your application.</div>
         <div class="field full"><label class="field-check"><input type="checkbox" required /> I agree to the Hardware Centre Seller Terms &amp; Conditions and confirm the information above is accurate.</label></div>
         <div class="field full"><button type="submit" class="btn btn-primary btn-block">Submit Application</button></div>
       </form>

@@ -1,0 +1,65 @@
+@extends('seller.layout')
+
+@section('title', 'My Products')
+
+@section('content')
+<div class="bg-white rounded-2xl border border-ink-200/70 p-5 mb-6">
+  <div class="font-bold text-ink-900 mb-4">Add a new product</div>
+  <form method="POST" action="{{ route('seller.products.store') }}" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+    @csrf
+    <div class="col-span-2 md:col-span-1"><label class="block text-xs font-medium text-ink-500 mb-1">Product Name</label><input name="name" required class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200 focus:outline-none focus:ring-2 focus:ring-brand-600"></div>
+    <div><label class="block text-xs font-medium text-ink-500 mb-1">Category</label>
+      <select name="category_code" required class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200">
+        <option value="">Select</option>
+        @foreach($categories as $c)<option value="{{ $c->category_code }}">{{ $c->name }}</option>@endforeach
+      </select>
+    </div>
+    <div><label class="block text-xs font-medium text-ink-500 mb-1">Brand</label>
+      <select name="brand_code" required class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200">
+        <option value="">Select</option>
+        @foreach($brands as $b)<option value="{{ $b->brand_code }}">{{ $b->name }}</option>@endforeach
+      </select>
+    </div>
+    <div><label class="block text-xs font-medium text-ink-500 mb-1">Price (₹)</label><input type="number" step="0.01" name="price" required class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
+    <div><label class="block text-xs font-medium text-ink-500 mb-1">MRP (₹)</label><input type="number" step="0.01" name="mrp" required class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
+    <div><label class="block text-xs font-medium text-ink-500 mb-1">Stock</label><input type="number" name="stock" required class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
+    <div class="col-span-2 md:col-span-3"><label class="block text-xs font-medium text-ink-500 mb-1">Description</label><textarea name="description" rows="2" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></textarea></div>
+    <div class="col-span-2 md:col-span-3"><button type="submit" class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold">Submit for Approval</button></div>
+  </form>
+</div>
+
+<div class="bg-white rounded-2xl border border-ink-200/70 p-5">
+  <div class="font-bold text-ink-900 mb-4">Your Products ({{ $products->total() }})</div>
+  @if($products->isEmpty())
+  <p class="text-sm text-ink-400">You haven't listed any products yet.</p>
+  @else
+  <table class="w-full text-sm">
+    <thead><tr class="text-left text-ink-400 border-b border-ink-100">
+      <th class="py-2 font-medium">Product</th><th class="font-medium">Price</th><th class="font-medium">Stock</th><th class="font-medium">Approval</th><th class="font-medium"></th>
+    </tr></thead>
+    <tbody>
+      @foreach($products as $p)
+      <tr class="border-b border-ink-100 last:border-0">
+        <td class="py-2.5">{{ $p->name }}<div class="text-xs text-ink-400">{{ $p->brand->name }} · {{ $p->category->name }}</div></td>
+        <td>₹{{ number_format($p->price, 2) }}</td>
+        <td>{{ $p->stock }}</td>
+        <td>
+          <span class="px-2 py-0.5 rounded-full text-xs font-semibold
+            {{ $p->approval_status === 'Approved' ? 'bg-emerald-50 text-emerald-700' : ($p->approval_status === 'Rejected' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-700') }}">
+            {{ $p->approval_status }}
+          </span>
+        </td>
+        <td>
+          <form method="POST" action="{{ route('seller.products.destroy', $p) }}" onsubmit="return confirm('Remove this product?');">
+            @csrf @method('DELETE')
+            <button type="submit" class="text-rose-600 text-xs font-semibold">Remove</button>
+          </form>
+        </td>
+      </tr>
+      @endforeach
+    </tbody>
+  </table>
+  <div class="mt-4">{{ $products->links() }}</div>
+  @endif
+</div>
+@endsection

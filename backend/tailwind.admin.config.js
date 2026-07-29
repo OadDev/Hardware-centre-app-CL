@@ -1,7 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: 'class',
-  content: ['./resources/views/admin/**/*.blade.php'],
+  content: ['./resources/views/admin/**/*.blade.php', './resources/views/seller/**/*.blade.php'],
   theme: {
     extend: {
       fontFamily: {

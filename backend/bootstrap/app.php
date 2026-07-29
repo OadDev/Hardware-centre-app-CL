@@ -23,7 +23,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'customer.optional' => TryAuthenticateCustomer::class,
         ]);
 
-        $middleware->redirectGuestsTo(fn () => route('admin.login'));
+        $middleware->redirectGuestsTo(function ($request) {
+            return $request->is('seller*') ? route('seller.login') : route('admin.login');
+        });
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

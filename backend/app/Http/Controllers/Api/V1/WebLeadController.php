@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\ContactMessage;
 use App\Models\NewsletterSubscriber;
 use App\Models\Seller;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 class WebLeadController extends Controller
@@ -46,14 +48,25 @@ class WebLeadController extends Controller
             'store_name' => ['required', 'string', 'max:150'],
             'owner_name' => ['required', 'string', 'max:120'],
             'phone' => ['required', 'string', 'max:20'],
-            'email' => ['required', 'email'],
+            'email' => ['required', 'email', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:8'],
             'gst_number' => ['required', 'string', 'max:20'],
             'category_interest' => ['required', 'string', 'max:60'],
             'warehouse_address' => ['nullable', 'string'],
         ]);
 
+        $user = User::create([
+            'name' => $data['owner_name'],
+            'email' => $data['email'],
+            'phone' => $data['phone'],
+            'password' => Hash::make($data['password']),
+            'is_active' => true,
+        ]);
+        $user->assignRole('Seller');
+
         $seller = Seller::create([
             'seller_code' => 'SLR-'.(1000 + Seller::count()),
+            'user_id' => $user->id,
             'store_name' => $data['store_name'],
             'owner_name' => $data['owner_name'],
             'email' => $data['email'],
@@ -66,7 +79,7 @@ class WebLeadController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Application received! Our team will verify your details within 48 hours.',
+            'message' => 'Application received! Sign in to the Seller Centre any time to track your approval status.',
             'seller_code' => $seller->seller_code,
         ], 201);
     }

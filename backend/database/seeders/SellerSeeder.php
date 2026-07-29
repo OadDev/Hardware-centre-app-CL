@@ -3,7 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\Seller;
+use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class SellerSeeder extends Seeder
 {
@@ -20,12 +22,21 @@ class SellerSeeder extends Seeder
     {
         $i = 0;
         foreach (self::$realSuppliers as $row) {
+            $email = strtolower(str_replace(' ', '.', $row['owner_name'])).'@'.strtolower(str_replace(' ', '', $row['store_name'])).'.in';
+
+            $user = User::updateOrCreate(
+                ['email' => $email],
+                ['name' => $row['owner_name'], 'password' => Hash::make('password'), 'is_active' => true]
+            );
+            $user->syncRoles(['Seller']);
+
             Seller::updateOrCreate(
                 ['store_name' => $row['store_name']],
                 [
                     'seller_code' => 'SLR-'.(1000 + $i),
+                    'user_id' => $user->id,
                     'owner_name' => $row['owner_name'],
-                    'email' => strtolower(str_replace(' ', '.', $row['owner_name'])).'@'.strtolower(str_replace(' ', '', $row['store_name'])).'.in',
+                    'email' => $email,
                     'phone' => '9'.random_int(100000000, 999999999),
                     'city' => $row['city'],
                     'state' => $row['state'],
