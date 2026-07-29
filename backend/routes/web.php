@@ -9,6 +9,7 @@ use App\Http\Controllers\Seller\ProductController as SellerProductController;
 use App\Http\Controllers\Seller\ProfileController as SellerProfileController;
 use App\Http\Controllers\Seller\ReturnController as SellerReturnController;
 use App\Http\Controllers\Seller\SettlementController as SellerSettlementController;
+use App\Http\Controllers\SetupController;
 use App\Http\Controllers\Web\AboutController;
 use App\Http\Controllers\Web\BlogController;
 use App\Http\Controllers\Web\CategoriesController;
@@ -21,6 +22,9 @@ use App\Http\Controllers\Web\SellController;
 use App\Http\Controllers\Web\SupportController;
 use App\Http\Controllers\Web\TrackOrderController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/setup', [SetupController::class, 'show'])->name('setup.show');
+Route::post('/setup', [SetupController::class, 'store'])->name('setup.store');
 
 Route::name('web.')->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');

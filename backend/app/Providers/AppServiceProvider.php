@@ -13,7 +13,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Before the /setup wizard has run, the database session/cache stores
+        // configured in .env don't exist yet — fall back to file-based storage
+        // so the wizard's own form (CSRF, validation errors) still works.
+        if (! file_exists(storage_path('app/installed.lock'))) {
+            if (config('session.driver') === 'database') {
+                config(['session.driver' => 'file']);
+            }
+            if (config('cache.default') === 'database') {
+                config(['cache.default' => 'file']);
+            }
+        }
     }
 
     /**
