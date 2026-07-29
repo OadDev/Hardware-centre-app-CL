@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -54,6 +55,33 @@ class CategoryController extends Controller
         return response()->json(['message' => 'Category deleted']);
     }
 
+    public function uploadIcon(Request $request, Category $category)
+    {
+        $request->validate([
+            'icon' => ['required', 'image', 'max:2048'],
+        ]);
+
+        if ($category->icon_path) {
+            Storage::disk('uploads')->delete($category->icon_path);
+        }
+
+        $category->update([
+            'icon_path' => $request->file('icon')->store('categories', 'uploads'),
+        ]);
+
+        return response()->json($this->transform($category->loadCount('products')));
+    }
+
+    public function destroyIcon(Category $category)
+    {
+        if ($category->icon_path) {
+            Storage::disk('uploads')->delete($category->icon_path);
+            $category->update(['icon_path' => null]);
+        }
+
+        return response()->json($this->transform($category->loadCount('products')));
+    }
+
     private function transform(Category $c): array
     {
         return [
@@ -61,6 +89,7 @@ class CategoryController extends Controller
             'name' => $c->name,
             'products' => $c->products_count,
             'status' => $c->status,
+            'iconUrl' => $c->icon_url,
         ];
     }
 }

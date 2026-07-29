@@ -373,10 +373,22 @@ SECTION_RENDERERS.categories = async function(main) {
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       ${DATA.categories.map(c => `
         <div class="bg-white dark:bg-ink-900 rounded-2xl border border-ink-200/70 dark:border-ink-800 shadow-card p-5">
-          <div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center">${icon('layout-grid','w-5 h-5')}</div>${statusBadge(c.status)}</div>
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center overflow-hidden">
+              ${c.iconUrl ? `<img src="${c.iconUrl}" alt="" class="w-full h-full object-contain">` : icon('layout-grid','w-5 h-5')}
+            </div>
+            ${statusBadge(c.status)}
+          </div>
           <p class="font-semibold text-ink-900 dark:text-white">${c.name}</p>
           <p class="text-xs text-ink-400 mt-1">${fmtNum(c.products)} products</p>
-          <div class="flex gap-2 mt-4">
+          <div class="mt-4 pt-3 border-t border-ink-100 dark:border-ink-800">
+            <label class="text-xs font-medium text-ink-500 block mb-1.5">Custom Icon</label>
+            <div class="flex items-center gap-2">
+              <input type="file" accept="image/*" data-cat-icon-input="${c.id}" class="flex-1 text-xs text-ink-600 dark:text-ink-300 file:mr-2 file:px-2.5 file:py-1 file:rounded-lg file:border-0 file:bg-ink-100 dark:file:bg-ink-800 file:text-ink-700 dark:file:text-ink-200 file:text-xs file:font-medium">
+              ${c.iconUrl ? `<button data-remove-cat-icon="${c.id}" class="px-2.5 py-1 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800 text-rose-600 flex-shrink-0">Remove</button>` : ''}
+            </div>
+          </div>
+          <div class="flex gap-2 mt-3">
             <button data-toggle-cat="${c.id}" class="flex-1 py-1.5 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800">${c.status==='Active'?'Deactivate':'Activate'}</button>
             <button data-delete-cat="${c.id}" class="flex-1 py-1.5 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800 text-rose-600">Remove</button>
           </div>
@@ -398,6 +410,20 @@ SECTION_RENDERERS.categories = async function(main) {
     if (!confirm('Delete this category?')) return;
     await api('DELETE', '/categories/'+btn.dataset.deleteCat);
     toast('Category removed'); await refreshCategories(); navigateTo('categories');
+  })));
+  main.querySelectorAll('[data-cat-icon-input]').forEach(input => input.addEventListener('change', withErr(async () => {
+    if (!input.files.length) return;
+    const fd = new FormData();
+    fd.append('icon', input.files[0]);
+    const res = await fetch('/admin/api/categories/'+input.dataset.catIconInput+'/icon', {
+      method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken() }, body: fd,
+    });
+    if (!res.ok) throw new Error((await res.json().catch(()=>({}))).message || 'Upload failed');
+    toast('Icon uploaded'); await refreshCategories(); navigateTo('categories');
+  })));
+  main.querySelectorAll('[data-remove-cat-icon]').forEach(btn => btn.addEventListener('click', withErr(async () => {
+    await api('DELETE', '/categories/'+btn.dataset.removeCatIcon+'/icon');
+    toast('Icon removed'); await refreshCategories(); navigateTo('categories');
   })));
 };
 
