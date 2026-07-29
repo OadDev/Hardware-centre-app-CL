@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\Seller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -15,7 +17,7 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Product::query()->with(['brand', 'category', 'seller']);
+        $query = Product::query()->with(['brand', 'category', 'seller', 'images']);
 
         if ($search = $request->query('q')) {
             $query->where('name', 'like', "%{$search}%");
@@ -45,7 +47,7 @@ class ProductController extends Controller
             'slug' => Str::slug($data['name']).'-'.Str::random(4),
         ]);
 
-        return response()->json($this->transform($product->load(['brand', 'category', 'seller'])), 201);
+        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images'])), 201);
     }
 
     public function update(Request $request, Product $product)
@@ -54,7 +56,7 @@ class ProductController extends Controller
         $data = $this->resolveRelations($data);
         $product->update($data);
 
-        return response()->json($this->transform($product->load(['brand', 'category', 'seller'])));
+        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images'])));
     }
 
     public function destroy(Product $product)
@@ -62,6 +64,28 @@ class ProductController extends Controller
         $product->delete();
 
         return response()->json(['message' => 'Product deleted']);
+    }
+
+    public function storeImages(Request $request, Product $product)
+    {
+        $request->validate([
+            'images' => ['required', 'array', 'max:8'],
+            'images.*' => ['image', 'max:5120'],
+        ]);
+
+        ProductImage::storeUploads($product, $request->file('images', []));
+
+        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images'])), 201);
+    }
+
+    public function destroyImage(Product $product, ProductImage $image)
+    {
+        abort_unless($image->product_id === $product->id, 404);
+
+        Storage::disk('uploads')->delete($image->path);
+        $image->delete();
+
+        return response()->json(['message' => 'Image removed']);
     }
 
     private function validated(Request $request, bool $isUpdate = false): array
@@ -80,6 +104,7 @@ class ProductController extends Controller
             'approval_status' => ['sometimes', Rule::in(['Approved', 'Pending', 'Rejected'])],
             'featured' => ['sometimes', 'boolean'],
             'description' => ['sometimes', 'nullable', 'string'],
+            'video_url' => ['sometimes', 'nullable', 'url', 'max:255'],
         ]);
     }
 
@@ -116,6 +141,8 @@ class ProductController extends Controller
             'featured' => (bool) $p->featured,
             'rating' => (float) $p->rating,
             'sold' => $p->sold_count,
+            'images' => $p->images->map(fn (ProductImage $img) => ['id' => $img->id, 'url' => $img->url])->all(),
+            'videoUrl' => $p->video_url,
         ];
     }
 }

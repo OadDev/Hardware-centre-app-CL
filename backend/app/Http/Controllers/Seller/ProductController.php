@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductImage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ProductController extends Controller
@@ -16,7 +18,7 @@ class ProductController extends Controller
         $seller = $request->user()->seller;
 
         $products = $seller->products()
-            ->with(['brand', 'category'])
+            ->with(['brand', 'category', 'images'])
             ->orderByDesc('id')
             ->paginate(15);
 
@@ -41,19 +43,26 @@ class ProductController extends Controller
             'unit' => ['sometimes', 'string', 'max:30'],
             'stock' => ['required', 'integer', 'min:0'],
             'description' => ['nullable', 'string'],
+            'video_url' => ['nullable', 'url', 'max:255'],
+            'images' => ['nullable', 'array', 'max:8'],
+            'images.*' => ['image', 'max:5120'],
         ]);
 
         $data['category_id'] = Category::where('category_code', $data['category_code'])->value('id');
         $data['brand_id'] = Brand::where('brand_code', $data['brand_code'])->value('id');
         unset($data['category_code'], $data['brand_code']);
+        $images = $data['images'] ?? [];
+        unset($data['images']);
 
-        $seller->products()->create([
+        $product = $seller->products()->create([
             ...$data,
             'product_code' => 'PRD-'.(10000 + Product::count()),
             'sku' => 'SKU'.strtoupper(Str::random(6)),
             'slug' => Str::slug($data['name']).'-'.Str::random(4),
             'approval_status' => 'Pending',
         ]);
+
+        ProductImage::storeUploads($product, $images);
 
         return back()->with('status', 'Product submitted for approval.');
     }
@@ -68,9 +77,16 @@ class ProductController extends Controller
             'mrp' => ['sometimes', 'numeric', 'min:0'],
             'stock' => ['sometimes', 'integer', 'min:0'],
             'description' => ['sometimes', 'nullable', 'string'],
+            'video_url' => ['sometimes', 'nullable', 'url', 'max:255'],
+            'images' => ['sometimes', 'nullable', 'array', 'max:8'],
+            'images.*' => ['image', 'max:5120'],
         ]);
 
+        $images = $data['images'] ?? [];
+        unset($data['images']);
+
         $product->update($data);
+        ProductImage::storeUploads($product, $images);
 
         return back()->with('status', 'Product updated.');
     }
@@ -81,6 +97,17 @@ class ProductController extends Controller
         $product->delete();
 
         return back()->with('status', 'Product removed.');
+    }
+
+    public function destroyImage(Request $request, Product $product, ProductImage $image)
+    {
+        $this->authorizeOwnership($request, $product);
+        abort_unless($image->product_id === $product->id, 404);
+
+        Storage::disk('uploads')->delete($image->path);
+        $image->delete();
+
+        return back()->with('status', 'Image removed.');
     }
 
     private function authorizeOwnership(Request $request, Product $product): void

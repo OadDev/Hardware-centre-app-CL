@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\CategoryResource;
 use App\Http\Resources\ProductResource;
 use App\Models\Category;
 use App\Models\Product;
@@ -12,7 +13,7 @@ class CategoryController extends Controller
 {
     public function index()
     {
-        return \App\Http\Resources\CategoryResource::collection(
+        return CategoryResource::collection(
             Category::where('status', 'Active')->orderBy('sort_order')->get()
         );
     }
@@ -22,7 +23,7 @@ class CategoryController extends Controller
         $sort = $request->query('sort', 'pop');
 
         $query = Product::query()->approved()
-            ->with(['brand', 'category', 'seller', 'specs'])
+            ->with(['brand', 'category', 'seller', 'specs', 'images'])
             ->where('category_id', $category->id);
 
         match ($sort) {
@@ -33,7 +34,7 @@ class CategoryController extends Controller
         };
 
         return response()->json([
-            'category' => new \App\Http\Resources\CategoryResource($category),
+            'category' => new CategoryResource($category),
             'products' => ProductResource::collection($query->paginate($request->integer('per_page', 20))),
         ]);
     }

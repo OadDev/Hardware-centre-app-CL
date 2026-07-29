@@ -467,3 +467,11 @@ export function IconEmptyOrders({ size = 44, color = '#CBD5E1', strokeWidth = 1.
     </Svg>
   );
 }
+
+export function IconPlay({ size = 16, color = '#fff' }: IconProps) {
+  return (
+    <Svg {...base(size)} fill={color}>
+      <Path d="M8 5v14l11-7z" />
+    </Svg>
+  );
+}

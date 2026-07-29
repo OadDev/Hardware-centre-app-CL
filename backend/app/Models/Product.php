@@ -11,8 +11,8 @@ class Product extends Model
 {
     protected $fillable = [
         'product_code', 'sku', 'name', 'slug', 'category_id', 'brand_id',
-        'seller_id', 'hsn_code_id', 'description', 'price', 'mrp', 'unit',
-        'stock', 'approval_status', 'featured', 'rating', 'reviews_count',
+        'seller_id', 'hsn_code_id', 'description', 'video_url', 'price', 'mrp',
+        'unit', 'stock', 'approval_status', 'featured', 'rating', 'reviews_count',
         'sold_count', 'eta_days', 'tag',
     ];
 

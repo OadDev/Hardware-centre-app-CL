@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -9,7 +10,7 @@ class ProductResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        /** @var \App\Models\Product $this */
+        /** @var Product $this */
         $customer = $request->user();
         $wished = false;
         if ($customer) {
@@ -44,6 +45,8 @@ class ProductResource extends JsonResource
             'wished' => $wished,
             'specs' => $this->specs->map(fn ($s) => [$s->label, $s->value])->all(),
             'desc' => $this->description,
+            'images' => $this->images->pluck('url')->filter()->values()->all(),
+            'video_url' => $this->video_url,
         ];
     }
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/types';
@@ -14,6 +14,7 @@ import {
   IconChevronLeft,
   IconHeart,
   IconMinus,
+  IconPlay,
   IconPlus,
   IconShare,
   IconStar,
@@ -54,12 +55,18 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
   const { product, reviews, rating_breakdown: ratingBars } = detail;
   const off = discountPct(product.price, product.mrp);
   const wished = !!wishlist[product.id];
+  const images = product.images ?? [];
+  const heroImage = images[gallery] ?? images[0];
 
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={{ paddingBottom: 110 }} showsVerticalScrollIndicator={false}>
         <SafeAreaView edges={['top']} style={styles.imageSection}>
-          <PlaceholderImage seed={product.id} label={product.name} style={styles.heroImage} />
+          {heroImage ? (
+            <Image source={{ uri: heroImage }} style={styles.heroImage} resizeMode="cover" />
+          ) : (
+            <PlaceholderImage seed={product.id} label={product.name} style={styles.heroImage} />
+          )}
           <View style={styles.imageTopBar}>
             <Pressable onPress={back} style={styles.roundBtn}>
               <IconChevronLeft />
@@ -78,20 +85,42 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
               <Text style={styles.offBadgeText}>-{off}% OFF</Text>
             </View>
           )}
+          {!!product.video_url && (
+            <Pressable
+              style={styles.videoBadge}
+              onPress={() => Linking.openURL(product.video_url as string)}
+            >
+              <IconPlay size={13} />
+              <Text style={styles.videoBadgeText}>Watch Video</Text>
+            </Pressable>
+          )}
         </SafeAreaView>
 
-        <View style={styles.galleryRow}>
-          {[0, 1, 2, 3].map((i) => (
-            <Pressable key={i} onPress={() => setGallery(i)}>
+        {images.length > 0 ? (
+          <View style={styles.galleryRow}>
+            {images.map((uri, i) => (
+              <Pressable key={uri} onPress={() => setGallery(i)}>
+                <Image
+                  source={{ uri }}
+                  style={[styles.galleryThumb, { borderColor: i === gallery ? colors.accent : colors.borderStrong }]}
+                  resizeMode="cover"
+                />
+              </Pressable>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.galleryRow}>
+            {[0, 1, 2, 3].map((i) => (
               <PlaceholderImage
+                key={i}
                 seed={product.id + '-g' + i}
                 label=" "
                 radius={11}
-                style={[styles.galleryThumb, { borderColor: i === gallery ? colors.accent : colors.borderStrong }]}
+                style={[styles.galleryThumb, { borderColor: colors.borderStrong }]}
               />
-            </Pressable>
-          ))}
-        </View>
+            ))}
+          </View>
+        )}
 
         <View style={styles.section}>
           <View style={styles.rowBetween}>
@@ -263,6 +292,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
   },
   offBadgeText: { color: '#fff', fontSize: 12, fontFamily: fonts.bodyExtra },
+  videoBadge: {
+    position: 'absolute',
+    bottom: 14,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 9,
+    backgroundColor: 'rgba(17,24,39,0.8)',
+  },
+  videoBadgeText: { color: '#fff', fontSize: 12, fontFamily: fonts.bodyExtra },
   galleryRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, paddingTop: 14 },
   galleryThumb: { width: 60, height: 60, borderWidth: 2 },
   section: { paddingHorizontal: 20, paddingTop: 18 },

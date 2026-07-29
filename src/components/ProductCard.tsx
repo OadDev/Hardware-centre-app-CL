@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Product } from '../api/types';
 import { colors, fonts, radii, shadow } from '../theme/theme';
 import { discountPct, inr } from '../utils/format';
@@ -28,7 +28,11 @@ export default function ProductCard({
   return (
     <Pressable onPress={onPress} style={[styles.card, shadow.card, width ? { width } : null]}>
       <View style={styles.imageWrap}>
-        <PlaceholderImage seed={product.id} label={product.brand} style={styles.image} />
+        {product.images?.[0] ? (
+          <Image source={{ uri: product.images[0] }} style={styles.image} resizeMode="cover" />
+        ) : (
+          <PlaceholderImage seed={product.id} label={product.brand} style={styles.image} />
+        )}
         <Pressable onPress={onToggleWish} hitSlop={8} style={styles.wishBtn}>
           <IconHeart size={16} color={wished ? colors.danger : 'none'} stroke={wished ? colors.danger : colors.textFaint} />
         </Pressable>

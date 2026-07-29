@@ -5,7 +5,7 @@
 @section('content')
 <div class="bg-white rounded-2xl border border-ink-200/70 p-5 mb-6">
   <div class="font-bold text-ink-900 mb-4">Add a new product</div>
-  <form method="POST" action="{{ route('seller.products.store') }}" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+  <form method="POST" action="{{ route('seller.products.store') }}" enctype="multipart/form-data" class="grid grid-cols-2 md:grid-cols-3 gap-3">
     @csrf
     <div class="col-span-2 md:col-span-1"><label class="block text-xs font-medium text-ink-500 mb-1">Product Name</label><input name="name" required class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200 focus:outline-none focus:ring-2 focus:ring-brand-600"></div>
     <div><label class="block text-xs font-medium text-ink-500 mb-1">Category</label>
@@ -24,6 +24,11 @@
     <div><label class="block text-xs font-medium text-ink-500 mb-1">MRP (₹)</label><input type="number" step="0.01" name="mrp" required class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
     <div><label class="block text-xs font-medium text-ink-500 mb-1">Stock</label><input type="number" name="stock" required class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
     <div class="col-span-2 md:col-span-3"><label class="block text-xs font-medium text-ink-500 mb-1">Description</label><textarea name="description" rows="2" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></textarea></div>
+    <div class="col-span-2 md:col-span-2">
+      <label class="block text-xs font-medium text-ink-500 mb-1">Product Photos (up to 8)</label>
+      <input type="file" name="images[]" multiple accept="image/*" class="w-full text-sm text-ink-600 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-ink-100 file:text-ink-700 file:text-xs file:font-medium">
+    </div>
+    <div><label class="block text-xs font-medium text-ink-500 mb-1">Video Link (optional)</label><input type="url" name="video_url" placeholder="https://youtube.com/watch?v=..." class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
     <div class="col-span-2 md:col-span-3"><button type="submit" class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold">Submit for Approval</button></div>
   </form>
 </div>
@@ -35,12 +40,21 @@
   @else
   <table class="w-full text-sm">
     <thead><tr class="text-left text-ink-400 border-b border-ink-100">
-      <th class="py-2 font-medium">Product</th><th class="font-medium">Price</th><th class="font-medium">Stock</th><th class="font-medium">Approval</th><th class="font-medium"></th>
+      <th class="py-2 font-medium"></th><th class="font-medium">Product</th><th class="font-medium">Price</th><th class="font-medium">Stock</th><th class="font-medium">Approval</th><th class="font-medium"></th>
     </tr></thead>
     <tbody>
       @foreach($products as $p)
       <tr class="border-b border-ink-100 last:border-0">
-        <td class="py-2.5">{{ $p->name }}<div class="text-xs text-ink-400">{{ $p->brand->name }} · {{ $p->category->name }}</div></td>
+        <td class="py-2.5">
+          @if($p->images->first())
+            <img src="{{ $p->images->first()->url }}" alt="" class="w-10 h-10 rounded-lg object-cover border border-ink-200">
+          @else
+            <div class="w-10 h-10 rounded-lg bg-ink-100 flex items-center justify-center text-[10px] text-ink-400">No photo</div>
+          @endif
+        </td>
+        <td class="py-2.5">{{ $p->name }}<div class="text-xs text-ink-400">{{ $p->brand->name }} · {{ $p->category->name }}</div>
+          @if($p->video_url)<a href="{{ $p->video_url }}" target="_blank" class="text-xs text-brand-600 font-semibold">▶ Watch video</a>@endif
+        </td>
         <td>₹{{ number_format($p->price, 2) }}</td>
         <td>{{ $p->stock }}</td>
         <td>

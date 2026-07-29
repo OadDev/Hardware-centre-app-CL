@@ -64,6 +64,7 @@ Route::prefix('seller')->name('seller.')->group(function () {
         Route::post('products', [SellerProductController::class, 'store'])->name('products.store');
         Route::patch('products/{product:product_code}', [SellerProductController::class, 'update'])->name('products.update');
         Route::delete('products/{product:product_code}', [SellerProductController::class, 'destroy'])->name('products.destroy');
+        Route::delete('products/{product:product_code}/images/{image}', [SellerProductController::class, 'destroyImage'])->name('products.images.destroy');
 
         Route::get('orders', [SellerOrderController::class, 'index'])->name('orders');
         Route::get('settlements', [SellerSettlementController::class, 'index'])->name('settlements');

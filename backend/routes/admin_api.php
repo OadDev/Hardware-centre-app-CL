@@ -28,6 +28,8 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::apiResource('sellers', SellerController::class)->only(['index', 'store', 'show', 'update']);
     Route::apiResource('customers', CustomerController::class)->only(['index', 'update']);
     Route::apiResource('products', ProductController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::post('products/{product}/images', [ProductController::class, 'storeImages']);
+    Route::delete('products/{product}/images/{image}', [ProductController::class, 'destroyImage']);
     Route::apiResource('categories', CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::apiResource('brands', BrandController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::apiResource('orders', OrderController::class)->only(['index', 'show', 'update']);

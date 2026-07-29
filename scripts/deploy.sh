@@ -28,6 +28,21 @@ fi
 mkdir -p storage/framework/sessions storage/framework/views storage/framework/cache storage/logs bootstrap/cache
 chmod -R 775 storage bootstrap/cache
 
+# public_html is a one-way copy of backend/public (see below), not a symlink to
+# it, so uploaded files (product photos, etc.) must be written directly into
+# a directory that's actually served. Point the 'uploads' disk (see
+# config/filesystems.php) at public_html/uploads instead of the usual
+# storage/app/public + /storage symlink.
+mkdir -p "$PUBLIC_DIR/uploads"
+chmod -R 775 "$PUBLIC_DIR/uploads"
+if ! grep -q '^UPLOADS_PATH=' .env; then
+  APP_URL_VALUE=$(grep -E '^APP_URL=' .env | head -1 | cut -d'=' -f2- | tr -d '"')
+  {
+    echo "UPLOADS_PATH=${PUBLIC_DIR}/uploads"
+    echo "UPLOADS_URL=${APP_URL_VALUE}/uploads"
+  } >> .env
+fi
+
 cp -r public/. "$PUBLIC_DIR"/
 sed -i "s|__DIR__\.'/\.\./|__DIR__.'/../app/backend/|g" "$PUBLIC_DIR/index.php"
 

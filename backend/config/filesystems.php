@@ -47,6 +47,20 @@ return [
             'report' => false,
         ],
 
+        // Serves user-uploaded files (product images, etc). Defaults to the
+        // standard storage/app/public + /storage symlink setup. On hosts where
+        // the document root can't point at backend/public directly (e.g. a
+        // shared-hosting public_html copy), override UPLOADS_PATH/UPLOADS_URL
+        // in .env to point straight at the served directory instead.
+        'uploads' => [
+            'driver' => 'local',
+            'root' => env('UPLOADS_PATH', storage_path('app/public')),
+            'url' => env('UPLOADS_URL', env('APP_URL').'/storage'),
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

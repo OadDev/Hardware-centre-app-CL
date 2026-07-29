@@ -24,6 +24,8 @@ export type Product = {
   wished: boolean;
   specs: [string, string][];
   desc: string;
+  images: string[];
+  video_url: string | null;
 };
 
 export type Category = {

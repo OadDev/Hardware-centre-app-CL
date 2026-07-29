@@ -13,7 +13,7 @@ class WishlistController extends Controller
     {
         $products = Product::query()
             ->whereHas('wishlistedBy', fn ($q) => $q->where('customers.id', $request->user()->id))
-            ->with(['brand', 'category', 'seller', 'specs'])
+            ->with(['brand', 'category', 'seller', 'specs', 'images'])
             ->get();
 
         return ProductResource::collection($products);

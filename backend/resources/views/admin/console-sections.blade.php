@@ -280,13 +280,18 @@ SECTION_RENDERERS.products = async function(main) {
         ${formField('MRP (₹)','number','e.g. 2999','','np-mrp')}
         ${formField('Stock','number','e.g. 100','0','np-stock')}
         ${formSelect('Unit', ['piece','box','pair','coil','bag','litre','tub'], 0, 'np-unit')}
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-medium text-ink-500 dark:text-ink-400 mb-1.5">Product Photos (up to 8)</label>
+          <input type="file" id="np-images" multiple accept="image/*" class="w-full text-sm text-ink-600 dark:text-ink-300 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-ink-100 dark:file:bg-ink-700 file:text-ink-700 dark:file:text-ink-200 file:text-xs file:font-medium">
+        </div>
+        ${formField('Video Link (optional)','url','https://youtube.com/watch?v=...','','np-video')}
       </div>`,
       confirmLabel:'Create Product',
       onConfirm: withErr(async () => {
         const category = DATA.categories.find(c=>c.name===document.getElementById('np-category').value);
         const brand = DATA.brands.find(b=>b.name===document.getElementById('np-brand').value);
         const seller = DATA.sellers.find(s=>s.store===document.getElementById('np-seller').value);
-        await api('POST', '/products', {
+        const created = await api('POST', '/products', {
           name: document.getElementById('np-name').value,
           category_code: category ? category.id : null,
           brand_code: brand ? brand.id : null,
@@ -295,7 +300,17 @@ SECTION_RENDERERS.products = async function(main) {
           mrp: parseFloat(document.getElementById('np-mrp').value||0),
           stock: parseInt(document.getElementById('np-stock').value||0),
           unit: document.getElementById('np-unit').value,
+          video_url: document.getElementById('np-video').value || undefined,
         });
+        const files = document.getElementById('np-images').files;
+        if (files && files.length) {
+          const fd = new FormData();
+          Array.from(files).forEach(f => fd.append('images[]', f));
+          const res = await fetch('/admin/api/products/'+created.id+'/images', {
+            method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken() }, body: fd,
+          });
+          if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.message || 'Photo upload failed'); }
+        }
         closeModal(); toast('Product created successfully'); await refreshProducts(); navigateTo('products');
       })
     });
@@ -311,11 +326,36 @@ function openProductProfile(p) {
       ${miniStat('Sold', fmtNum(p.sold))}
     </div>
     ${drawerSection('Details', `${drawerRow('Category', p.category)}${drawerRow('Seller', p.sellerName)}${drawerRow('MRP', fmtINR(p.mrp))}${drawerRow('Approval', statusBadge(p.approval))}`)}
+    ${drawerSection('Photos', `
+      <div class="flex flex-wrap gap-2 mb-3">
+        ${(p.images||[]).map(img => `
+          <div class="relative w-16 h-16">
+            <img src="${img.url}" class="w-16 h-16 rounded-lg object-cover border border-ink-200 dark:border-ink-700">
+            <button data-remove-image="${img.id}" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-600 text-white text-xs leading-none flex items-center justify-center">×</button>
+          </div>`).join('') || `<p class="text-xs text-ink-400">No photos uploaded yet</p>`}
+      </div>
+      <input type="file" id="drawer-add-images" multiple accept="image/*" class="w-full text-sm text-ink-600 dark:text-ink-300 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-ink-100 dark:file:bg-ink-700 file:text-ink-700 dark:file:text-ink-200 file:text-xs file:font-medium">
+      <button id="drawer-upload-images-btn" class="mt-2 w-full py-2 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700">Upload Photos</button>
+      ${p.videoUrl ? `<a href="${p.videoUrl}" target="_blank" class="block mt-3 text-sm text-brand-600 font-medium">▶ Watch product video</a>` : ''}
+    `)}
     <div class="flex gap-2.5 mt-6 pt-5 border-t border-ink-100 dark:border-ink-800">
       ${p.approval!=='Approved' ? `<button id="approve-product-btn" class="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl">Approve</button>` : ''}
       <button id="toggle-featured-btn" class="flex-1 px-4 py-2.5 bg-white dark:bg-ink-800 border border-ink-200 dark:border-ink-700 text-sm font-medium rounded-xl">${p.featured?'Unfeature':'Feature'} Product</button>
     </div>
   `, true);
+  document.getElementById('drawer-upload-images-btn')?.addEventListener('click', withErr(async () => {
+    const files = document.getElementById('drawer-add-images').files;
+    if (!files || !files.length) { toast('Choose at least one photo', 'warn'); return; }
+    const fd = new FormData();
+    Array.from(files).forEach(f => fd.append('images[]', f));
+    const res = await fetch('/admin/api/products/'+p.id+'/images', { method:'POST', headers:{'X-CSRF-TOKEN':csrfToken()}, body: fd });
+    if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.message || 'Photo upload failed'); }
+    toast('Photos uploaded'); await refreshProducts(); navigateTo('products');
+  }));
+  document.querySelectorAll('[data-remove-image]').forEach(btn => btn.addEventListener('click', withErr(async () => {
+    await api('DELETE', '/products/'+p.id+'/images/'+btn.dataset.removeImage);
+    toast('Photo removed'); await refreshProducts(); navigateTo('products');
+  })));
   document.getElementById('approve-product-btn')?.addEventListener('click', withErr(async () => {
     await api('PATCH', '/products/'+p.id, { approval_status:'Approved' });
     closeModal(); toast('Product approved'); await refreshProducts(); navigateTo('products');
