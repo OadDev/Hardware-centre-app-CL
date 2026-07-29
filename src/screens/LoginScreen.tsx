@@ -6,31 +6,34 @@ import { RootStackParamList } from '../navigation/types';
 import { useApp } from '../context/AppContext';
 import { colors, fonts, radii } from '../theme/theme';
 import { BackButton, PrimaryButton } from '../components/UI';
-import { IconGoogle, IconLock, IconMail } from '../components/Icons';
+import { IconGoogle, IconLock, IconMail, IconPhone } from '../components/Icons';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const PHONE_RE = /^[6-9]\d{9}$/;
 
 export default function LoginScreen({ navigation }: Props) {
-  const { requestOtp } = useApp();
+  const { requestOtp, otpChannel } = useApp();
+  const isSms = otpChannel === 'sms';
   const [email, setEmail] = useState('rajesh@kumarhardware.in');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [remember, setRemember] = useState(true);
   const [sending, setSending] = useState(false);
 
   const doLogin = async () => {
-    const e = email.trim();
-    if (!EMAIL_RE.test(e)) {
-      setError('Enter a valid email address.');
+    const contact = isSms ? phone.trim() : email.trim();
+    if (isSms ? !PHONE_RE.test(contact) : !EMAIL_RE.test(contact)) {
+      setError(isSms ? 'Enter a valid 10-digit mobile number.' : 'Enter a valid email address.');
       return;
     }
     setError('');
     setSending(true);
-    const debugOtp = await requestOtp(e);
+    const debugOtp = await requestOtp(contact);
     setSending(false);
-    navigation.navigate('Otp', { email: e, debugOtp });
+    navigation.navigate('Otp', { contact, channel: otpChannel, debugOtp });
   };
 
   return (
@@ -40,21 +43,35 @@ export default function LoginScreen({ navigation }: Props) {
         <Text style={styles.title}>Welcome back</Text>
         <Text style={styles.sub}>Login to your Hardware Centre account.</Text>
 
-        <Text style={styles.label}>Email Address</Text>
+        <Text style={styles.label}>{isSms ? 'Mobile Number' : 'Email Address'}</Text>
         <View style={[styles.inputRow, { borderColor: error ? colors.danger : colors.borderStrong }]}>
-          <IconMail />
-          <TextInput
-            value={email}
-            onChangeText={(v) => {
-              setEmail(v);
-              setError('');
-            }}
-            placeholder="you@business.in"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            style={styles.input}
-            placeholderTextColor={colors.textFaint}
-          />
+          {isSms ? <IconPhone /> : <IconMail />}
+          {isSms ? (
+            <TextInput
+              value={phone}
+              onChangeText={(v) => {
+                setPhone(v.replace(/\D/g, '').slice(0, 10));
+                setError('');
+              }}
+              placeholder="98765 43210"
+              keyboardType="phone-pad"
+              style={styles.input}
+              placeholderTextColor={colors.textFaint}
+            />
+          ) : (
+            <TextInput
+              value={email}
+              onChangeText={(v) => {
+                setEmail(v);
+                setError('');
+              }}
+              placeholder="you@business.in"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              style={styles.input}
+              placeholderTextColor={colors.textFaint}
+            />
+          )}
         </View>
 
         <Text style={[styles.label, { marginTop: 18 }]}>Password</Text>

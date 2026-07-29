@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Foundation\Auth\User as AuthenticatableModel;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Foundation\Auth\User as AuthenticatableModel;
 use Laravel\Sanctum\HasApiTokens;
 
 class Customer extends AuthenticatableModel
@@ -24,6 +24,7 @@ class Customer extends AuthenticatableModel
     {
         return [
             'email_verified_at' => 'datetime',
+            'phone_verified_at' => 'datetime',
             'password' => 'hashed',
             'wallet_balance' => 'decimal:2',
             'is_guest' => 'boolean',

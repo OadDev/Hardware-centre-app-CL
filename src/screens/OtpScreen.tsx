@@ -6,7 +6,7 @@ import { RootStackParamList } from '../navigation/types';
 import { useApp } from '../context/AppContext';
 import { colors, fonts, radii } from '../theme/theme';
 import { BackButton, PrimaryButton } from '../components/UI';
-import { IconCheckCircle, IconMail } from '../components/Icons';
+import { IconCheckCircle, IconMail, IconPhone } from '../components/Icons';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Otp'>;
 
@@ -16,8 +16,14 @@ function maskEmail(email: string): string {
   return email;
 }
 
+function maskPhone(phone: string): string {
+  if (phone.length <= 4) return phone;
+  return '••••••' + phone.slice(-4);
+}
+
 export default function OtpScreen({ navigation, route }: Props) {
-  const { email, debugOtp } = route.params;
+  const { contact, channel, debugOtp } = route.params;
+  const isSms = channel === 'sms';
   const { requestOtp, verifyOtp, showToast } = useApp();
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [resend, setResend] = useState(60);
@@ -51,8 +57,8 @@ export default function OtpScreen({ navigation, route }: Props) {
   const resendOtp = async () => {
     setOtp(['', '', '', '', '', '']);
     setResend(60);
-    const newDebugOtp = await requestOtp(email);
-    showToast(newDebugOtp ? `Dev OTP: ${newDebugOtp}` : 'Code resent to your email');
+    const newDebugOtp = await requestOtp(contact);
+    showToast(newDebugOtp ? `Dev OTP: ${newDebugOtp}` : `Code resent via ${isSms ? 'SMS' : 'email'}`);
   };
 
   const verify = async () => {
@@ -61,7 +67,7 @@ export default function OtpScreen({ navigation, route }: Props) {
       return;
     }
     setVerifying(true);
-    const ok = await verifyOtp(email, otp.join(''));
+    const ok = await verifyOtp(contact, otp.join(''));
     setVerifying(false);
     if (!ok) return;
 
@@ -79,11 +85,16 @@ export default function OtpScreen({ navigation, route }: Props) {
       <View style={{ paddingHorizontal: 28, flex: 1 }}>
         <BackButton onPress={() => navigation.goBack()} />
         <View style={styles.iconWrap}>
-          <IconMail size={30} color={colors.accent} strokeWidth={1.8} />
+          {isSms ? (
+            <IconPhone size={30} color={colors.accent} strokeWidth={1.8} />
+          ) : (
+            <IconMail size={30} color={colors.accent} strokeWidth={1.8} />
+          )}
         </View>
-        <Text style={styles.title}>Verify your email</Text>
+        <Text style={styles.title}>{isSms ? 'Verify your number' : 'Verify your email'}</Text>
         <Text style={styles.sub}>
-          We've sent a 6-digit verification code to <Text style={styles.bold}>{maskEmail(email)}</Text>
+          We've sent a 6-digit verification code to{' '}
+          <Text style={styles.bold}>{isSms ? maskPhone(contact) : maskEmail(contact)}</Text>
         </Text>
 
         <View style={styles.otpRow}>
@@ -115,9 +126,15 @@ export default function OtpScreen({ navigation, route }: Props) {
           )}
         </View>
 
-        <PrimaryButton label="Verify Email" onPress={verify} disabled={!otpDone} loading={verifying} style={{ marginTop: 24 }} />
+        <PrimaryButton
+          label={isSms ? 'Verify Number' : 'Verify Email'}
+          onPress={verify}
+          disabled={!otpDone}
+          loading={verifying}
+          style={{ marginTop: 24 }}
+        />
         <Text style={styles.changeEmail} onPress={() => navigation.goBack()}>
-          Change Email
+          {isSms ? 'Change Number' : 'Change Email'}
         </Text>
       </View>
 
@@ -137,7 +154,7 @@ export default function OtpScreen({ navigation, route }: Props) {
           >
             <IconCheckCircle size={48} color="#fff" strokeWidth={3} />
           </Animated.View>
-          <Text style={styles.successTitle}>Email Verified</Text>
+          <Text style={styles.successTitle}>{isSms ? 'Number Verified' : 'Email Verified'}</Text>
           <Text style={styles.successSub}>Redirecting to your dashboard…</Text>
         </Animated.View>
       )}

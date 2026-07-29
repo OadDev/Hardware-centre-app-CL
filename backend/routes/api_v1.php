@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\WebOrderLookupController;
 use App\Http\Controllers\Api\V1\WishlistController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('auth/otp/channel', [AuthController::class, 'otpChannel']);
 Route::post('auth/otp/request', [AuthController::class, 'requestOtp']);
 Route::post('auth/otp/verify', [AuthController::class, 'verifyOtp']);
 Route::post('auth/guest', [AuthController::class, 'guest']);

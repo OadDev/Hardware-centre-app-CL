@@ -13,7 +13,7 @@ export type RootStackParamList = {
   Onboarding: undefined;
   Welcome: undefined;
   Login: undefined;
-  Otp: { email: string; debugOtp?: string | null };
+  Otp: { contact: string; channel: 'email' | 'sms'; debugOtp?: string | null };
   Main: NavigatorScreenParams<MainTabParamList>;
   Search: undefined;
   CategoryListing: { catId: string };

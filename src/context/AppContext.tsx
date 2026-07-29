@@ -10,6 +10,7 @@ import {
   HomeApi,
   CategoryApi,
   OrderApi,
+  OtpChannel,
   WishlistApi,
 } from '../api/endpoints';
 import { CartResponse, Category, HomeData, Totals } from '../api/types';
@@ -26,6 +27,7 @@ type AppContextValue = {
   ready: boolean;
   hasOnboarded: boolean;
   session: 'guest' | 'user' | null;
+  otpChannel: OtpChannel;
   user: User;
   home: HomeData | null;
   categories: Category[];
@@ -42,8 +44,8 @@ type AppContextValue = {
   couponErr: string;
 
   completeOnboarding: () => void;
-  requestOtp: (email: string) => Promise<string | null>;
-  verifyOtp: (email: string, otp: string) => Promise<boolean>;
+  requestOtp: (contact: string) => Promise<string | null>;
+  verifyOtp: (contact: string, otp: string) => Promise<boolean>;
   enterAsGuest: () => Promise<void>;
   logout: () => Promise<void>;
 
@@ -95,6 +97,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [hasOnboarded, setHasOnboarded] = useState(false);
   const [session, setSession] = useState<'guest' | 'user' | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [otpChannel, setOtpChannel] = useState<OtpChannel>('email');
 
   const [home, setHome] = useState<HomeData | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -152,6 +155,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    AuthApi.getOtpChannel()
+      .then((res) => setOtpChannel(res.channel))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     (async () => {
       try {
         const onboarded = await AsyncStorage.getItem(ONBOARD_KEY);
@@ -183,19 +192,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem(ONBOARD_KEY, '1').catch(() => {});
   }, []);
 
-  const requestOtp = useCallback(async (email: string): Promise<string | null> => {
+  const requestOtp = useCallback(async (contact: string): Promise<string | null> => {
     try {
-      const res = await AuthApi.requestOtp(email);
+      const res = await AuthApi.requestOtp(otpChannel, contact);
       return res.debug_otp;
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : 'Could not send verification code');
       return null;
     }
-  }, [showToast]);
+  }, [showToast, otpChannel]);
 
-  const verifyOtp = useCallback(async (email: string, otp: string): Promise<boolean> => {
+  const verifyOtp = useCallback(async (contact: string, otp: string): Promise<boolean> => {
     try {
-      const res = await AuthApi.verifyOtp(email, otp);
+      const res = await AuthApi.verifyOtp(otpChannel, contact, otp);
       await setToken(res.token);
       setCustomer(res.customer);
       setSession(res.customer.is_guest ? 'guest' : 'user');
@@ -207,7 +216,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       showToast(err instanceof ApiError ? err.message : 'Verification failed');
       return false;
     }
-  }, [loadUserData, showToast]);
+  }, [loadUserData, showToast, otpChannel]);
 
   const enterAsGuest = useCallback(async () => {
     try {
@@ -388,6 +397,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     ready,
     hasOnboarded,
     session,
+    otpChannel,
     user: toUser(customer),
     home,
     categories,

@@ -904,7 +904,7 @@ SECTION_RENDERERS.roles = async function(main) {
 /* ===== SETTINGS ===== */
 SECTION_RENDERERS.settings = async function(main) {
   const s = DATA.settings;
-  const tabs = ['Company Information','Security & SMTP'];
+  const tabs = ['Company Information','Security & SMTP','OTP Verification'];
   let activeTab = tabs[0];
   main.innerHTML = `
     ${pageHeader('Settings', 'Company, security and system configuration')}
@@ -946,14 +946,17 @@ SECTION_RENDERERS.settings = async function(main) {
         });
         toast('Company settings saved'); await refreshSettings(); navigateTo('settings');
       }));
-    } else {
+    } else if (activeTab === 'Security & SMTP') {
       content.innerHTML = `
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
           ${card(`<div class="p-5"><p class="font-semibold text-ink-900 dark:text-white mb-4">SMTP Settings</p><div class="space-y-3">
             ${formField('SMTP Host','text','smtp.yourmailserver.com', s.smtp_host||'', 'st-smtp-host')}
             ${formField('SMTP Port','number','587', s.smtp_port||'', 'st-smtp-port')}
+            ${formSelect('Encryption', ['TLS','SSL','None'], ['tls','ssl','none'].indexOf(s.smtp_encryption||'tls'), 'st-smtp-encryption')}
             ${formField('SMTP Username','text','', s.smtp_username||'', 'st-smtp-user')}
             ${formField('SMTP Password','password','••••••••••','', 'st-smtp-pass')}
+            ${formField('From Address','email','no-reply@yourdomain.com', s.smtp_from_address||'', 'st-smtp-from-address')}
+            ${formField('From Name','text','Hardware Centre', s.smtp_from_name||'', 'st-smtp-from-name')}
           </div></div>`)}
           ${card(`<div class="p-5"><p class="font-semibold text-ink-900 dark:text-white mb-4">Password Policy</p><div class="space-y-3">
             ${formField('Minimum Password Length','number','', s.password_min_length||8, 'st-pw-len')}
@@ -967,14 +970,47 @@ SECTION_RENDERERS.settings = async function(main) {
         await api('PATCH', '/settings', {
           smtp_host: document.getElementById('st-smtp-host').value,
           smtp_port: parseInt(document.getElementById('st-smtp-port').value||0) || null,
+          smtp_encryption: ['tls','ssl','none'][document.getElementById('st-smtp-encryption').selectedIndex],
           smtp_username: document.getElementById('st-smtp-user').value,
           smtp_password: document.getElementById('st-smtp-pass').value || undefined,
+          smtp_from_address: document.getElementById('st-smtp-from-address').value,
+          smtp_from_name: document.getElementById('st-smtp-from-name').value,
           password_min_length: parseInt(document.getElementById('st-pw-len').value||8),
           password_require_special: document.getElementById('st-pw-special').dataset.checked === 'true',
           require_2fa_admins: document.getElementById('st-2fa').dataset.checked === 'true',
           session_timeout_minutes: parseInt(document.getElementById('st-session-timeout').value||60),
         });
         toast('Security settings saved'); await refreshSettings(); navigateTo('settings');
+      }));
+    } else {
+      const channel = s.otp_channel === 'sms' ? 'sms' : 'email';
+      content.innerHTML = `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          ${card(`<div class="p-5"><p class="font-semibold text-ink-900 dark:text-white mb-4">Active Channel</p>
+            <p class="text-xs text-ink-400 mb-4">Only one channel can be active at a time. Switching to SMS disables Email OTP, and vice versa.</p>
+            <div class="space-y-2">
+              <label class="flex items-center gap-2.5 p-3 rounded-xl border ${channel==='email'?'border-brand-600 bg-brand-50 dark:bg-brand-600/10':'border-ink-200 dark:border-ink-700'} cursor-pointer">
+                <input type="radio" name="otp-channel" value="email" id="otp-ch-email" ${channel==='email'?'checked':''}>
+                <div><p class="text-sm font-medium text-ink-900 dark:text-white">Email OTP</p><p class="text-xs text-ink-400">Sent via the SMTP settings configured in Security &amp; SMTP</p></div>
+              </label>
+              <label class="flex items-center gap-2.5 p-3 rounded-xl border ${channel==='sms'?'border-brand-600 bg-brand-50 dark:bg-brand-600/10':'border-ink-200 dark:border-ink-700'} cursor-pointer">
+                <input type="radio" name="otp-channel" value="sms" id="otp-ch-sms" ${channel==='sms'?'checked':''}>
+                <div><p class="text-sm font-medium text-ink-900 dark:text-white">SMS OTP</p><p class="text-xs text-ink-400">Sent via Fast2SMS using the API key below</p></div>
+              </label>
+            </div>
+          </div>`)}
+          ${card(`<div class="p-5"><p class="font-semibold text-ink-900 dark:text-white mb-4">Fast2SMS</p><div class="space-y-3">
+            ${formField('Fast2SMS API Key','password','••••••••••','', 'st-fast2sms-key')}
+            <p class="text-xs text-ink-400">From fast2sms.com &rarr; Dev API &rarr; API Key. Leave blank to keep the current key.</p>
+          </div></div>`)}
+        </div>
+        <div class="flex justify-end mt-5">${btnPrimary('Save Changes','check','save-otp-btn')}</div>`;
+      document.getElementById('save-otp-btn').addEventListener('click', withErr(async () => {
+        await api('PATCH', '/settings', {
+          otp_channel: document.querySelector('input[name="otp-channel"]:checked').value,
+          fast2sms_api_key: document.getElementById('st-fast2sms-key').value || undefined,
+        });
+        toast('OTP settings saved'); await refreshSettings(); navigateTo('settings');
       }));
     }
     refreshIcons();

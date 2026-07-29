@@ -18,10 +18,19 @@ import {
 // resource "data" envelope (when the controller returns a Resource /
 // ResourceCollection directly). Each function unwraps accordingly.
 
+export type OtpChannel = 'email' | 'sms';
+
 export const AuthApi = {
-  requestOtp: (email: string) => http.post<{ message: string; debug_otp: string | null }>('/auth/otp/request', { email }),
-  verifyOtp: (email: string, otp: string) =>
-    http.post<{ token: string; customer: Customer }>('/auth/otp/verify', { email, otp }),
+  getOtpChannel: () => http.get<{ channel: OtpChannel }>('/auth/otp/channel'),
+  requestOtp: (channel: OtpChannel, contact: string) =>
+    http.post<{ message: string; channel: OtpChannel; debug_otp: string | null }>('/auth/otp/request', {
+      [channel === 'sms' ? 'phone' : 'email']: contact,
+    }),
+  verifyOtp: (channel: OtpChannel, contact: string, otp: string) =>
+    http.post<{ token: string; customer: Customer }>('/auth/otp/verify', {
+      [channel === 'sms' ? 'phone' : 'email']: contact,
+      otp,
+    }),
   guest: () => http.post<{ token: string; customer: Customer }>('/auth/guest'),
   me: async () => (await http.get<{ data: Customer }>('/me')).data,
   logout: () => http.post<{ message: string }>('/logout'),
