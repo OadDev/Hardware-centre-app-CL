@@ -10,17 +10,17 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Install sshpass
+        run: sudo apt-get update -y && sudo apt-get install -y sshpass
+
       - name: Deploy over SSH
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          SSHPASS: ${{ secrets.DEPLOY_PASSWORD }}
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-
-          ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" \
+          sshpass -e ssh -p "$DEPLOY_PORT" \
             -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
             "$DEPLOY_USER@$DEPLOY_HOST" '
             [ -f ~/.bashrc ] && source ~/.bashrc
