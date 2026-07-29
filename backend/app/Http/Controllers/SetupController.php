@@ -128,7 +128,7 @@ class SetupController extends Controller
             ]);
         }
 
-        $seedExit = Artisan::call('db:seed', ['--force' => true]);
+        $seedExit = Artisan::call('db:seed', ['--class' => 'Database\\Seeders\\ProductionSeeder', '--force' => true]);
         if ($seedExit !== 0) {
             return back()->withInput()->withErrors([
                 'db_host' => 'Seeding failed: '.Artisan::output(),
@@ -142,6 +142,10 @@ class SetupController extends Controller
                 'password' => Hash::make($data['admin_password']),
             ]);
         }
+
+        // AdminUserSeeder also creates a demo "Ops Manager" account with a
+        // known default password — fine for local dev, not for a live site.
+        User::where('email', 'manager@hardwarecentre.in')->delete();
 
         Artisan::call('config:cache');
         Artisan::call('route:cache');
