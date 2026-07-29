@@ -375,18 +375,23 @@ SECTION_RENDERERS.categories = async function(main) {
         <div class="bg-white dark:bg-ink-900 rounded-2xl border border-ink-200/70 dark:border-ink-800 shadow-card p-5">
           <div class="flex items-start justify-between mb-3">
             <div class="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center overflow-hidden">
-              ${c.iconUrl ? `<img src="${c.iconUrl}" alt="" class="w-full h-full object-contain">` : icon('layout-grid','w-5 h-5')}
+              ${c.iconUrl ? `<img src="${c.iconUrl}" alt="" class="w-full h-full object-contain">`
+                : c.iconClass ? `<i class="${c.iconClass}" style="font-size:18px"></i>`
+                : icon('layout-grid','w-5 h-5')}
             </div>
             ${statusBadge(c.status)}
           </div>
           <p class="font-semibold text-ink-900 dark:text-white">${c.name}</p>
           <p class="text-xs text-ink-400 mt-1">${fmtNum(c.products)} products</p>
-          <div class="mt-4 pt-3 border-t border-ink-100 dark:border-ink-800">
-            <label class="text-xs font-medium text-ink-500 block mb-1.5">Custom Icon</label>
+          <div class="mt-4 pt-3 border-t border-ink-100 dark:border-ink-800 space-y-2">
+            <label class="text-xs font-medium text-ink-500 block">Custom Icon</label>
+            <input type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" data-cat-icon-input="${c.id}" class="w-full text-xs text-ink-600 dark:text-ink-300 file:mr-2 file:px-2.5 file:py-1 file:rounded-lg file:border-0 file:bg-ink-100 dark:file:bg-ink-800 file:text-ink-700 dark:file:text-ink-200 file:text-xs file:font-medium">
             <div class="flex items-center gap-2">
-              <input type="file" accept="image/*" data-cat-icon-input="${c.id}" class="flex-1 text-xs text-ink-600 dark:text-ink-300 file:mr-2 file:px-2.5 file:py-1 file:rounded-lg file:border-0 file:bg-ink-100 dark:file:bg-ink-800 file:text-ink-700 dark:file:text-ink-200 file:text-xs file:font-medium">
-              ${c.iconUrl ? `<button data-remove-cat-icon="${c.id}" class="px-2.5 py-1 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800 text-rose-600 flex-shrink-0">Remove</button>` : ''}
+              <input type="text" placeholder="or a Font Awesome class, e.g. fa-solid fa-bolt" value="${c.iconClass && !c.iconUrl ? c.iconClass : ''}" data-cat-iconclass-input="${c.id}" class="flex-1 px-2.5 py-1.5 text-xs rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
+              <button data-set-cat-iconclass="${c.id}" class="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800 flex-shrink-0">Set</button>
             </div>
+            <p class="text-[10px] text-ink-400">JPG/PNG image, or a Font Awesome (free) icon class</p>
+            ${(c.iconUrl || c.iconClass) ? `<button data-remove-cat-icon="${c.id}" class="text-xs font-medium text-rose-600 hover:underline">Remove custom icon</button>` : ''}
           </div>
           <div class="flex gap-2 mt-3">
             <button data-toggle-cat="${c.id}" class="flex-1 py-1.5 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800">${c.status==='Active'?'Deactivate':'Activate'}</button>
@@ -424,6 +429,13 @@ SECTION_RENDERERS.categories = async function(main) {
   main.querySelectorAll('[data-remove-cat-icon]').forEach(btn => btn.addEventListener('click', withErr(async () => {
     await api('DELETE', '/categories/'+btn.dataset.removeCatIcon+'/icon');
     toast('Icon removed'); await refreshCategories(); navigateTo('categories');
+  })));
+  main.querySelectorAll('[data-set-cat-iconclass]').forEach(btn => btn.addEventListener('click', withErr(async () => {
+    const id = btn.dataset.setCatIconclass;
+    const value = main.querySelector('[data-cat-iconclass-input="'+id+'"]').value.trim();
+    if (!value) { toast('Enter a Font Awesome class first'); return; }
+    await api('POST', '/categories/'+id+'/icon-class', { icon_class: value });
+    toast('Icon updated'); await refreshCategories(); navigateTo('categories');
   })));
 };
 

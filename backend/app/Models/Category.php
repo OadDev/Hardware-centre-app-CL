@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Storage;
 class Category extends Model
 {
     protected $fillable = [
-        'category_code', 'name', 'slug', 'icon', 'icon_path', 'sort_order', 'status',
+        'category_code', 'name', 'slug', 'icon', 'icon_path', 'icon_class', 'sort_order', 'status',
     ];
 
     public function products(): HasMany

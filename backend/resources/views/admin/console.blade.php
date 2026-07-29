@@ -7,6 +7,7 @@
 <title>Hardware Centre — Admin Console</title>
 
 <link rel="stylesheet" href="{{ asset('vendor/admin.css') }}">
+<link rel="stylesheet" href="{{ asset('vendor/fontawesome/css/all.min.css') }}">
 <script src="{{ asset('vendor/chart.umd.min.js') }}"></script>
 <script src="{{ asset('vendor/lucide.min.js') }}"></script>
 

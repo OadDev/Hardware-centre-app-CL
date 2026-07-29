@@ -17,6 +17,7 @@ class CategoryResource extends JsonResource
             'count' => $this->products_count ?? $this->products()->count(),
             'status' => $this->status,
             'icon_image' => $this->icon_url,
+            'icon_class' => $this->icon_class,
         ];
     }
 }

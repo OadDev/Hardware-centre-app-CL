@@ -58,7 +58,7 @@ class CategoryController extends Controller
     public function uploadIcon(Request $request, Category $category)
     {
         $request->validate([
-            'icon' => ['required', 'image', 'max:2048'],
+            'icon' => ['required', 'image', 'mimes:jpg,jpeg,png', 'max:2048'],
         ]);
 
         if ($category->icon_path) {
@@ -67,6 +67,25 @@ class CategoryController extends Controller
 
         $category->update([
             'icon_path' => $request->file('icon')->store('categories', 'uploads'),
+            'icon_class' => null,
+        ]);
+
+        return response()->json($this->transform($category->loadCount('products')));
+    }
+
+    public function setIconClass(Request $request, Category $category)
+    {
+        $data = $request->validate([
+            'icon_class' => ['required', 'string', 'max:60', 'regex:/^[a-zA-Z0-9\- ]+$/'],
+        ]);
+
+        if ($category->icon_path) {
+            Storage::disk('uploads')->delete($category->icon_path);
+        }
+
+        $category->update([
+            'icon_path' => null,
+            'icon_class' => $data['icon_class'],
         ]);
 
         return response()->json($this->transform($category->loadCount('products')));
@@ -76,8 +95,8 @@ class CategoryController extends Controller
     {
         if ($category->icon_path) {
             Storage::disk('uploads')->delete($category->icon_path);
-            $category->update(['icon_path' => null]);
         }
+        $category->update(['icon_path' => null, 'icon_class' => null]);
 
         return response()->json($this->transform($category->loadCount('products')));
     }
@@ -90,6 +109,7 @@ class CategoryController extends Controller
             'products' => $c->products_count,
             'status' => $c->status,
             'iconUrl' => $c->icon_url,
+            'iconClass' => $c->icon_class,
         ];
     }
 }
