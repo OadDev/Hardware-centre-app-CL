@@ -94,3 +94,44 @@ jobs:
               "$PHP_BIN" artisan config:cache
             fi
           '
+
+      - name: Check MySQL connection limits under concurrent load
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          SSHPASS: ${{ secrets.DEPLOY_PASSWORD }}
+        run: |
+          sshpass -e ssh -p "$DEPLOY_PORT" \
+            -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            "$DEPLOY_USER@$DEPLOY_HOST" '
+            [ -f ~/.bashrc ] && source ~/.bashrc
+            [ -f ~/.bash_profile ] && source ~/.bash_profile
+
+            BACKEND_DIR="$HOME/domains/hardwarecenters.com/app/backend"
+            PHP_BIN=""
+            for v in 85 84 83 82; do
+              candidate="/opt/alt/php${v}/usr/bin/php"
+              if [ -x "$candidate" ]; then PHP_BIN="$candidate"; break; fi
+            done
+            cd "$BACKEND_DIR"
+
+            echo "--- MySQL connection limits (via app credentials) ---"
+            "$PHP_BIN" artisan tinker --execute="
+              \$rows = DB::select(\"show variables where Variable_name in ('"'"'max_connections'"'"','"'"'max_user_connections'"'"')\");
+              foreach (\$rows as \$r) { echo \$r->Variable_name . \"=\" . \$r->Value . PHP_EOL; }
+              \$proc = DB::select(\"show status where Variable_name = '"'"'Threads_connected'"'"'\");
+              foreach (\$proc as \$r) { echo \$r->Variable_name . \"=\" . \$r->Value . PHP_EOL; }
+            " 2>&1 | grep -v "^$"
+
+            echo "--- firing 25 concurrent requests to admin/login (mimics the consoles Promise.all burst) ---"
+            for i in $(seq 1 25); do
+              curl -s -o /dev/null -w "%{http_code} " https://hardwarecenters.com/admin/login &
+            done
+            wait
+            echo ""
+
+            echo "--- most recent log entries ---"
+            latest=$(ls -t "$BACKEND_DIR"/storage/logs/*.log 2>/dev/null | head -1 || true)
+            if [ -n "$latest" ]; then grep -E "^\[20" "$latest" | tail -40; else echo "no log files found"; fi
+          '
