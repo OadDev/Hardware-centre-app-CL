@@ -94,3 +94,45 @@ jobs:
               "$PHP_BIN" artisan config:cache
             fi
           '
+
+      - name: Diagnose warehouse shipments 500
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          SSHPASS: ${{ secrets.DEPLOY_PASSWORD }}
+        run: |
+          sshpass -e ssh -p "$DEPLOY_PORT" \
+            -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            "$DEPLOY_USER@$DEPLOY_HOST" '
+            [ -f ~/.bashrc ] && source ~/.bashrc
+            [ -f ~/.bash_profile ] && source ~/.bash_profile
+            BACKEND_DIR="$HOME/domains/hardwarecenters.com/app/backend"
+            PHP_BIN=""
+            for v in 85 84 83 82; do
+              candidate="/opt/alt/php${v}/usr/bin/php"
+              if [ -x "$candidate" ]; then PHP_BIN="$candidate"; break; fi
+            done
+            cd "$BACKEND_DIR"
+
+            echo "--- reproducing the shipments query directly ---"
+            "$PHP_BIN" artisan tinker --execute="
+              try {
+                \$shipments = \App\Models\WarehouseShipment::with([\"warehouse\", \"seller\", \"items.product\", \"items.productVariant\"])->orderByDesc(\"created_at\")->paginate(250);
+                echo \"count=\" . \$shipments->count() . PHP_EOL;
+                foreach (\$shipments as \$s) {
+                  echo \"shipment \" . \$s->id . \" warehouse=\" . (\$s->warehouse ? \$s->warehouse->name : \"NULL\") . \" seller=\" . (\$s->seller ? \$s->seller->store_name : \"NULL\") . PHP_EOL;
+                  foreach (\$s->items as \$item) {
+                    echo \"  item \" . \$item->id . \" product=\" . (\$item->product ? \$item->product->name : \"NULL\") . PHP_EOL;
+                  }
+                }
+              } catch (\Throwable \$e) {
+                echo \"EXCEPTION: \" . get_class(\$e) . \": \" . \$e->getMessage() . PHP_EOL;
+                echo \$e->getFile() . \":\" . \$e->getLine() . PHP_EOL;
+              }
+            " 2>&1
+
+            echo "--- most recent log errors mentioning warehouse/shipment ---"
+            latest=$(ls -t "$BACKEND_DIR"/storage/logs/*.log 2>/dev/null | head -1 || true)
+            if [ -n "$latest" ]; then grep -iE "warehouse|shipment" "$latest" | tail -10; fi
+          '
