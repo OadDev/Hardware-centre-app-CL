@@ -58,7 +58,7 @@ jobs:
             bash "$APP_DIR/scripts/deploy.sh"
           '
 
-      - name: Tail Laravel error log
+      - name: Diagnose MySQL socket connectivity
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
@@ -70,9 +70,23 @@ jobs:
             "$DEPLOY_USER@$DEPLOY_HOST" '
             [ -f ~/.bashrc ] && source ~/.bashrc
             [ -f ~/.bash_profile ] && source ~/.bash_profile
-            LOG_DIR="$HOME/domains/hardwarecenters.com/app/backend/storage/logs"
-            echo "--- log files ---"; ls -la "$LOG_DIR" 2>/dev/null || true
-            echo "--- last 150 lines of most recently modified log ---"
-            latest=$(ls -t "$LOG_DIR"/*.log 2>/dev/null | head -1)
-            if [ -n "$latest" ]; then tail -n 150 "$latest"; else echo "no log files found"; fi
+            ENV_FILE="$HOME/domains/hardwarecenters.com/app/backend/.env"
+            echo "--- .env DB_* (password masked) ---"
+            grep -E "^DB_" "$ENV_FILE" | sed -E "s/^(DB_PASSWORD=).*/\1***MASKED***/"
+            echo "--- pdo_mysql.default_socket / mysqli.default_socket (CLI php85 ini) ---"
+            /opt/alt/php85/usr/bin/php -i 2>/dev/null | grep -i "default_socket"
+            echo "--- common mysql socket file locations ---"
+            ls -la /var/lib/mysql/mysql.sock /var/run/mysqld/mysqld.sock /tmp/mysql.sock 2>/dev/null || true
+            echo "--- can php85 CLI actually connect via TCP 127.0.0.1:3306? ---"
+            /opt/alt/php85/usr/bin/php -r "
+              \$host = getenv(\"DB_HOST\") ?: \"127.0.0.1\";
+              try {
+                \$pdo = new PDO(\"mysql:host=127.0.0.1;port=3306\", \"root\", \"\", [PDO::ATTR_TIMEOUT => 3]);
+                echo \"TCP 127.0.0.1:3306 reachable (auth aside)\" . PHP_EOL;
+              } catch (\Throwable \$e) {
+                echo \"TCP attempt result: \" . \$e->getMessage() . PHP_EOL;
+              }
+            "
+            echo "--- FPM pool / ini files for this domain (best-effort search) ---"
+            find /etc /opt/alt -iname "*hardwarecenters*" 2>/dev/null | head -20 || true
           '
