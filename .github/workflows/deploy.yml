@@ -58,7 +58,7 @@ jobs:
             bash "$APP_DIR/scripts/deploy.sh"
           '
 
-      - name: Fix DB_HOST to use TCP instead of the broken FPM socket path
+      - name: Ensure DB_HOST uses TCP (avoids a broken FPM socket path)
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
@@ -75,33 +75,17 @@ jobs:
             BACKEND_DIR="$HOME/domains/hardwarecenters.com/app/backend"
             ENV_FILE="$BACKEND_DIR/.env"
 
-            echo "--- before ---"; grep -E "^DB_HOST=" "$ENV_FILE"
-            sed -i "s/^DB_HOST=localhost$/DB_HOST=127.0.0.1/" "$ENV_FILE"
-            echo "--- after ---"; grep -E "^DB_HOST=" "$ENV_FILE"
+            if grep -q "^DB_HOST=localhost$" "$ENV_FILE"; then
+              sed -i "s/^DB_HOST=localhost$/DB_HOST=127.0.0.1/" "$ENV_FILE"
 
-            PHP_BIN=""
-            for v in 85 84 83 82; do
-              candidate="/opt/alt/php${v}/usr/bin/php"
-              if [ -x "$candidate" ]; then PHP_BIN="$candidate"; break; fi
-            done
+              PHP_BIN=""
+              for v in 85 84 83 82; do
+                candidate="/opt/alt/php${v}/usr/bin/php"
+                if [ -x "$candidate" ]; then PHP_BIN="$candidate"; break; fi
+              done
 
-            cd "$BACKEND_DIR"
-            "$PHP_BIN" artisan config:clear
-            "$PHP_BIN" artisan config:cache
-            echo "--- verifying DB connection over TCP with real app credentials (CLI) ---"
-            "$PHP_BIN" artisan migrate:status | tail -5
-
-            echo "--- hitting the live site over HTTPS right now ---"
-            curl -s -o /dev/null -w "admin/login -> %{http_code}\n" https://hardwarecenters.com/admin/login
-            date -u
-            echo "--- _diag.php (inside the live FPM process) ---"
-            curl -s "https://hardwarecenters.com/_diag.php?reset=1"
-            echo "--- last 20 error timestamps in the log (pattern: constant vs intermittent) ---"
-            latest=$(ls -t "$BACKEND_DIR"/storage/logs/*.log 2>/dev/null | head -1 || true)
-            if [ -n "$latest" ]; then grep -E "^\[20" "$latest" | tail -20; else echo "no log files found"; fi
-
-            echo "--- hitting admin/login 10x back-to-back to check for flakiness ---"
-            for i in 1 2 3 4 5 6 7 8 9 10; do
-              curl -s -o /dev/null -w "attempt $i -> %{http_code}\n" https://hardwarecenters.com/admin/login
-            done
+              cd "$BACKEND_DIR"
+              "$PHP_BIN" artisan config:clear
+              "$PHP_BIN" artisan config:cache
+            fi
           '
