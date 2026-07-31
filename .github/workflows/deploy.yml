@@ -96,9 +96,12 @@ jobs:
             date -u
             echo "--- _diag.php (inside the live FPM process) ---"
             curl -s "https://hardwarecenters.com/_diag.php?reset=1"
-            echo "--- log file mtimes ---"
-            ls -la "$BACKEND_DIR/storage/logs"
-            echo "--- last 30 lines of the log, right now ---"
+            echo "--- last 20 error timestamps in the log (pattern: constant vs intermittent) ---"
             latest=$(ls -t "$BACKEND_DIR"/storage/logs/*.log 2>/dev/null | head -1 || true)
-            if [ -n "$latest" ]; then tail -n 30 "$latest"; else echo "no log files found"; fi
+            if [ -n "$latest" ]; then grep -E "^\[20" "$latest" | tail -20; else echo "no log files found"; fi
+
+            echo "--- hitting admin/login 10x back-to-back to check for flakiness ---"
+            for i in 1 2 3 4 5 6 7 8 9 10; do
+              curl -s -o /dev/null -w "attempt $i -> %{http_code}\n" https://hardwarecenters.com/admin/login
+            done
           '
