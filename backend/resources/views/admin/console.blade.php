@@ -151,15 +151,87 @@ async function refreshNotifications() { DATA.notifications = await api('GET', '/
 async function refreshRoles() { DATA.rolesData = await api('GET', '/roles'); }
 async function refreshSettings() { DATA.settings = await api('GET', '/settings'); }
 
+/*
+ * The database's connection quota is shared and can't be raised, so booting
+ * the console must not open ~20 simultaneous DB connections at once (each
+ * fetch below hits a separate PHP-FPM worker with its own MySQL connection).
+ * Running a handful at a time keeps peak concurrent connections low while
+ * still loading everything in a few short waves instead of one big burst.
+ */
+async function runLimited(tasks, limit) {
+  const failures = [];
+  let next = 0;
+  async function worker() {
+    while (next < tasks.length) {
+      const i = next++;
+      const [name, fn] = tasks[i];
+      try {
+        await fn();
+      } catch (e) {
+        failures.push({ name, message: e?.message || 'Unknown error' });
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker));
+  return failures;
+}
+
+const LOAD_TASKS = [
+  ['Dashboard', refreshDashboard], ['Sellers', refreshSellers], ['Customers', refreshCustomers],
+  ['Products', refreshProducts], ['Categories', refreshCategories], ['Brands', refreshBrands],
+  ['Orders', refreshOrders], ['Returns', refreshReturns], ['Coupons', refreshCoupons],
+  ['Banners', refreshBanners], ['Settlements', refreshSettlements], ['Commission', refreshCommission],
+  ['GST', refreshGst], ['Shipping', refreshShipping], ['Payments', refreshPayments],
+  ['Shiprocket', refreshShiprocket], ['Notifications', refreshNotifications], ['Roles', refreshRoles],
+  ['Settings', refreshSettings], ['Warehouse Overview', refreshWarehouseOverview],
+  ['Warehouse Inventory', refreshWarehouseInventory], ['Warehouse Shipments', refreshWarehouseShipments],
+  ['Dispatch Queue', refreshDispatchQueue],
+];
+
 async function loadAll() {
-  await Promise.all([
-    refreshDashboard(), refreshSellers(), refreshCustomers(), refreshProducts(),
-    refreshCategories(), refreshBrands(), refreshOrders(), refreshReturns(),
-    refreshCoupons(), refreshBanners(), refreshSettlements(), refreshCommission(),
-    refreshGst(), refreshShipping(), refreshPayments(), refreshShiprocket(),
-    refreshNotifications(), refreshRoles(), refreshSettings(),
-    refreshWarehouseOverview(), refreshWarehouseInventory(), refreshWarehouseShipments(), refreshDispatchQueue(),
-  ]);
+  const failures = await runLimited(LOAD_TASKS, 4);
+  // Give every section a safe empty default so a section that failed to
+  // load doesn't crash its renderer when the admin navigates to it.
+  const defaults = {
+    dashboard: {}, sellers: [], customers: [], products: [], categories: [], brands: [],
+    orders: [], returns: [], coupons: [], banners: [], settlements: [],
+    commission: { sellers: [], tiers: [] }, gst: {}, shipping: {}, payments: {}, shiprocket: {},
+    notifications: {}, rolesData: {}, settings: {},
+    warehouseOverview: { warehouses: [], dispatch_pending: 0 },
+    warehouseInventory: [], warehouseShipments: [], dispatchQueue: [],
+  };
+  Object.keys(defaults).forEach(key => { if (DATA[key] === undefined) DATA[key] = defaults[key]; });
+  return failures;
+}
+
+function showLoadFailuresBanner(failures) {
+  document.getElementById('load-failures-banner')?.remove();
+  const wrap = el('div', 'fixed top-4 left-1/2 -translate-x-1/2 z-[150] w-[min(640px,92vw)] bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 rounded-2xl shadow-popover p-4');
+  wrap.id = 'load-failures-banner';
+  wrap.innerHTML = `
+    <div class="flex items-start gap-3">
+      <div class="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-500/20 text-rose-600 flex items-center justify-center flex-shrink-0">${icon('alert-triangle','w-4.5 h-4.5')}</div>
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-semibold text-rose-700 dark:text-rose-300">${failures.length} section${failures.length>1?'s':''} failed to load</p>
+        <ul class="mt-1.5 space-y-0.5 text-xs text-rose-600 dark:text-rose-400 max-h-32 overflow-y-auto">
+          ${failures.map(f => `<li><b>${f.name}:</b> ${String(f.message).replace(/</g,'&lt;')}</li>`).join('')}
+        </ul>
+        <div class="flex gap-2 mt-3">
+          <button id="load-failures-retry" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-rose-600 hover:bg-rose-700 text-white">Retry</button>
+          <button id="load-failures-dismiss" class="px-3 py-1.5 text-xs font-medium rounded-lg border border-rose-200 dark:border-rose-500/30 text-rose-600 dark:text-rose-400">Dismiss</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+  refreshIcons();
+  document.getElementById('load-failures-dismiss').addEventListener('click', () => wrap.remove());
+  document.getElementById('load-failures-retry').addEventListener('click', withErr(async () => {
+    wrap.remove();
+    const stillFailing = await loadAll();
+    navigateTo(AppState.currentSection || 'dashboard');
+    if (stillFailing.length) showLoadFailuresBanner(stillFailing);
+    else toast('All sections loaded successfully');
+  }));
 }
 
 /* ---------------- 3. LAYOUT SHELL ---------------- */
@@ -565,15 +637,19 @@ function withErr(fn) { return async (...args) => { try { await fn(...args); } ca
 
 /* ---------------- 6. INIT ---------------- */
 document.addEventListener('DOMContentLoaded', async () => {
+  let failures = [];
   try {
-    await loadAll();
+    failures = await loadAll();
   } catch (e) {
+    // Only a total failure (e.g. network unreachable) lands here -- loadAll()
+    // itself catches per-section errors so one bad request can't block boot.
     document.getElementById('boot-loading').innerHTML = `<div class="text-center max-w-sm px-6"><p class="text-sm font-medium text-rose-600">Failed to load marketplace data</p><p class="text-xs text-ink-400 mt-2">${(e.message||'').replace(/</g,'&lt;')}</p></div>`;
     return;
   }
   document.getElementById('boot-loading').remove();
   buildAppShell();
   navigateTo('dashboard');
+  if (failures.length) showLoadFailuresBanner(failures);
 });
 </script>
 </body>
