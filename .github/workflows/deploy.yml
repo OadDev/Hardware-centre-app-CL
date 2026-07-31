@@ -13,6 +13,29 @@ jobs:
       - name: Install sshpass
         run: sudo apt-get update -y && sudo apt-get install -y sshpass
 
+      - name: Diagnose server PHP versions
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          SSHPASS: ${{ secrets.DEPLOY_PASSWORD }}
+        run: |
+          sshpass -e ssh -p "$DEPLOY_PORT" \
+            -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            "$DEPLOY_USER@$DEPLOY_HOST" '
+            [ -f ~/.bashrc ] && source ~/.bashrc
+            [ -f ~/.bash_profile ] && source ~/.bash_profile
+            echo "--- php -v ---"; php -v || true
+            echo "--- command -v php ---"; command -v php || true
+            echo "--- PATH ---"; echo "$PATH"
+            echo "--- /usr/bin/php* ---"; ls -la /usr/bin/php* 2>/dev/null || true
+            echo "--- /opt/alt/php*/usr/bin/php ---"; ls -la /opt/alt/php*/usr/bin/php 2>/dev/null || true
+            echo "--- ~/bin ---"; ls -la ~/bin 2>/dev/null || true
+            echo "--- php refs in ~/.bashrc ---"; grep -i php ~/.bashrc 2>/dev/null || true
+            echo "--- php refs in ~/.bash_profile ---"; grep -i php ~/.bash_profile 2>/dev/null || true
+            echo "--- public_html path check ---"; ls -la ~/domains/hardwarecenters.com/ 2>/dev/null || true
+          '
+
       - name: Deploy over SSH
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
