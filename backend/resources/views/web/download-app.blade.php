@@ -1,7 +1,7 @@
 @extends('web.layout')
 
-@section('title', 'Download the App · Hardware Centre')
-@section('description', 'Shop 8,000+ hardware products, track orders, and get app-only deals on the Hardware Centre app for iOS and Android.')
+@section('title', 'Download the App · Hardware Centers')
+@section('description', 'Shop 8,000+ hardware products, track orders, and get app-only deals on the Hardware Centers app for iOS and Android.')
 
 @section('content')
 <section class="section" style="padding-top:56px;">
@@ -70,7 +70,7 @@
   <div class="container">
     <div class="cta-band">
       <div class="cta-band-in">
-        <div><h3>Get the Hardware Centre app today</h3><p>Available free on the App Store and Google Play.</p></div>
+        <div><h3>Get the Hardware Centers app today</h3><p>Available free on the App Store and Google Play.</p></div>
         <div class="btns">
           <a href="#" class="btn btn-primary"><svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" stroke="#fff" stroke-width="0"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.02 7.31c1.34.07 2.28.74 3.06.8.94-.16 2.03-.83 3.06-.7 1.87.15 3.03.9 3.76 2.1-3.3 2-2.72 6.13.63 7.51-.53 1.26-1.22 2.5-1.98 3.26zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.31-2.08 4.5-3.74 4.25z"/></svg> App Store</a>
           <a href="#" class="btn btn-outline-light"><svg width="14" height="14" viewBox="0 0 24 24" fill="#fff" stroke="#fff" stroke-width="1.4"><path d="m5 3 14 9-14 9V3z"/></svg> Google Play</a>

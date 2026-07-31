@@ -22,8 +22,8 @@ class BlogPostSeeder extends Seeder
                     ."<p>Look past the wattage number on the box. Torque (measured in Nm) tells you how much resistance the drill can push through, while chuck size (10mm vs 13mm) determines the largest bit you can use. For general household and light contractor work, a 13mm chuck with 20+ Nm of torque covers almost everything.</p>"
                     ."<blockquote>Pro tip: Buy a drill with a keyless chuck — it saves real time when you're switching bits multiple times an hour on site.</blockquote>"
                     ."<h3>Our recommendation</h3>"
-                    ."<p>For most contractors, a mid-range impact drill strikes the right balance of torque, price and chuck size — and it's currently one of our best-selling power tools on Hardware Centre.</p>",
-                'author' => 'Hardware Centre Editorial',
+                    ."<p>For most contractors, a mid-range impact drill strikes the right balance of torque, price and chuck size — and it's currently one of our best-selling power tools on Hardware Centers.</p>",
+                'author' => 'Hardware Centers Editorial',
                 'read_minutes' => 5,
                 'featured' => true,
                 'published_at' => '2026-06-12 09:00:00',
@@ -40,7 +40,7 @@ class BlogPostSeeder extends Seeder
                     ."<p>An undersized MCB trips constantly; an oversized one won't protect the circuit. Match breaker ratings to the wire gauge and expected load before signing off any installation.</p>"
                     ."<h3>Earth every circuit</h3>"
                     ."<p>Proper earthing isn't optional — it's the difference between a nuisance trip and a fire hazard. Test continuity on every earth connection before energizing a new circuit.</p>",
-                'author' => 'Hardware Centre Editorial',
+                'author' => 'Hardware Centers Editorial',
                 'read_minutes' => 6,
                 'featured' => false,
                 'published_at' => '2026-05-28 09:00:00',
@@ -49,13 +49,13 @@ class BlogPostSeeder extends Seeder
                 'slug' => 'indias-fastest-growing-hardware-supply-chains',
                 'title' => "Inside India's Fastest Growing Hardware Supply Chains",
                 'category' => 'Supplier Spotlight',
-                'excerpt' => 'How GST-verified suppliers on Hardware Centre are shipping to 500+ cities within 48 hours.',
-                'body' => "<p>How GST-verified suppliers on Hardware Centre are shipping to 500+ cities within 48 hours.</p>"
+                'excerpt' => 'How GST-verified suppliers on Hardware Centers are shipping to 500+ cities within 48 hours.',
+                'body' => "<p>How GST-verified suppliers on Hardware Centers are shipping to 500+ cities within 48 hours.</p>"
                     ."<h3>Regional warehousing, not just a single hub</h3>"
                     ."<p>The fastest-growing sellers on the platform run 2–3 regional warehouses rather than one central store, cutting last-mile delivery time by nearly half for tier-2 and tier-3 cities.</p>"
                     ."<h3>What buyers should look for</h3>"
-                    ."<p>GST verification, a consistent rating above 4.5, and clear stock-availability signals are the strongest predictors of a reliable supplier relationship on Hardware Centre.</p>",
-                'author' => 'Hardware Centre Editorial',
+                    ."<p>GST verification, a consistent rating above 4.5, and clear stock-availability signals are the strongest predictors of a reliable supplier relationship on Hardware Centers.</p>",
+                'author' => 'Hardware Centers Editorial',
                 'read_minutes' => 4,
                 'featured' => false,
                 'published_at' => '2026-05-14 09:00:00',
@@ -70,7 +70,7 @@ class BlogPostSeeder extends Seeder
                     ."<p>Exterior paints are formulated with UV-resistant resins and flexible binders to survive temperature swings and monsoon moisture. Using an interior emulsion outdoors will chalk and peel within a season.</p>"
                     ."<h3>Sheen levels, explained</h3>"
                     ."<p>Matte finishes hide wall imperfections well and suit interior ceilings and living rooms; higher-sheen exterior finishes shed dirt and rain more effectively, which is why most exteriors use satin or gloss.</p>",
-                'author' => 'Hardware Centre Editorial',
+                'author' => 'Hardware Centers Editorial',
                 'read_minutes' => 5,
                 'featured' => false,
                 'published_at' => '2026-05-02 09:00:00',
@@ -87,7 +87,7 @@ class BlogPostSeeder extends Seeder
                     ."<p>Buyers convert better when product photos show scale references (a hand, a ruler, a common object) alongside the studio shot — especially for hardware where dimensions matter more than aesthetics.</p>"
                     ."<h3>Price for the trade, not retail</h3>"
                     ."<p>List trade/wholesale pricing up front. Marketplace buyers are comparing you against other verified sellers in real time, and hidden 'call for bulk pricing' listings convert far worse.</p>",
-                'author' => 'Hardware Centre Editorial',
+                'author' => 'Hardware Centers Editorial',
                 'read_minutes' => 7,
                 'featured' => false,
                 'published_at' => '2026-04-21 09:00:00',
@@ -102,7 +102,7 @@ class BlogPostSeeder extends Seeder
                     ."<p>GI pipes corrode from the inside out over 8–10 years, discoloring water and eventually leaking at threaded joints. CPVC doesn't rust, so it's become the default spec for new residential plumbing.</p>"
                     ."<h3>Faster installs, fewer tools</h3>"
                     ."<p>Solvent-cement CPVC joints cure in minutes without threading or welding equipment, cutting typical plumbing labor time by 30–40% compared to GI on a comparable job.</p>",
-                'author' => 'Hardware Centre Editorial',
+                'author' => 'Hardware Centers Editorial',
                 'read_minutes' => 4,
                 'featured' => false,
                 'published_at' => '2026-04-09 09:00:00',

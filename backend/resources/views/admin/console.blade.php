@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<title>Hardware Centre — Admin Console</title>
+<title>Hardware Centers — Admin Console</title>
 
 <link rel="stylesheet" href="{{ asset('vendor/admin.css') }}">
 <link rel="stylesheet" href="{{ asset('vendor/fontawesome/css/all.min.css') }}">
@@ -300,7 +300,7 @@ function buildSidebar() {
     <div class="flex items-center gap-2.5 h-16 px-4 border-b border-ink-200/70 dark:border-ink-800 flex-shrink-0">
       <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center flex-shrink-0 shadow-sm">${icon('boxes', 'w-4.5 h-4.5 text-white')}</div>
       <div class="sidebar-label leading-tight overflow-hidden whitespace-nowrap">
-        <p class="text-sm font-bold text-ink-900 dark:text-white">Hardware Centre</p>
+        <p class="text-sm font-bold text-ink-900 dark:text-white">Hardware Centers</p>
         <p class="text-[11px] text-ink-400 -mt-0.5">Admin Console</p>
       </div>
       <button id="sidebar-close-mobile" class="ml-auto lg:hidden p-1.5 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800">${icon('x', 'w-4.5 h-4.5')}</button>

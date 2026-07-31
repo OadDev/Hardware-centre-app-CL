@@ -10,7 +10,7 @@ return new class extends Migration
         Warehouse::firstOrCreate(
             ['code' => 'WH-001'],
             [
-                'name' => 'Hardware Centre Main Warehouse',
+                'name' => 'Hardware Centers Main Warehouse',
                 'status' => 'Active',
             ]
         );

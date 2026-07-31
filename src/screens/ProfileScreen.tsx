@@ -107,7 +107,7 @@ export default function ProfileScreen() {
           <IconLogout />
           <Text style={styles.logoutText}>Logout</Text>
         </Pressable>
-        <Text style={styles.version}>Hardware Centre · Version 1.0.0</Text>
+        <Text style={styles.version}>Hardware Centers · Version 1.0.0</Text>
       </ScrollView>
     </SafeAreaView>
   );

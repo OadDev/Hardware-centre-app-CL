@@ -1,6 +1,6 @@
 @extends('web.layout')
 
-@section('title', $product->name.' · '.$product->brand->name.' · Hardware Centre')
+@section('title', $product->name.' · '.$product->brand->name.' · Hardware Centers')
 @section('description', str($product->description)->limit(155))
 
 @section('content')

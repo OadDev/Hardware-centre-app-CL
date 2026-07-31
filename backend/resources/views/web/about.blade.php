@@ -1,7 +1,7 @@
 @extends('web.layout')
 
-@section('title', 'About Us · Hardware Centre')
-@section('description', "Hardware Centre connects builders, contractors and retailers with GST-verified suppliers across India.")
+@section('title', 'About Us · Hardware Centers')
+@section('description', "Hardware Centers connects builders, contractors and retailers with GST-verified suppliers across India.")
 
 @section('content')
 <section class="page-hero">
@@ -9,7 +9,7 @@
     <div class="crumb"><a href="{{ route('web.home') }}">Home</a> <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg> <span style="color:#fff;">About Us</span></div>
     <span class="hero-eyebrow"><svg width="13" height="13" viewBox="0 0 24 24" fill="#FDBA74" stroke="#FDBA74" stroke-width="0"><path d="M12 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg> Our Story</span>
     <h1 style="margin-top:14px;">Built to make hardware sourcing simple</h1>
-    <p>Hardware Centre connects builders, contractors and retailers with GST-verified suppliers across India — one marketplace for tools, electrical, plumbing, paint and construction materials.</p>
+    <p>Hardware Centers connects builders, contractors and retailers with GST-verified suppliers across India — one marketplace for tools, electrical, plumbing, paint and construction materials.</p>
   </div>
 </section>
 
@@ -28,8 +28,8 @@
     <div>
       <span class="eyebrow">Why we started</span>
       <h2 class="section-title" style="margin-top:14px;">From a single hardware store to a nationwide marketplace</h2>
-      <p class="section-sub">Hardware Centre began with a simple frustration: sourcing quality tools and materials meant calling a dozen suppliers, comparing prices by phone, and hoping the invoice matched what showed up. We built a platform where every supplier is GST-verified, every price is transparent, and every order is trackable end-to-end.</p>
-      <p class="section-sub">Today, contractors, retailers and facility teams in 500+ cities use Hardware Centre to source everything from CPVC pipes to power tools — often with same-week delivery.</p>
+      <p class="section-sub">Hardware Centers began with a simple frustration: sourcing quality tools and materials meant calling a dozen suppliers, comparing prices by phone, and hoping the invoice matched what showed up. We built a platform where every supplier is GST-verified, every price is transparent, and every order is trackable end-to-end.</p>
+      <p class="section-sub">Today, contractors, retailers and facility teams in 500+ cities use Hardware Centers to source everything from CPVC pipes to power tools — often with same-week delivery.</p>
     </div>
   </div>
 </section>
@@ -68,7 +68,7 @@
   <div class="container">
     <div class="cta-band">
       <div class="cta-band-in">
-        <div><h3>Ready to source smarter?</h3><p>Join thousands of buyers and sellers already using Hardware Centre.</p></div>
+        <div><h3>Ready to source smarter?</h3><p>Join thousands of buyers and sellers already using Hardware Centers.</p></div>
         <div class="btns"><a href="{{ route('web.categories') }}" class="btn btn-primary">Start Shopping</a><a href="{{ route('web.sell') }}" class="btn btn-outline-light">Become a Seller</a></div>
       </div>
     </div>

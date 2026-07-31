@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Seller Sign In — Hardware Centre</title>
+<title>Seller Sign In — Hardware Centers</title>
 <link rel="stylesheet" href="{{ asset('vendor/admin.css') }}">
 </head>
 <body class="min-h-screen bg-ink-50 font-sans flex items-center justify-center p-6">
   <div class="w-full max-w-sm">
     <div class="text-center mb-8">
       <div class="w-12 h-12 rounded-2xl bg-brand-600 text-white flex items-center justify-center mx-auto font-bold text-lg">HC</div>
-      <h1 class="mt-4 text-xl font-bold text-ink-900">Hardware Centre Seller Centre</h1>
+      <h1 class="mt-4 text-xl font-bold text-ink-900">Hardware Centers Seller Center</h1>
       <p class="text-sm text-ink-500 mt-1">Sign in to manage your store</p>
     </div>
 
@@ -44,7 +44,7 @@
       </form>
     </div>
 
-    <p class="text-center text-xs text-ink-400 mt-6">Not a seller yet? <a href="{{ route('web.sell') }}" class="text-brand-600 font-semibold">Apply to sell on Hardware Centre</a></p>
+    <p class="text-center text-xs text-ink-400 mt-6">Not a seller yet? <a href="{{ route('web.sell') }}" class="text-brand-600 font-semibold">Apply to sell on Hardware Centers</a></p>
   </div>
 </body>
 </html>

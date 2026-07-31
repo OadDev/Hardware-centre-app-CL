@@ -1,13 +1,13 @@
 @extends('web.layout')
 
-@section('title', 'Blog · Hardware Centre')
-@section('description', 'Buying guides, supplier spotlights and industry trends from Hardware Centre.')
+@section('title', 'Blog · Hardware Centers')
+@section('description', 'Buying guides, supplier spotlights and industry trends from Hardware Centers.')
 
 @section('content')
 <section class="page-hero">
   <div class="container">
     <div class="crumb"><a href="{{ route('web.home') }}">Home</a> <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg> <span style="color:#fff;">Blog</span></div>
-    <span class="hero-eyebrow"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FDBA74" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> Hardware Centre Journal</span>
+    <span class="hero-eyebrow"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FDBA74" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> Hardware Centers Journal</span>
     <h1 style="margin-top:14px;">Guides, trends &amp; stories from the trade</h1>
     <p>Buying guides, supplier spotlights and industry trends to help you build, source and sell smarter.</p>
   </div>

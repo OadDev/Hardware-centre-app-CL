@@ -79,7 +79,7 @@ class WebLeadController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Application received! Sign in to the Seller Centre any time to track your approval status.',
+            'message' => 'Application received! Sign in to the Seller Center any time to track your approval status.',
             'seller_code' => $seller->seller_code,
         ], 201);
     }

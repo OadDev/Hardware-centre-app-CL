@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('app_settings', function (Blueprint $table) {
             $table->id();
-            $table->string('business_name')->default('Hardware Centre Pvt. Ltd.');
+            $table->string('business_name')->default('Hardware Centers Pvt. Ltd.');
             $table->string('contact_number')->nullable();
             $table->string('support_email')->nullable();
             $table->string('gst_number')->nullable();

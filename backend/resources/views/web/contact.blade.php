@@ -1,14 +1,14 @@
 @extends('web.layout')
 
-@section('title', 'Contact Us · Hardware Centre')
-@section('description', 'Get in touch with Hardware Centre for order, billing, or partnership queries.')
+@section('title', 'Contact Us · Hardware Centers')
+@section('description', 'Get in touch with Hardware Centers for order, billing, or partnership queries.')
 
 @section('content')
 <section class="page-hero">
   <div class="container">
     <div class="crumb"><a href="{{ route('web.home') }}">Home</a> <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg> <span style="color:#fff;">Contact Us</span></div>
     <span class="hero-eyebrow"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FDBA74" stroke-width="1.8"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> We'd love to hear from you</span>
-    <h1 style="margin-top:14px;">Get in touch with Hardware Centre</h1>
+    <h1 style="margin-top:14px;">Get in touch with Hardware Centers</h1>
     <p>Questions about an order, a supplier partnership, or feedback on the app — our team typically replies within 24 hours.</p>
   </div>
 </section>
@@ -45,7 +45,7 @@
       </form>
     </div>
     <div>
-      <div class="ph-box" style="height:260px;margin-bottom:20px;background:linear-gradient(135deg,#F8FAFC,#EEF1F4);"><span>Map — Hardware Centre HQ, New Delhi</span></div>
+      <div class="ph-box" style="height:260px;margin-bottom:20px;background:linear-gradient(135deg,#F8FAFC,#EEF1F4);"><span>Map — Hardware Centers HQ, New Delhi</span></div>
       <div class="card" style="padding:22px;">
         <div style="display:flex;align-items:center;gap:12px;"><span style="width:40px;height:40px;border-radius:12px;background:var(--orange-light-bg);display:flex;align-items:center;justify-content:center;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#F97316" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><div><div style="font-size:14px;font-weight:700;">Support Hours</div><div style="font-size:12.5px;color:var(--muted);margin-top:2px;">Mon–Sat · 9:00 AM – 7:00 PM IST</div></div></div>
         <div style="height:1px;background:var(--border-soft);margin:16px 0;"></div>

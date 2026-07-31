@@ -1,7 +1,7 @@
 @extends('web.layout')
 
-@section('title', 'Become a Seller · Hardware Centre')
-@section('description', 'Join 1,200+ GST-verified sellers reaching buyers across 500+ Indian cities on Hardware Centre.')
+@section('title', 'Become a Seller · Hardware Centers')
+@section('description', 'Join 1,200+ GST-verified sellers reaching buyers across 500+ Indian cities on Hardware Centers.')
 
 @section('content')
 <section class="hero">
@@ -69,7 +69,7 @@
         <div style="display:flex;gap:3px;">
           @for($i=0;$i<5;$i++)<svg width="14" height="14" viewBox="0 0 24 24" fill="#F59E0B" stroke="none" stroke-width="0"><path d="m12 2 3 6.5 7 .6-5.3 4.6L18.4 21 12 17.3 5.6 21l1.7-7.3L2 9.1l7-.6L12 2Z"/></svg>@endfor
         </div>
-        <p style="margin-top:10px;font-size:15px;color:#374151;line-height:1.7;">"Since listing on Hardware Centre, our monthly order volume has tripled. The seller dashboard makes it easy to manage inventory across our 3 warehouses, and payouts are always on time."</p>
+        <p style="margin-top:10px;font-size:15px;color:#374151;line-height:1.7;">"Since listing on Hardware Centers, our monthly order volume has tripled. The seller dashboard makes it easy to manage inventory across our 3 warehouses, and payouts are always on time."</p>
         <div style="margin-top:14px;font-size:13.5px;font-weight:700;">Shree Balaji Steel Corp <span style="color:var(--muted);font-weight:500;">· Ahmedabad, Gujarat</span></div>
       </div>
     </div>
@@ -96,8 +96,8 @@
         </div>
         <div class="field full"><label>Business Address</label><textarea name="warehouse_address" placeholder="Warehouse / shop address"></textarea></div>
         <div class="field"><label>Create a Password</label><input type="password" name="password" minlength="8" placeholder="At least 8 characters" required /></div>
-        <div class="field full" style="font-size:12px;color:var(--muted);margin-top:-6px;">You'll use this to sign in to your Seller Centre at <a href="{{ route('seller.login') }}" style="color:var(--orange-dark);font-weight:700;">/seller/login</a> and track your application.</div>
-        <div class="field full"><label class="field-check"><input type="checkbox" required /> I agree to the Hardware Centre Seller Terms &amp; Conditions and confirm the information above is accurate.</label></div>
+        <div class="field full" style="font-size:12px;color:var(--muted);margin-top:-6px;">You'll use this to sign in to your Seller Center at <a href="{{ route('seller.login') }}" style="color:var(--orange-dark);font-weight:700;">/seller/login</a> and track your application.</div>
+        <div class="field full"><label class="field-check"><input type="checkbox" required /> I agree to the Hardware Centers Seller Terms &amp; Conditions and confirm the information above is accurate.</label></div>
         <div class="field full"><button type="submit" class="btn btn-primary btn-block">Submit Application</button></div>
       </form>
     </div>

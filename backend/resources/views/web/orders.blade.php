@@ -1,7 +1,7 @@
 @extends('web.layout')
 
-@section('title', 'My Orders · Hardware Centre')
-@section('description', 'View your Hardware Centre order history and track shipments.')
+@section('title', 'My Orders · Hardware Centers')
+@section('description', 'View your Hardware Centers order history and track shipments.')
 
 @section('content')
 <section class="page-hero" style="padding:44px 0 34px;">

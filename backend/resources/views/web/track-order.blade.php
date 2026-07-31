@@ -1,7 +1,7 @@
 @extends('web.layout')
 
-@section('title', 'Track Your Order · Hardware Centre')
-@section('description', 'Track your Hardware Centre order in real time.')
+@section('title', 'Track Your Order · Hardware Centers')
+@section('description', 'Track your Hardware Centers order in real time.')
 
 @section('content')
 <section class="page-hero">

@@ -1192,7 +1192,7 @@ SECTION_RENDERERS.settings = async function(main) {
             ${formField('SMTP Username','text','', s.smtp_username||'', 'st-smtp-user')}
             ${formField('SMTP Password','password','••••••••••','', 'st-smtp-pass')}
             ${formField('From Address','email','no-reply@yourdomain.com', s.smtp_from_address||'', 'st-smtp-from-address')}
-            ${formField('From Name','text','Hardware Centre', s.smtp_from_name||'', 'st-smtp-from-name')}
+            ${formField('From Name','text','Hardware Centers', s.smtp_from_name||'', 'st-smtp-from-name')}
           </div></div>`)}
           ${card(`<div class="p-5"><p class="font-semibold text-ink-900 dark:text-white mb-4">Password Policy</p><div class="space-y-3">
             ${formField('Minimum Password Length','number','', s.password_min_length||8, 'st-pw-len')}
@@ -1372,7 +1372,7 @@ SECTION_RENDERERS.warehouse = async function(main) {
         openModal({
           title: 'Add Warehouse',
           body: `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            ${formField('Warehouse Name','text','e.g. Chennai Fulfillment Centre','','nw-name')}
+            ${formField('Warehouse Name','text','e.g. Chennai Fulfillment Center','','nw-name')}
             ${formField('Phone','tel','','','nw-phone')}
             ${formField('City','text','','','nw-city')}
             ${formField('State','text','','','nw-state')}

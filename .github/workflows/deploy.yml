@@ -58,7 +58,7 @@ jobs:
             bash "$APP_DIR/scripts/deploy.sh"
           '
 
-      - name: Ensure DB_HOST uses TCP (avoids a broken FPM socket path)
+      - name: Ensure DB_HOST uses TCP, APP_NAME matches the current brand name
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
@@ -80,9 +80,23 @@ jobs:
             # removed from the repo) needs an explicit removal here.
             rm -f "$HOME/domains/hardwarecenters.com/public_html/_diag.php"
 
+            CHANGED=0
+
             if grep -q "^DB_HOST=localhost$" "$ENV_FILE"; then
               sed -i "s/^DB_HOST=localhost$/DB_HOST=127.0.0.1/" "$ENV_FILE"
+              CHANGED=1
+            fi
 
+            # .env was created once from .env.example at install time and is
+            # never touched by later deploys, so the brand-name fix in
+            # .env.example does not reach an already-installed server on its
+            # own — patch the live value directly instead.
+            if grep -q "^APP_NAME=\"Hardware Centre" "$ENV_FILE"; then
+              sed -i "s/^APP_NAME=\"Hardware Centre/APP_NAME=\"Hardware Centers/" "$ENV_FILE"
+              CHANGED=1
+            fi
+
+            if [ "$CHANGED" = "1" ]; then
               PHP_BIN=""
               for v in 85 84 83 82; do
                 candidate="/opt/alt/php${v}/usr/bin/php"

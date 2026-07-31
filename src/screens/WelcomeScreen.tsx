@@ -16,7 +16,7 @@ export default function WelcomeScreen({ navigation }: Props) {
     <View style={styles.container}>
       <View style={styles.top}>
         <Image source={require('../../assets/brand/hc-logo.png')} style={styles.logo} />
-        <Text style={styles.appName}>Hardware Centre</Text>
+        <Text style={styles.appName}>Hardware Centers</Text>
         <Text style={styles.tagline}>India's B2B marketplace for verified hardware suppliers.</Text>
       </View>
       <SafeAreaView edges={['bottom']} style={styles.sheet}>

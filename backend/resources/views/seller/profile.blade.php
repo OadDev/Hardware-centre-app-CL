@@ -17,7 +17,7 @@
     </div>
     <div><label class="block text-xs font-medium text-ink-500 mb-1">Warehouse Address</label><textarea name="warehouse_address" rows="2" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200">{{ old('warehouse_address', $seller->warehouse_address) }}</textarea></div>
     <div class="pt-2 border-t border-ink-100 text-xs text-ink-400">
-      GST Number: <b class="text-ink-700">{{ $seller->gst_number ?? '—' }}</b> · Commission: <b class="text-ink-700">{{ number_format($seller->commission_pct, 1) }}%</b> · these are managed by Hardware Centre and can't be self-edited.
+      GST Number: <b class="text-ink-700">{{ $seller->gst_number ?? '—' }}</b> · Commission: <b class="text-ink-700">{{ number_format($seller->commission_pct, 1) }}%</b> · these are managed by Hardware Centers and can't be self-edited.
     </div>
     <button type="submit" class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold">Save Changes</button>
   </form>

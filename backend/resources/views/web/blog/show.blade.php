@@ -1,6 +1,6 @@
 @extends('web.layout')
 
-@section('title', $post->title.' · Hardware Centre')
+@section('title', $post->title.' · Hardware Centers')
 @section('description', $post->excerpt)
 
 @section('content')

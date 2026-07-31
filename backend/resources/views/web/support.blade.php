@@ -1,7 +1,7 @@
 @extends('web.layout')
 
-@section('title', 'Help & Support · Hardware Centre')
-@section('description', 'Get help with orders, payments, returns and your Hardware Centre account.')
+@section('title', 'Help & Support · Hardware Centers')
+@section('description', 'Get help with orders, payments, returns and your Hardware Centers account.')
 
 @section('content')
 <section class="page-hero">
@@ -30,7 +30,7 @@
     <div class="cat-grid" style="grid-template-columns:repeat(4,1fr);">
       <a class="cat-card" href="{{ route('web.track-order') }}"><div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1F2937" stroke-width="1.7"><rect x="1" y="6" width="13" height="11" rx="1.5"/><path d="M14 9h4l3 3v5h-7"/><circle cx="6" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg></div><div class="name">Orders &amp; Tracking</div><div class="count">12 articles</div></a>
       <a class="cat-card" href="#"><div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1F2937" stroke-width="1.7"><path d="M12 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg></div><div class="name">Payments &amp; Refunds</div><div class="count">9 articles</div></a>
-      <a class="cat-card" href="{{ route('web.sell') }}"><div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1F2937" stroke-width="1.7"><path d="M3 21V8l6-3 6 3v13"/><path d="M15 11h6v10h-6"/><path d="M6 11h3M6 14h3M6 17h3M18 14h0M18 17h0"/></svg></div><div class="name">Selling on Hardware Centre</div><div class="count">15 articles</div></a>
+      <a class="cat-card" href="{{ route('web.sell') }}"><div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1F2937" stroke-width="1.7"><path d="M3 21V8l6-3 6 3v13"/><path d="M15 11h6v10h-6"/><path d="M6 11h3M6 14h3M6 17h3M18 14h0M18 17h0"/></svg></div><div class="name">Selling on Hardware Centers</div><div class="count">15 articles</div></a>
       <a class="cat-card" href="{{ route('web.download-app') }}"><div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1F2937" stroke-width="1.7"><path d="M12 3v12"/><path d="m6 11 6 6 6-6"/><path d="M4 21h16"/></svg></div><div class="name">App &amp; Account</div><div class="count">7 articles</div></a>
     </div>
   </div>

@@ -41,7 +41,7 @@ export default function LoginScreen({ navigation }: Props) {
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.title}>Welcome back</Text>
-        <Text style={styles.sub}>Login to your Hardware Centre account.</Text>
+        <Text style={styles.sub}>Login to your Hardware Centers account.</Text>
 
         <Text style={styles.label}>{isSms ? 'Mobile Number' : 'Email Address'}</Text>
         <View style={[styles.inputRow, { borderColor: error ? colors.danger : colors.borderStrong }]}>

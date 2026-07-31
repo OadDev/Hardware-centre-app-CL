@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>@yield('title', 'Hardware Centre')</title>
-<meta name="description" content="@yield('description', "Hardware Centre — India's B2B hardware marketplace. Shop 8,000+ products across electrical, plumbing, paint, tools, construction and more from GST-verified suppliers.")" />
+<title>@yield('title', 'Hardware Centers')</title>
+<meta name="description" content="@yield('description', "Hardware Centers — India's B2B hardware marketplace. Shop 8,000+ products across electrical, plumbing, paint, tools, construction and more from GST-verified suppliers.")" />
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link rel="icon" href="{{ asset('web/img/hc-logo.png') }}" />
 <link rel="stylesheet" href="{{ asset('web/css/style.css') }}" />
@@ -26,7 +26,7 @@
 <header class="site-header">
   <div class="container">
     <a href="{{ route('web.home') }}" class="brand">
-      <img src="{{ asset('web/img/hc-logo.png') }}" alt="Hardware Centre logo" />
+      <img src="{{ asset('web/img/hc-logo.png') }}" alt="Hardware Centers logo" />
       <span class="brand-name">Hardware <span>Centre</span></span>
     </a>
     <nav><ul class="main-nav">
@@ -86,7 +86,7 @@
 <footer class="site-footer">
   <div class="container footer-top">
     <div class="footer-brand">
-      <a href="{{ route('web.home') }}" class="brand"><img src="{{ asset('web/img/hc-logo.png') }}" alt="Hardware Centre logo" style="width:40px;height:40px;border-radius:11px;" /><span class="brand-name">Hardware <span style="color:#F97316;">Centre</span></span></a>
+      <a href="{{ route('web.home') }}" class="brand"><img src="{{ asset('web/img/hc-logo.png') }}" alt="Hardware Centers logo" style="width:40px;height:40px;border-radius:11px;" /><span class="brand-name">Hardware <span style="color:#F97316;">Centre</span></span></a>
       <p>Everything hardware, one marketplace. 8,000+ products from GST-verified suppliers, delivered to 500+ cities across India.</p>
       <div class="footer-social">
         <a href="#" aria-label="Facebook"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></a>
@@ -130,7 +130,7 @@
     </div>
   </div>
   <div class="container footer-bottom">
-    <span>© {{ date('Y') }} Hardware Centre. All rights reserved.</span>
+    <span>© {{ date('Y') }} Hardware Centers. All rights reserved.</span>
     <div class="footer-legal"><a href="#">Privacy Policy</a><a href="#">Terms of Service</a><a href="{{ route('web.contact') }}">Sitemap</a></div>
   </div>
 </footer>

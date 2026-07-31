@@ -1,7 +1,7 @@
 @extends('web.layout')
 
-@section('title', 'Search · Hardware Centre')
-@section('description', 'Search 8,000+ hardware products from GST-verified suppliers on Hardware Centre.')
+@section('title', 'Search · Hardware Centers')
+@section('description', 'Search 8,000+ hardware products from GST-verified suppliers on Hardware Centers.')
 
 @section('content')
 <section class="page-hero" style="padding:44px 0 40px;">

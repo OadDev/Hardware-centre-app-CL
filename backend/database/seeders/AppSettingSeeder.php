@@ -10,7 +10,7 @@ class AppSettingSeeder extends Seeder
     public function run(): void
     {
         AppSetting::current()->update([
-            'business_name' => 'Hardware Centre Pvt. Ltd.',
+            'business_name' => 'Hardware Centers Pvt. Ltd.',
             'contact_number' => '+91 98765 43210',
             'support_email' => 'support@hardwarecentre.in',
             'gst_number' => 'GSTIN07AABCH1234N1Z5',

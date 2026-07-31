@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Setup — Hardware Centre</title>
+<title>Setup — Hardware Centers</title>
 <link rel="stylesheet" href="{{ asset('vendor/admin.css') }}">
 </head>
 <body class="min-h-screen bg-ink-50 font-sans flex items-center justify-center p-6">
   <div class="w-full max-w-lg">
     <div class="text-center mb-8">
       <div class="w-12 h-12 rounded-2xl bg-brand-600 text-white flex items-center justify-center mx-auto font-bold text-lg">HC</div>
-      <h1 class="mt-4 text-xl font-bold text-ink-900">Hardware Centre — Installation</h1>
+      <h1 class="mt-4 text-xl font-bold text-ink-900">Hardware Centers — Installation</h1>
       <p class="text-sm text-ink-500 mt-1">One-time setup: connect the database and create your admin login.</p>
     </div>
 

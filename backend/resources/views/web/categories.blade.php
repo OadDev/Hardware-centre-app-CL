@@ -1,7 +1,7 @@
 @extends('web.layout')
 
-@section('title', 'Browse by Category · Hardware Centre')
-@section('description', 'Browse Hardware Centre\'s 12 categories and 8,000+ products from verified suppliers.')
+@section('title', 'Browse by Category · Hardware Centers')
+@section('description', 'Browse Hardware Centers\'s 12 categories and 8,000+ products from verified suppliers.')
 
 @section('content')
 <section class="page-hero">
@@ -60,7 +60,7 @@
     <div class="subcat-panel" data-subpanel="more" style="display:none;">
       <div class="subcat-head">
         <div class="ic"><x-web.cat-icon icon="more" size="24" /></div>
-        <div><div style="font-size:19px;font-weight:800;font-family:'Manrope',sans-serif;">More Categories</div><div style="font-size:12.5px;color:var(--muted);margin-top:2px;">Browse everything Hardware Centre has to offer</div></div>
+        <div><div style="font-size:19px;font-weight:800;font-family:'Manrope',sans-serif;">More Categories</div><div style="font-size:12.5px;color:var(--muted);margin-top:2px;">Browse everything Hardware Centers has to offer</div></div>
       </div>
       <p style="font-size:13.5px;color:var(--muted);margin-top:10px;">Use <a href="{{ route('web.search') }}" style="color:var(--orange-dark);font-weight:700;">Search</a> to explore the full catalog across all categories.</p>
     </div>

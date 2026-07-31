@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('category');
             $table->string('excerpt');
             $table->longText('body');
-            $table->string('author')->default('Hardware Centre Editorial');
+            $table->string('author')->default('Hardware Centers Editorial');
             $table->unsignedInteger('read_minutes')->default(5);
             $table->boolean('featured')->default(false);
             $table->enum('status', ['Published', 'Draft'])->default('Published');

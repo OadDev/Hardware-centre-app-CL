@@ -13,7 +13,7 @@ class AdminUserSeeder extends Seeder
         $admin = User::firstOrCreate(
             ['email' => 'admin@hardwarecentre.in'],
             [
-                'name' => 'Hardware Centre Admin',
+                'name' => 'Hardware Centers Admin',
                 'phone' => '9876543210',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),

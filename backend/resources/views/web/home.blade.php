@@ -1,7 +1,7 @@
 @extends('web.layout')
 
-@section('title', 'Home · Hardware Centre')
-@section('description', "Hardware Centre — India's B2B hardware marketplace. Shop 8,000+ products across electrical, plumbing, paint, tools, construction and more from GST-verified suppliers.")
+@section('title', 'Home · Hardware Centers')
+@section('description', "Hardware Centers — India's B2B hardware marketplace. Shop 8,000+ products across electrical, plumbing, paint, tools, construction and more from GST-verified suppliers.")
 
 @section('content')
 <section class="hero">
@@ -161,14 +161,14 @@
   <div class="container" style="display:grid;grid-template-columns:1fr 1fr;gap:22px;">
     <div class="cta-band" style="padding:36px;">
       <div class="cta-band-in" style="flex-direction:column;align-items:flex-start;">
-        <h3 style="font-size:21px;">Grow your business with Hardware Centre</h3>
+        <h3 style="font-size:21px;">Grow your business with Hardware Centers</h3>
         <p>Join 1,200+ verified sellers reaching buyers across India.</p>
         <div class="btns" style="margin-top:18px;"><a href="{{ route('web.sell') }}" class="btn btn-primary">Become a Seller</a></div>
       </div>
     </div>
     <div class="cta-band" style="padding:36px;background:#111827;">
       <div class="cta-band-in" style="flex-direction:column;align-items:flex-start;">
-        <h3 style="font-size:21px;">Shop faster on the Hardware Centre app</h3>
+        <h3 style="font-size:21px;">Shop faster on the Hardware Centers app</h3>
         <p>Track orders, scan barcodes, and get exclusive app-only deals.</p>
         <div class="btns" style="margin-top:18px;"><a href="{{ route('web.download-app') }}" class="btn btn-outline-light">Download the App</a></div>
       </div>

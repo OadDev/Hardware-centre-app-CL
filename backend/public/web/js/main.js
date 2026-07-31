@@ -1,4 +1,4 @@
-// Hardware Centre — shared site behaviour
+// Hardware Centers — shared site behaviour
 (function () {
   "use strict";
 
@@ -392,7 +392,7 @@
     if (!btn) return;
     e.preventDefault();
     e.stopPropagation();
-    showToast("Download the Hardware Centre app to complete your purchase.");
+    showToast("Download the Hardware Centers app to complete your purchase.");
   });
 
   // ---------------- Product detail page ----------------
