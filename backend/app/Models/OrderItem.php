@@ -10,6 +10,7 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id', 'product_id', 'product_variant_id', 'variant_label', 'seller_id', 'quantity', 'unit_price',
         'line_total', 'commission_pct', 'commission_amount',
+        'fulfillment_type', 'warehouse_id', 'dispatch_status',
     ];
 
     protected function casts(): array
@@ -40,5 +41,10 @@ class OrderItem extends Model
     public function seller(): BelongsTo
     {
         return $this->belongsTo(Seller::class);
+    }
+
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 }

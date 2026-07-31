@@ -10,14 +10,14 @@ class RolePermissionSeeder extends Seeder
 {
     public function run(): void
     {
-        $modules = ['Dashboard', 'Sellers', 'Customers', 'Products', 'Orders', 'Settlements', 'Reports', 'Settings'];
+        $modules = ['Dashboard', 'Sellers', 'Customers', 'Products', 'Orders', 'Settlements', 'Reports', 'Settings', 'Warehouse'];
 
         foreach ($modules as $module) {
             Permission::firstOrCreate(['name' => 'view '.$module, 'guard_name' => 'web']);
             Permission::firstOrCreate(['name' => 'manage '.$module, 'guard_name' => 'web']);
         }
 
-        $roles = ['Admin', 'Manager', 'Support', 'Accounts', 'Seller'];
+        $roles = ['Admin', 'Manager', 'Support', 'Accounts', 'Seller', 'WarehouseStaff'];
         foreach ($roles as $roleName) {
             Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
         }
@@ -49,6 +49,12 @@ class RolePermissionSeeder extends Seeder
         $seller = Role::where('name', 'Seller')->first();
         $seller->syncPermissions(Permission::whereIn('name', [
             'view Products', 'manage Products', 'view Orders',
+        ])->get());
+
+        /** @var Role $warehouseStaff */
+        $warehouseStaff = Role::where('name', 'WarehouseStaff')->first();
+        $warehouseStaff->syncPermissions(Permission::whereIn('name', [
+            'view Warehouse', 'manage Warehouse',
         ])->get());
     }
 }

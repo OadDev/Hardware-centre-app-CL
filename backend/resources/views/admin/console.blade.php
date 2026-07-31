@@ -137,6 +137,10 @@ async function refreshReturns() { DATA.returns = unwrap(await api('GET', '/retur
 async function refreshCoupons() { DATA.coupons = await api('GET', '/coupons'); }
 async function refreshBanners() { DATA.banners = await api('GET', '/banners'); }
 async function refreshSettlements() { DATA.settlements = unwrap(await api('GET', '/settlements?per_page=250')); }
+async function refreshWarehouseOverview() { DATA.warehouseOverview = await api('GET', '/warehouses'); }
+async function refreshWarehouseInventory() { DATA.warehouseInventory = unwrap(await api('GET', '/warehouses/inventory?per_page=250')); }
+async function refreshWarehouseShipments() { DATA.warehouseShipments = unwrap(await api('GET', '/warehouses/shipments?per_page=250')); }
+async function refreshDispatchQueue() { DATA.dispatchQueue = unwrap(await api('GET', '/warehouses/dispatch-queue?per_page=250')); }
 async function refreshCommission() { DATA.commission = await api('GET', '/commission?per_page=250'); }
 async function refreshDashboard() { DATA.dashboard = await api('GET', '/dashboard'); DATA.monthlyRevenue = DATA.dashboard.monthly_revenue; DATA.activities = DATA.dashboard.activities; }
 async function refreshGst() { DATA.gst = await api('GET', '/gst'); }
@@ -154,6 +158,7 @@ async function loadAll() {
     refreshCoupons(), refreshBanners(), refreshSettlements(), refreshCommission(),
     refreshGst(), refreshShipping(), refreshPayments(), refreshShiprocket(),
     refreshNotifications(), refreshRoles(), refreshSettings(),
+    refreshWarehouseOverview(), refreshWarehouseInventory(), refreshWarehouseShipments(), refreshDispatchQueue(),
   ]);
 }
 
@@ -174,6 +179,9 @@ const NAV_GROUPS = [
     { key:'settlements', label:'Settlement Management', icon:'banknote' },
     { key:'coupons', label:'Coupons & Offers', icon:'ticket-percent' },
     { key:'banners', label:'Banner Management', icon:'image' },
+  ]},
+  { title:'Fulfillment', items: [
+    { key:'warehouse', label:'Warehouse & FBA', icon:'warehouse' },
   ]},
   { title:'Insights', items: [
     { key:'reports', label:'Reports & Analytics', icon:'bar-chart-3' },
@@ -202,6 +210,7 @@ const SECTION_TITLES = {
   settlements: ['Settlement Management', 'Track payouts to sellers'],
   coupons: ['Coupons & Offers', 'Create and manage promotional discounts'],
   banners: ['Banner Management', 'Manage homepage and offer banners'],
+  warehouse: ['Warehouse & FBA', 'Manage warehouse stock, inbound shipments and order dispatch'],
   reports: ['Reports & Analytics', 'Deep dive into marketplace performance'],
   gst: ['GST & Tax Settings', 'Configure tax rules and HSN codes'],
   shipping: ['Shipping Configuration', 'Set up shipping zones, charges and rules'],

@@ -31,5 +31,16 @@ class AdminUserSeeder extends Seeder
             ]
         );
         $manager->syncRoles(['Manager']);
+
+        $warehouseStaff = User::firstOrCreate(
+            ['email' => 'warehouse@hardwarecentre.in'],
+            [
+                'name' => 'Warehouse Staff',
+                'phone' => '9876500001',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+            ]
+        );
+        $warehouseStaff->syncRoles(['WarehouseStaff']);
     }
 }

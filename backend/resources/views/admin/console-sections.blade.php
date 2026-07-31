@@ -1263,3 +1263,216 @@ SECTION_RENDERERS.settings = async function(main) {
   }));
   renderTab();
 };
+
+/* ===== WAREHOUSE & FBA ===== */
+SECTION_RENDERERS.warehouse = async function(main) {
+  const tabs = ['Inventory', 'Inbound Shipments', 'Dispatch Queue', 'Warehouses'];
+  let activeTab = tabs[0];
+  const overview = DATA.warehouseOverview || { warehouses: [], dispatch_pending: 0 };
+
+  main.innerHTML = `
+    ${pageHeader('Warehouse & FBA', 'Manage warehouse stock, inbound shipments and order dispatch')}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      ${kpiCard({label:'Warehouses', value: fmtNum(overview.warehouses.length), icon:'warehouse', accent:'brand'})}
+      ${kpiCard({label:'SKUs Tracked', value: fmtNum(overview.warehouses.reduce((a,w)=>a+w.skuCount,0)), icon:'package', accent:'emerald'})}
+      ${kpiCard({label:'Low Stock Items', value: fmtNum(overview.warehouses.reduce((a,w)=>a+w.lowStockCount,0)), icon:'alert-triangle', accent:'amber'})}
+      ${kpiCard({label:'Pending Dispatch', value: fmtNum(overview.dispatch_pending), icon:'truck', accent:'rose'})}
+    </div>
+    <div class="flex gap-1.5 mb-5 overflow-x-auto pb-1 scrollbar-none" id="warehouse-tabs">
+      ${tabs.map((t,i) => `<button data-tab="${t}" class="warehouse-tab px-3.5 py-2 text-sm font-medium rounded-xl whitespace-nowrap transition-colors ${i===0?'bg-brand-600 text-white':'bg-white dark:bg-ink-800 text-ink-600 dark:text-ink-300 border border-ink-200 dark:border-ink-700'}">${t}</button>`).join('')}
+    </div>
+    <div id="warehouse-content"></div>`;
+
+  function renderTab() {
+    const content = document.getElementById('warehouse-content');
+
+    if (activeTab === 'Inventory') {
+      content.innerHTML = tableCard('warehouse-inventory-table');
+      renderDataTable('warehouse-inventory-table', {
+        title: 'Warehouse Inventory', subtitle: `${DATA.warehouseInventory.length} SKUs across all warehouses`,
+        data: DATA.warehouseInventory, searchKeys: ['product','seller','warehouse'],
+        filters: [{ key: 'warehouse', label: 'Warehouse', options: [...new Set(DATA.warehouseInventory.map(i=>i.warehouse))] }],
+        columns: [
+          { label:'Product', render: i => `<div><p class="font-medium text-ink-800 dark:text-ink-100">${i.product}</p>${i.variant?`<p class="text-xs text-ink-400">${i.variant}</p>`:''}</div>` },
+          { label:'Seller', key:'seller' },
+          { label:'Warehouse', key:'warehouse' },
+          { label:'Available', render: i => `<span class="font-semibold ${i.lowStock?'text-amber-600':'text-ink-800 dark:text-ink-100'}">${fmtNum(i.quantityAvailable)}</span>` },
+          { label:'Reserved', render: i => fmtNum(i.quantityReserved) },
+        ],
+        rowClick: openInventoryAdjustModal,
+      });
+    }
+
+    if (activeTab === 'Inbound Shipments') {
+      content.innerHTML = tableCard('warehouse-shipments-table');
+      renderDataTable('warehouse-shipments-table', {
+        title: 'Inbound Shipments', subtitle: `${DATA.warehouseShipments.length} shipments from sellers`,
+        data: DATA.warehouseShipments, searchKeys: ['id','seller'],
+        filters: [{ key: 'status', label: 'Status', options: ['Pending','In Transit','Received','Partially Received','Rejected'] }],
+        columns: [
+          { label:'Shipment', render: s => `<span class="font-medium text-ink-800 dark:text-ink-100">${s.id}</span>` },
+          { label:'Seller', key:'seller' },
+          { label:'Warehouse', key:'warehouse' },
+          { label:'Items', render: s => `${s.items.reduce((a,it)=>a+it.quantityExpected,0)} units (${s.items.length} products)` },
+          { label:'Status', render: s => statusBadge(s.status) },
+          { label:'Created', render: s => new Date(s.createdAt).toLocaleDateString('en-IN',{day:'numeric',month:'short'}) },
+        ],
+        rowClick: openShipmentDrawer,
+      });
+    }
+
+    if (activeTab === 'Dispatch Queue') {
+      content.innerHTML = tableCard('dispatch-queue-table');
+      renderDataTable('dispatch-queue-table', {
+        title: 'Dispatch Queue', subtitle: `${DATA.dispatchQueue.length} warehouse-fulfilled items awaiting pack/dispatch`,
+        data: DATA.dispatchQueue, searchKeys: ['orderId','customerName','product'],
+        filters: [{ key: 'dispatchStatus', label: 'Status', options: ['Pending','Packed'] }],
+        columns: [
+          { label:'Order', key:'orderId' },
+          { label:'Customer', key:'customerName' },
+          { label:'Product', render: i => `<div><p class="font-medium text-ink-800 dark:text-ink-100">${i.product}</p>${i.variant?`<p class="text-xs text-ink-400">${i.variant}</p>`:''}</div>` },
+          { label:'Qty', key:'quantity' },
+          { label:'Seller', key:'seller' },
+          { label:'Status', render: i => statusBadge(i.dispatchStatus) },
+          { label:'Action', render: i => i.dispatchStatus === 'Pending'
+              ? `<button data-stop-row-click data-action="pack" data-id="${i.id}" class="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-brand-600 hover:bg-brand-700 text-white">Mark Packed</button>`
+              : `<button data-stop-row-click data-action="dispatch" data-id="${i.id}" class="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">Dispatch</button>`
+          },
+        ],
+        afterRender: (container) => {
+          container.querySelectorAll('[data-action]').forEach(btn => btn.addEventListener('click', withErr(async () => {
+            const action = btn.dataset.action;
+            await api('POST', `/warehouses/dispatch-queue/${btn.dataset.id}/${action}`, {});
+            toast(action === 'pack' ? 'Marked as packed' : 'Marked as dispatched');
+            await refreshDispatchQueue(); navigateTo('warehouse');
+          })));
+        },
+      });
+    }
+
+    if (activeTab === 'Warehouses') {
+      content.innerHTML = `
+        <div class="flex justify-end mb-3">${btnPrimary('Add Warehouse','plus','add-warehouse-btn')}</div>
+        ${tableCard('warehouses-table')}
+      `;
+      renderDataTable('warehouses-table', {
+        title: 'Warehouses', subtitle: `${overview.warehouses.length} warehouses`,
+        data: overview.warehouses, searchKeys: ['name','city'],
+        columns: [
+          { label:'Name', render: w => `<div><p class="font-medium text-ink-800 dark:text-ink-100">${w.name}</p><p class="text-xs text-ink-400">${w.id}</p></div>` },
+          { label:'City', render: w => w.city ? `${w.city}, ${w.state||''}` : '—' },
+          { label:'SKUs', render: w => fmtNum(w.skuCount) },
+          { label:'Low Stock', render: w => fmtNum(w.lowStockCount) },
+          { label:'Pending Shipments', render: w => fmtNum(w.pendingShipments) },
+          { label:'Status', render: w => statusBadge(w.status) },
+        ],
+        rowClick: openWarehouseEditModal,
+      });
+      document.getElementById('add-warehouse-btn').addEventListener('click', () => {
+        openModal({
+          title: 'Add Warehouse',
+          body: `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            ${formField('Warehouse Name','text','e.g. Chennai Fulfillment Centre','','nw-name')}
+            ${formField('Phone','tel','','','nw-phone')}
+            ${formField('City','text','','','nw-city')}
+            ${formField('State','text','','','nw-state')}
+            <div class="sm:col-span-2">${formTextarea('Address','',2,'nw-address')}</div>
+          </div>`,
+          confirmLabel: 'Create Warehouse', onConfirm: withErr(async () => {
+            await api('POST', '/warehouses', {
+              name: document.getElementById('nw-name').value,
+              phone: document.getElementById('nw-phone').value || undefined,
+              city: document.getElementById('nw-city').value || undefined,
+              state: document.getElementById('nw-state').value || undefined,
+              address: document.getElementById('nw-address').value || undefined,
+            });
+            closeModal(); toast('Warehouse created'); await refreshWarehouseOverview(); navigateTo('warehouse');
+          }),
+        });
+      });
+    }
+
+    refreshIcons();
+  }
+
+  main.querySelectorAll('.warehouse-tab').forEach(btn => btn.addEventListener('click', () => {
+    activeTab = btn.dataset.tab;
+    main.querySelectorAll('.warehouse-tab').forEach(b => {
+      b.classList.toggle('bg-brand-600', b===btn); b.classList.toggle('text-white', b===btn);
+      b.classList.toggle('bg-white', b!==btn); b.classList.toggle('dark:bg-ink-800', b!==btn);
+      b.classList.toggle('text-ink-600', b!==btn); b.classList.toggle('dark:text-ink-300', b!==btn);
+      b.classList.toggle('border', b!==btn); b.classList.toggle('border-ink-200', b!==btn); b.classList.toggle('dark:border-ink-700', b!==btn);
+    });
+    renderTab();
+  }));
+  renderTab();
+};
+
+function openInventoryAdjustModal(i) {
+  openModal({
+    title: 'Adjust Stock — ' + i.product + (i.variant ? ' ('+i.variant+')' : ''),
+    body: `
+      <div class="grid grid-cols-2 gap-3 mb-4">${miniStat('Available', fmtNum(i.quantityAvailable))}${miniStat('Reserved', fmtNum(i.quantityReserved))}</div>
+      ${formField('Adjustment (+/-)','number','e.g. -5 or 20','','wi-delta')}
+      ${formTextarea('Reason / Note','e.g. damaged stock, recount',2,'wi-note')}
+    `,
+    confirmLabel: 'Apply Adjustment', onConfirm: withErr(async () => {
+      const delta = parseInt(document.getElementById('wi-delta').value || '0', 10);
+      if (!delta) { throw new Error('Enter a non-zero adjustment'); }
+      await api('PATCH', '/warehouses/inventory/'+i.id, { quantity_delta: delta, note: document.getElementById('wi-note').value || undefined });
+      closeModal(); toast('Inventory adjusted'); await refreshWarehouseInventory(); navigateTo('warehouse');
+    }),
+  });
+}
+
+function openShipmentDrawer(s) {
+  openDrawer(s.id, `
+    <div class="grid grid-cols-2 gap-3 mb-5">${miniStat('Status', s.status)}${miniStat('Warehouse', s.warehouse)}</div>
+    ${drawerSection('Shipment Details', `${drawerRow('Seller', s.seller)}${drawerRow('Expected', s.expectedAt ? new Date(s.expectedAt).toLocaleDateString('en-IN') : '—')}${drawerRow('Notes', s.notes || '—')}`)}
+    <div class="mt-4">
+      <p class="text-xs font-semibold uppercase tracking-wide text-ink-400 mb-2">Items Received</p>
+      <div class="space-y-2.5">
+        ${s.items.map(item => `
+          <div class="bg-ink-50 dark:bg-ink-800/40 rounded-xl p-3 flex items-center justify-between gap-3">
+            <div class="min-w-0"><p class="text-sm font-medium text-ink-800 dark:text-ink-100 truncate">${item.product}${item.variant?` <span class="text-ink-400">(${item.variant})</span>`:''}</p><p class="text-xs text-ink-400">Expected ${item.quantityExpected}</p></div>
+            <input type="number" min="0" max="${item.quantityExpected}" value="${item.quantityReceived}" data-shipment-item="${item.id}" class="w-20 px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-800 text-right">
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    <div class="flex gap-2.5 mt-6 pt-5 border-t border-ink-100 dark:border-ink-800">
+      <button id="save-shipment-receipt-btn" class="flex-1 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-xl">Save Received Quantities</button>
+    </div>
+  `, true);
+  document.getElementById('save-shipment-receipt-btn').addEventListener('click', withErr(async () => {
+    const items = s.items.map(item => ({
+      item_id: item.id,
+      quantity_received: parseInt(document.querySelector(`[data-shipment-item="${item.id}"]`).value || '0', 10),
+    }));
+    await api('POST', '/warehouses/shipments/'+s.id+'/receive', { items });
+    closeModal(); toast('Shipment updated'); await refreshWarehouseInventory(); await refreshWarehouseShipments(); navigateTo('warehouse');
+  }));
+}
+
+function openWarehouseEditModal(w) {
+  openModal({
+    title: 'Edit Warehouse — ' + w.name,
+    body: `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      ${formField('Warehouse Name','text','',w.name,'ew-name')}
+      ${formField('Phone','tel','',w.phone||'','ew-phone')}
+      ${formField('City','text','',w.city||'','ew-city')}
+      ${formField('State','text','',w.state||'','ew-state')}
+      ${formSelect('Status',['Active','Inactive'],w.status==='Active'?0:1,'ew-status')}
+    </div>`,
+    confirmLabel: 'Save Changes', onConfirm: withErr(async () => {
+      await api('PATCH', '/warehouses/'+w.id, {
+        name: document.getElementById('ew-name').value,
+        phone: document.getElementById('ew-phone').value || undefined,
+        city: document.getElementById('ew-city').value || undefined,
+        state: document.getElementById('ew-state').value || undefined,
+        status: document.getElementById('ew-status').value,
+      });
+      closeModal(); toast('Warehouse updated'); await refreshWarehouseOverview(); navigateTo('warehouse');
+    }),
+  });
+}

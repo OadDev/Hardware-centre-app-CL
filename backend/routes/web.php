@@ -9,6 +9,7 @@ use App\Http\Controllers\Seller\ProductController as SellerProductController;
 use App\Http\Controllers\Seller\ProfileController as SellerProfileController;
 use App\Http\Controllers\Seller\ReturnController as SellerReturnController;
 use App\Http\Controllers\Seller\SettlementController as SellerSettlementController;
+use App\Http\Controllers\Seller\WarehouseController as SellerWarehouseController;
 use App\Http\Controllers\SetupController;
 use App\Http\Controllers\Web\AboutController;
 use App\Http\Controllers\Web\BlogController;
@@ -46,7 +47,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('login', [AuthController::class, 'login'])->name('login.attempt');
     Route::post('logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
-    Route::middleware(['auth', 'role:Admin|Manager|Support|Accounts'])->group(function () {
+    Route::middleware(['auth', 'role:Admin|Manager|Support|Accounts|WarehouseStaff'])->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::group([], base_path('routes/admin_api.php'));
     });
@@ -71,6 +72,10 @@ Route::prefix('seller')->name('seller.')->group(function () {
         Route::delete('products/{product:product_code}/variants/{variant}', [SellerProductController::class, 'destroyVariant'])->name('products.variants.destroy');
 
         Route::get('orders', [SellerOrderController::class, 'index'])->name('orders');
+
+        Route::get('warehouse', [SellerWarehouseController::class, 'index'])->name('warehouse');
+        Route::post('warehouse/shipments', [SellerWarehouseController::class, 'storeShipment'])->name('warehouse.shipments.store');
+
         Route::get('settlements', [SellerSettlementController::class, 'index'])->name('settlements');
         Route::get('returns', [SellerReturnController::class, 'index'])->name('returns');
 

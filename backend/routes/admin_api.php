@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SettlementController;
 use App\Http\Controllers\Admin\ShippingController;
 use App\Http\Controllers\Admin\ShiprocketController;
+use App\Http\Controllers\Admin\WarehouseController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('api')->name('api.')->group(function () {
@@ -49,6 +50,18 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::post('commission/sellers/{seller}/categories', [CommissionController::class, 'setCategoryOverride']);
     Route::delete('commission/sellers/{seller}/categories/{category}', [CommissionController::class, 'removeCategoryOverride']);
     Route::patch('commission/tiers/{tier}', [CommissionController::class, 'updateTier']);
+
+    Route::get('warehouses', [WarehouseController::class, 'index']);
+    Route::post('warehouses', [WarehouseController::class, 'store']);
+    Route::patch('warehouses/{warehouse}', [WarehouseController::class, 'update']);
+    Route::get('warehouses/inventory', [WarehouseController::class, 'inventory']);
+    Route::patch('warehouses/inventory/{inventory}', [WarehouseController::class, 'adjustInventory']);
+    Route::get('warehouses/shipments', [WarehouseController::class, 'shipments']);
+    Route::get('warehouses/shipments/{shipment}', [WarehouseController::class, 'showShipment']);
+    Route::post('warehouses/shipments/{shipment}/receive', [WarehouseController::class, 'receiveShipment']);
+    Route::get('warehouses/dispatch-queue', [WarehouseController::class, 'dispatchQueue']);
+    Route::post('warehouses/dispatch-queue/{item}/pack', [WarehouseController::class, 'packItem']);
+    Route::post('warehouses/dispatch-queue/{item}/dispatch', [WarehouseController::class, 'dispatchItem']);
 
     Route::get('settlements', [SettlementController::class, 'index']);
     Route::post('settlements/{settlement}/retry', [SettlementController::class, 'retry']);

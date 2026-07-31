@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\WarehouseInventory;
+use App\Models\WarehouseStockMovement;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -56,9 +58,54 @@ class OrderController extends Controller
             $data['delivered_at'] = now();
         }
 
+        $wasCancelled = $order->status === 'Cancelled';
         $order->update($data);
 
+        if ($data['status'] === 'Cancelled' && ! $wasCancelled) {
+            $this->releaseWarehouseReservations($order);
+        }
+
         return response()->json($this->transform($order));
+    }
+
+    /**
+     * Undo any warehouse stock reservation for items that haven't shipped
+     * yet, so cancelled orders don't permanently lock up warehouse stock.
+     */
+    private function releaseWarehouseReservations(Order $order): void
+    {
+        $order->load('items');
+
+        foreach ($order->items as $item) {
+            if ($item->fulfillment_type !== 'warehouse' || ! in_array($item->dispatch_status, ['Pending', 'Packed'], true)) {
+                continue;
+            }
+
+            $inventory = WarehouseInventory::where('warehouse_id', $item->warehouse_id)
+                ->where('seller_id', $item->seller_id)
+                ->where('product_id', $item->product_id)
+                ->where('product_variant_id', $item->product_variant_id)
+                ->first();
+
+            if ($inventory) {
+                $inventory->increment('quantity_available', $item->quantity);
+                $inventory->decrement('quantity_reserved', min($item->quantity, $inventory->quantity_reserved));
+
+                WarehouseStockMovement::create([
+                    'warehouse_id' => $item->warehouse_id,
+                    'seller_id' => $item->seller_id,
+                    'product_id' => $item->product_id,
+                    'product_variant_id' => $item->product_variant_id,
+                    'type' => 'order_cancelled_release',
+                    'quantity_delta' => $item->quantity,
+                    'reference_type' => 'order_item',
+                    'reference_id' => $item->id,
+                    'note' => 'Released — order '.$order->order_no.' cancelled',
+                ]);
+            }
+
+            $item->update(['dispatch_status' => 'Cancelled']);
+        }
     }
 
     private function transform(Order $o): array

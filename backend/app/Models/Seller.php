@@ -60,6 +60,16 @@ class Seller extends Model
         return $this->hasMany(SellerCategoryCommission::class);
     }
 
+    public function warehouseInventories(): HasMany
+    {
+        return $this->hasMany(WarehouseInventory::class);
+    }
+
+    public function warehouseShipments(): HasMany
+    {
+        return $this->hasMany(WarehouseShipment::class);
+    }
+
     /**
      * The commission rate that applies to a sale of $category by this
      * seller: an exact override on that category, else an override on its

@@ -16,8 +16,8 @@
       </div>
     </div>
     <nav class="flex-1 px-3 py-4 space-y-1 text-sm">
-      @php($current = request()->routeIs('seller.dashboard') ? 'dashboard' : (request()->routeIs('seller.products') ? 'products' : (request()->routeIs('seller.orders') ? 'orders' : (request()->routeIs('seller.settlements') ? 'settlements' : (request()->routeIs('seller.returns') ? 'returns' : (request()->routeIs('seller.profile') ? 'profile' : ''))))))
-      @foreach([['dashboard','Dashboard','seller.dashboard'],['products','My Products','seller.products'],['orders','My Orders','seller.orders'],['settlements','Settlements','seller.settlements'],['returns','Returns','seller.returns'],['profile','Store Profile','seller.profile']] as [$key, $label, $route])
+      @php($current = request()->routeIs('seller.dashboard') ? 'dashboard' : (request()->routeIs('seller.products') ? 'products' : (request()->routeIs('seller.orders') ? 'orders' : (request()->routeIs('seller.warehouse') ? 'warehouse' : (request()->routeIs('seller.settlements') ? 'settlements' : (request()->routeIs('seller.returns') ? 'returns' : (request()->routeIs('seller.profile') ? 'profile' : '')))))))
+      @foreach([['dashboard','Dashboard','seller.dashboard'],['products','My Products','seller.products'],['orders','My Orders','seller.orders'],['warehouse','Warehouse','seller.warehouse'],['settlements','Settlements','seller.settlements'],['returns','Returns','seller.returns'],['profile','Store Profile','seller.profile']] as [$key, $label, $route])
       <a href="{{ route($route) }}" class="block px-3 py-2.5 rounded-xl font-medium {{ $current === $key ? 'bg-brand-50 text-brand-700' : 'text-ink-600 hover:bg-ink-50' }}">{{ $label }}</a>
       @endforeach
     </nav>

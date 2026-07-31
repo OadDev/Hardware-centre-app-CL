@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
 use App\Models\Coupon;
 use App\Models\Order;
+use App\Models\WarehouseInventory;
+use App\Models\WarehouseStockMovement;
 use App\Support\CartCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -79,7 +81,17 @@ class OrderController extends Controller
             $lineTotal = $unitPrice * $item->quantity;
             $commissionPct = $seller->commissionRateFor($product->category);
 
-            $order->items()->create([
+            // FBA-style auto-fulfillment: if this seller has enough stock sitting
+            // in an active warehouse, reserve it from there instead of relying on
+            // the seller to ship it themselves.
+            $warehouseInventory = WarehouseInventory::where('seller_id', $seller->id)
+                ->where('product_id', $product->id)
+                ->where('product_variant_id', $variant?->id)
+                ->where('quantity_available', '>=', $item->quantity)
+                ->whereHas('warehouse', fn ($q) => $q->where('status', 'Active'))
+                ->first();
+
+            $orderItem = $order->items()->create([
                 'product_id' => $product->id,
                 'product_variant_id' => $variant?->id,
                 'variant_label' => $variant?->label,
@@ -89,7 +101,27 @@ class OrderController extends Controller
                 'line_total' => $lineTotal,
                 'commission_pct' => $commissionPct,
                 'commission_amount' => round($lineTotal * $commissionPct / 100, 2),
+                'fulfillment_type' => $warehouseInventory ? 'warehouse' : 'seller',
+                'warehouse_id' => $warehouseInventory?->warehouse_id,
+                'dispatch_status' => $warehouseInventory ? 'Pending' : null,
             ]);
+
+            if ($warehouseInventory) {
+                $warehouseInventory->decrement('quantity_available', $item->quantity);
+                $warehouseInventory->increment('quantity_reserved', $item->quantity);
+
+                WarehouseStockMovement::create([
+                    'warehouse_id' => $warehouseInventory->warehouse_id,
+                    'seller_id' => $seller->id,
+                    'product_id' => $product->id,
+                    'product_variant_id' => $variant?->id,
+                    'type' => 'order_reserved',
+                    'quantity_delta' => -$item->quantity,
+                    'reference_type' => 'order_item',
+                    'reference_id' => $orderItem->id,
+                    'note' => 'Reserved for order '.$order->order_no,
+                ]);
+            }
 
             $product->increment('sold_count', $item->quantity);
 
