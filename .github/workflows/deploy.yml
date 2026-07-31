@@ -94,9 +94,11 @@ jobs:
             echo "--- hitting the live site over HTTPS right now ---"
             curl -s -o /dev/null -w "admin/login -> %{http_code}\n" https://hardwarecenters.com/admin/login
             date -u
+            echo "--- _diag.php (inside the live FPM process) ---"
+            curl -s "https://hardwarecenters.com/_diag.php?reset=1"
             echo "--- log file mtimes ---"
             ls -la "$BACKEND_DIR/storage/logs"
-            echo "--- last 60 lines of the log, right now ---"
+            echo "--- last 30 lines of the log, right now ---"
             latest=$(ls -t "$BACKEND_DIR"/storage/logs/*.log 2>/dev/null | head -1 || true)
-            if [ -n "$latest" ]; then tail -n 60 "$latest"; else echo "no log files found"; fi
+            if [ -n "$latest" ]; then tail -n 30 "$latest"; else echo "no log files found"; fi
           '
