@@ -75,6 +75,11 @@ jobs:
             BACKEND_DIR="$HOME/domains/hardwarecenters.com/app/backend"
             ENV_FILE="$BACKEND_DIR/.env"
 
+            # deploy.sh copies public/ into public_html but never deletes
+            # orphaned files there, so this temporary diagnostic script (now
+            # removed from the repo) needs an explicit removal here.
+            rm -f "$HOME/domains/hardwarecenters.com/public_html/_diag.php"
+
             if grep -q "^DB_HOST=localhost$" "$ENV_FILE"; then
               sed -i "s/^DB_HOST=localhost$/DB_HOST=127.0.0.1/" "$ENV_FILE"
 
