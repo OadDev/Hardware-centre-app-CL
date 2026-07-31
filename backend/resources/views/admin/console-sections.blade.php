@@ -149,7 +149,11 @@ function openSellerProfile(s) {
       ${drawerSection('Store Details', `${drawerRow('Email', s.email)}${drawerRow('Phone', s.phone)}${drawerRow('City', s.city+', '+s.state)}${drawerRow('GSTIN', s.gst||'—')}`)}
       ${drawerSection('KYC Status', `${drawerRow('Status', statusBadge(s.kyc))}`)}
       ${drawerSection('Wallet', `${drawerRow('Wallet Balance', fmtINR(s.walletBalance))}`)}
-      ${drawerSection('Commission Rate', `<input id="drawer-commission-input" type="number" step="0.1" value="${s.commissionPct}" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-800 focus-ring outline-none">`)}
+      ${drawerSection('Base Commission Rate', `<input id="drawer-commission-input" type="number" step="0.1" value="${s.commissionPct}" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-800 focus-ring outline-none"><p class="text-[11px] text-ink-400 mt-1.5">Applies to every category unless a category override below is set.</p>`)}
+      ${drawerSection('Category Commission Overrides', `
+        <input id="drawer-category-filter" placeholder="Filter categories…" class="w-full mb-2 px-3 py-2 text-xs rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
+        <div id="commission-overrides-list" class="max-h-72 overflow-y-auto space-y-3 pr-1"><p class="text-xs text-ink-400">Loading…</p></div>
+      `)}
     </div>
     <div class="flex gap-2.5 mt-6 pt-5 border-t border-ink-100 dark:border-ink-800 flex-wrap">
       <button id="save-commission-btn" class="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-xl">Save Commission</button>
@@ -182,6 +186,60 @@ function openSellerProfile(s) {
     await api('PATCH', '/sellers/'+s.id, { account_status:'Active' });
     closeModal(); toast(`${s.store} reactivated`); await refreshSellers(); navigateTo('sellers');
   }));
+
+  loadCommissionOverrides(s);
+  document.getElementById('drawer-category-filter')?.addEventListener('input', (e) => {
+    const term = e.target.value.trim().toLowerCase();
+    document.querySelectorAll('[data-cat-override-row]').forEach(row => {
+      row.style.display = !term || row.dataset.catName.includes(term) ? '' : 'none';
+    });
+  });
+}
+
+async function loadCommissionOverrides(s) {
+  const container = document.getElementById('commission-overrides-list');
+  if (!container) return;
+  let overrides;
+  try {
+    overrides = await api('GET', '/commission/sellers/'+s.id+'/categories');
+  } catch (e) {
+    container.innerHTML = '<p class="text-xs text-rose-600">Could not load overrides.</p>';
+    return;
+  }
+  const overrideMap = {};
+  overrides.forEach(o => { overrideMap[o.categoryId] = o.commissionPct; });
+
+  const topLevel = DATA.categories.filter(c => !c.parentId);
+  const rowHTML = (c, indent) => {
+    const val = overrideMap[c.id];
+    return `
+      <div data-cat-override-row data-cat-name="${c.name.toLowerCase()}" class="flex items-center gap-2" style="padding-left:${indent}px;">
+        <span class="text-xs text-ink-700 dark:text-ink-300 flex-1 truncate">${c.name}</span>
+        <input type="number" step="0.1" placeholder="${s.commissionPct}" value="${val !== undefined ? val : ''}" data-override-input="${c.id}" class="w-20 px-2 py-1 text-xs rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
+        <button data-save-override="${c.id}" class="px-2 py-1 text-[11px] font-medium rounded-lg border border-ink-200 dark:border-ink-700">Save</button>
+        ${val !== undefined ? `<button data-clear-override="${c.id}" class="w-5 h-5 rounded-full bg-rose-600 text-white text-[10px] leading-none flex items-center justify-center flex-shrink-0">×</button>` : ''}
+      </div>`;
+  };
+
+  container.innerHTML = topLevel.map(top => `
+    ${rowHTML(top, 0)}
+    ${DATA.categories.filter(c => c.parentId === top.id).map(sub => rowHTML(sub, 16)).join('')}
+  `).join('');
+
+  container.querySelectorAll('[data-save-override]').forEach(btn => btn.addEventListener('click', withErr(async () => {
+    const catId = btn.dataset.saveOverride;
+    const input = container.querySelector('[data-override-input="'+catId+'"]');
+    const v = parseFloat(input.value);
+    if (isNaN(v)) { toast('Enter a commission percentage', 'warn'); return; }
+    await api('POST', '/commission/sellers/'+s.id+'/categories', { category_code: catId, commission_pct: v });
+    toast('Category commission saved');
+    await loadCommissionOverrides(s);
+  })));
+  container.querySelectorAll('[data-clear-override]').forEach(btn => btn.addEventListener('click', withErr(async () => {
+    await api('DELETE', '/commission/sellers/'+s.id+'/categories/'+btn.dataset.clearOverride);
+    toast('Reverted to base rate');
+    await loadCommissionOverrides(s);
+  })));
 }
 
 /* ===== CUSTOMER MANAGEMENT ===== */
@@ -273,7 +331,7 @@ SECTION_RENDERERS.products = async function(main) {
       title:'Add New Product', wide:true,
       body:`<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         ${formField('Product Name','text','e.g. Cordless Drill 18V','','np-name')}
-        ${formSelect('Category', DATA.categories.map(c=>c.name), 0, 'np-category')}
+        ${formCategorySelect('Category', DATA.categories, 'np-category')}
         ${formSelect('Brand', DATA.brands.map(b=>b.name), 0, 'np-brand')}
         ${formSelect('Seller', DATA.sellers.map(s=>s.store), 0, 'np-seller')}
         ${formField('Price (₹)','number','e.g. 2499','','np-price')}
@@ -412,10 +470,12 @@ function openProductProfile(p) {
 
 /* ===== CATEGORIES ===== */
 SECTION_RENDERERS.categories = async function(main) {
+  const topLevel = DATA.categories.filter(c => !c.parentId);
+  const subsOf = (id) => DATA.categories.filter(c => c.parentId === id);
   main.innerHTML = `
-    ${pageHeader('Categories', 'Organize products into categories', btnPrimary('Add Category','plus','add-category-btn'))}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      ${DATA.categories.map(c => `
+    ${pageHeader('Categories', 'Organize products into categories and subcategories', btnPrimary('Add Category','plus','add-category-btn'))}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      ${topLevel.map(c => `
         <div class="bg-white dark:bg-ink-900 rounded-2xl border border-ink-200/70 dark:border-ink-800 shadow-card p-5">
           <div class="flex items-start justify-between mb-3">
             <div class="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center overflow-hidden">
@@ -426,7 +486,7 @@ SECTION_RENDERERS.categories = async function(main) {
             ${statusBadge(c.status)}
           </div>
           <p class="font-semibold text-ink-900 dark:text-white">${c.name}</p>
-          <p class="text-xs text-ink-400 mt-1">${fmtNum(c.products)} products</p>
+          <p class="text-xs text-ink-400 mt-1">${fmtNum(c.products)} products directly</p>
           <div class="mt-4 pt-3 border-t border-ink-100 dark:border-ink-800 space-y-2">
             <label class="text-xs font-medium text-ink-500 block">Custom Icon</label>
             <input type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" data-cat-icon-input="${c.id}" class="w-full text-xs text-ink-600 dark:text-ink-300 file:mr-2 file:px-2.5 file:py-1 file:rounded-lg file:border-0 file:bg-ink-100 dark:file:bg-ink-800 file:text-ink-700 dark:file:text-ink-200 file:text-xs file:font-medium">
@@ -441,6 +501,23 @@ SECTION_RENDERERS.categories = async function(main) {
             <button data-toggle-cat="${c.id}" class="flex-1 py-1.5 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800">${c.status==='Active'?'Deactivate':'Activate'}</button>
             <button data-delete-cat="${c.id}" class="flex-1 py-1.5 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800 text-rose-600">Remove</button>
           </div>
+          <div class="mt-4 pt-4 border-t border-ink-100 dark:border-ink-800">
+            <p class="text-xs font-semibold text-ink-500 mb-2">Subcategories (${subsOf(c.id).length})</p>
+            <div class="space-y-1.5 mb-2">
+              ${subsOf(c.id).map(s => `
+                <div class="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg border border-ink-200 dark:border-ink-700">
+                  <div class="min-w-0"><span class="text-sm text-ink-800 dark:text-ink-200">${s.name}</span> <span class="text-xs text-ink-400">· ${fmtNum(s.products)} products</span></div>
+                  <div class="flex items-center gap-1 flex-shrink-0">
+                    <button data-toggle-cat="${s.id}" class="px-2 py-1 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700">${s.status==='Active'?'Deactivate':'Activate'}</button>
+                    <button data-delete-cat="${s.id}" class="w-6 h-6 rounded-full bg-rose-600 text-white text-xs leading-none flex items-center justify-center">×</button>
+                  </div>
+                </div>`).join('') || `<p class="text-xs text-ink-400">No subcategories yet.</p>`}
+            </div>
+            <div class="flex items-center gap-2">
+              <input placeholder="New subcategory name" data-new-subcat="${c.id}" class="flex-1 px-2.5 py-1.5 text-xs rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
+              <button data-add-subcat="${c.id}" class="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800 flex-shrink-0">Add</button>
+            </div>
+          </div>
         </div>`).join('')}
     </div>`;
   document.getElementById('add-category-btn').addEventListener('click', () => {
@@ -450,6 +527,14 @@ SECTION_RENDERERS.categories = async function(main) {
         closeModal(); toast('Category created'); await refreshCategories(); navigateTo('categories');
       }) });
   });
+  main.querySelectorAll('[data-add-subcat]').forEach(btn => btn.addEventListener('click', withErr(async () => {
+    const parent = DATA.categories.find(x=>x.id===btn.dataset.addSubcat);
+    const input = main.querySelector('[data-new-subcat="'+btn.dataset.addSubcat+'"]');
+    const name = input.value.trim();
+    if (!name) { toast('Enter a subcategory name', 'warn'); return; }
+    await api('POST', '/categories', { name, parent_code: parent.id });
+    toast('Subcategory added'); await refreshCategories(); navigateTo('categories');
+  })));
   main.querySelectorAll('[data-toggle-cat]').forEach(btn => btn.addEventListener('click', withErr(async () => {
     const c = DATA.categories.find(x=>x.id===btn.dataset.toggleCat);
     await api('PATCH', '/categories/'+c.id, { status: c.status==='Active'?'Inactive':'Active' });

@@ -37,8 +37,8 @@
           @foreach($navCategories->take(9) as $cat)
           <div class="mega-col">
             <div class="mega-col-title"><span class="ic"><x-web.cat-icon :icon="$cat->icon" size="15" /></span>{{ $cat->name }}</div>
-            @foreach(\App\Support\CategorySubcategories::forIcon($cat->icon, 4) as $sub)
-            <a href="{{ route('web.categories') }}#{{ $cat->icon }}">{{ $sub }}</a>
+            @foreach($cat->children as $sub)
+            <a href="{{ route('web.search') }}?category={{ $sub->icon }}">{{ $sub->name }}</a>
             @endforeach
           </div>
           @endforeach

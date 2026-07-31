@@ -75,7 +75,7 @@ export default function HomeScreen() {
   const recommended = home.recommended;
   const suppliers = home.suppliers;
   const brands = home.brands;
-  const topCats = categories.slice(0, 7);
+  const topCats = categories.filter((c) => !c.parent_id).slice(0, 7);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

@@ -54,4 +54,31 @@ class Seller extends Model
     {
         return $this->hasMany(ReturnRequest::class);
     }
+
+    public function categoryCommissions(): HasMany
+    {
+        return $this->hasMany(SellerCategoryCommission::class);
+    }
+
+    /**
+     * The commission rate that applies to a sale of $category by this
+     * seller: an exact override on that category, else an override on its
+     * parent (a blanket rate for the whole top-level category), else the
+     * seller's own base rate.
+     */
+    public function commissionRateFor(?Category $category): float
+    {
+        if (! $category) {
+            return (float) $this->commission_pct;
+        }
+
+        $categoryIds = array_filter([$category->id, $category->parent_id]);
+
+        $override = $this->categoryCommissions
+            ->whereIn('category_id', $categoryIds)
+            ->sortBy(fn ($c) => $c->category_id === $category->id ? 0 : 1)
+            ->first();
+
+        return $override ? (float) $override->commission_pct : (float) $this->commission_pct;
+    }
 }

@@ -41,6 +41,7 @@ export type Product = {
 export type Category = {
   id: string;
   name: string;
+  parent_id: string | null;
   count: number;
   status: string;
 };

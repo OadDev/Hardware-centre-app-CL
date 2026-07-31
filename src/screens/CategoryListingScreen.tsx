@@ -26,16 +26,23 @@ const { width: SCREEN_W } = Dimensions.get('window');
 
 export default function CategoryListingScreen({ navigation, route }: Props) {
   const { catId } = route.params;
-  const { wishlist, addToCart, toggleWish, totals } = useApp();
+  const { wishlist, addToCart, toggleWish, totals, categories } = useApp();
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [sort, setSort] = useState<SortKey>('pop');
   const [title, setTitle] = useState('');
   const [listing, setListing] = useState<Product[] | null>(null);
+  const [activeCatId, setActiveCatId] = useState(catId);
+
+  const subcategories = categories.filter((c) => c.parent_id === catId);
+
+  useEffect(() => {
+    setActiveCatId(catId);
+  }, [catId]);
 
   useEffect(() => {
     let cancelled = false;
     setListing(null);
-    CategoryApi.products(catId, sort)
+    CategoryApi.products(activeCatId, sort)
       .then((res) => {
         if (cancelled) return;
         setTitle(res.category.name);
@@ -49,7 +56,7 @@ export default function CategoryListingScreen({ navigation, route }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [catId, sort]);
+  }, [activeCatId, sort]);
 
   const cardW = (SCREEN_W - 40 - 13) / 2;
 
@@ -109,6 +116,26 @@ export default function CategoryListingScreen({ navigation, route }: Props) {
             </View>
           </View>
         </View>
+
+        {subcategories.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingLeft: 20 }} contentContainerStyle={{ gap: 8, paddingRight: 20 }}>
+            <Pressable
+              onPress={() => setActiveCatId(catId)}
+              style={[styles.chip, activeCatId === catId ? styles.chipActive : null]}
+            >
+              <Text style={[styles.chipText, activeCatId === catId ? styles.chipTextActive : null]}>All</Text>
+            </Pressable>
+            {subcategories.map((sub) => (
+              <Pressable
+                key={sub.id}
+                onPress={() => setActiveCatId(sub.id)}
+                style={[styles.chip, activeCatId === sub.id ? styles.chipActive : null]}
+              >
+                <Text style={[styles.chipText, activeCatId === sub.id ? styles.chipTextActive : null]}>{sub.name}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingLeft: 20 }} contentContainerStyle={{ gap: 8, paddingRight: 20, paddingVertical: 6 }}>
           {SORTS.map((s) => (

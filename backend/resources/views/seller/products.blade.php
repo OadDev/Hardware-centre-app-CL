@@ -11,7 +11,15 @@
     <div><label class="block text-xs font-medium text-ink-500 mb-1">Category</label>
       <select name="category_code" required class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200">
         <option value="">Select</option>
-        @foreach($categories as $c)<option value="{{ $c->category_code }}">{{ $c->name }}</option>@endforeach
+        @foreach($categories as $c)
+          @if($c->children->isNotEmpty())
+          <optgroup label="{{ $c->name }}">
+            @foreach($c->children as $sub)<option value="{{ $sub->category_code }}">{{ $sub->name }}</option>@endforeach
+          </optgroup>
+          @else
+          <option value="{{ $c->category_code }}">{{ $c->name }}</option>
+          @endif
+        @endforeach
       </select>
     </div>
     <div><label class="block text-xs font-medium text-ink-500 mb-1">Brand</label>

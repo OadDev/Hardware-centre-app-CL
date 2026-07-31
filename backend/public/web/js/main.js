@@ -139,6 +139,7 @@
 
   if (searchResults && searchInput) {
     var searchDebounce = null;
+    var urlCategory = new URLSearchParams(window.location.search).get("category");
     var runSearch = function () {
       var q = searchInput.value.trim();
       var brands = Array.prototype.filter.call(brandChecks, function (c) { return c.checked; })
@@ -146,6 +147,7 @@
 
       var params = new URLSearchParams();
       if (q) params.set("q", q);
+      if (urlCategory) params.set("category", urlCategory);
       if (brands.length) params.set("brands", brands.join(","));
       params.set("per_page", "24");
 
@@ -156,7 +158,7 @@
           var countEl = document.querySelector("[data-result-count]");
           var titleEl = document.getElementById("search-results-title");
           if (countEl) countEl.textContent = items.length + " products found";
-          if (titleEl) titleEl.textContent = q ? ('Results for "' + q + '"') : "Trending Products";
+          if (titleEl) titleEl.textContent = q ? ('Results for "' + q + '"') : (urlCategory ? "Category Results" : "Trending Products");
           searchResults.innerHTML = items.length
             ? items.map(productCardHTML).join("")
             : '<p style="color:var(--muted);grid-column:1/-1;">No products matched your search.</p>';
@@ -167,6 +169,7 @@
         });
     };
 
+    if (urlCategory) runSearch();
     searchInput.addEventListener("input", function () {
       clearTimeout(searchDebounce);
       searchDebounce = setTimeout(runSearch, 300);

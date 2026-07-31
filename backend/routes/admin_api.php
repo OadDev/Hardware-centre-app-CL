@@ -45,6 +45,9 @@ Route::prefix('api')->name('api.')->group(function () {
 
     Route::get('commission', [CommissionController::class, 'index']);
     Route::patch('commission/sellers/{seller}', [CommissionController::class, 'updateSeller']);
+    Route::get('commission/sellers/{seller}/categories', [CommissionController::class, 'categoryOverrides']);
+    Route::post('commission/sellers/{seller}/categories', [CommissionController::class, 'setCategoryOverride']);
+    Route::delete('commission/sellers/{seller}/categories/{category}', [CommissionController::class, 'removeCategoryOverride']);
     Route::patch('commission/tiers/{tier}', [CommissionController::class, 'updateTier']);
 
     Route::get('settlements', [SettlementController::class, 'index']);

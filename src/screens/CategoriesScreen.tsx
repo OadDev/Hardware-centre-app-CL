@@ -13,7 +13,8 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function CategoriesScreen() {
   const navigation = useNavigation<Nav>();
-  const { categories } = useApp();
+  const { categories: allCategories } = useApp();
+  const categories = allCategories.filter((c) => !c.parent_id);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

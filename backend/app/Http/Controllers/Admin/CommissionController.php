@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\CommissionTier;
-use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Seller;
+use App\Models\SellerCategoryCommission;
 use Illuminate\Http\Request;
 
 class CommissionController extends Controller
@@ -22,7 +24,7 @@ class CommissionController extends Controller
             'marketplaceEarning' => (float) $s->orderItems()->sum('commission_amount'),
         ]);
 
-        $totalEarnings = (float) \App\Models\OrderItem::sum('commission_amount');
+        $totalEarnings = (float) OrderItem::sum('commission_amount');
         $avgRate = (float) Seller::avg('commission_pct');
 
         return response()->json([
@@ -53,5 +55,39 @@ class CommissionController extends Controller
         $tier->update($data);
 
         return response()->json($tier);
+    }
+
+    public function categoryOverrides(Seller $seller)
+    {
+        return response()->json(
+            $seller->categoryCommissions()->with('category')->get()->map(fn (SellerCategoryCommission $o) => [
+                'categoryId' => $o->category->category_code,
+                'commissionPct' => (float) $o->commission_pct,
+            ])
+        );
+    }
+
+    public function setCategoryOverride(Request $request, Seller $seller)
+    {
+        $data = $request->validate([
+            'category_code' => ['required', 'string', 'exists:categories,category_code'],
+            'commission_pct' => ['required', 'numeric', 'min:0', 'max:100'],
+        ]);
+
+        $categoryId = Category::where('category_code', $data['category_code'])->value('id');
+
+        SellerCategoryCommission::updateOrCreate(
+            ['seller_id' => $seller->id, 'category_id' => $categoryId],
+            ['commission_pct' => $data['commission_pct']]
+        );
+
+        return $this->categoryOverrides($seller);
+    }
+
+    public function removeCategoryOverride(Seller $seller, Category $category)
+    {
+        $seller->categoryCommissions()->where('category_id', $category->id)->delete();
+
+        return $this->categoryOverrides($seller);
     }
 }

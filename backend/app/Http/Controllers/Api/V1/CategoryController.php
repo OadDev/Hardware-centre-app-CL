@@ -14,12 +14,13 @@ class CategoryController extends Controller
     public function index()
     {
         return CategoryResource::collection(
-            Category::where('status', 'Active')->orderBy('sort_order')->get()
+            Category::with('parent')->where('status', 'Active')->orderBy('sort_order')->get()
         );
     }
 
     public function products(Request $request, Category $category)
     {
+        $category->load('parent');
         $sort = $request->query('sort', 'pop');
 
         $query = Product::query()->approved()

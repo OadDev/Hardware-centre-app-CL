@@ -9,12 +9,15 @@ class CategoriesController extends Controller
 {
     public function index()
     {
-        $categories = Category::where('status', 'Active')
+        $categories = Category::topLevel()->where('status', 'Active')
             ->orderBy('sort_order')
             ->withCount('products')
-            ->with(['products' => function ($q) {
-                $q->approved()->with(['brand', 'category'])->orderByDesc('reviews_count')->limit(4);
-            }])
+            ->with([
+                'children' => fn ($q) => $q->where('status', 'Active')->withCount('products'),
+                'products' => function ($q) {
+                    $q->approved()->with(['brand', 'category'])->orderByDesc('reviews_count')->limit(4);
+                },
+            ])
             ->get();
 
         return view('web.categories', ['categories' => $categories]);

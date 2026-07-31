@@ -27,7 +27,9 @@ class ProductController extends Controller
         return view('seller.products', [
             'seller' => $seller,
             'products' => $products,
-            'categories' => Category::where('status', 'Active')->orderBy('name')->get(),
+            'categories' => Category::topLevel()->where('status', 'Active')->orderBy('name')->with([
+                'children' => fn ($q) => $q->where('status', 'Active')->orderBy('name'),
+            ])->get(),
             'brands' => Brand::where('status', 'Active')->orderBy('name')->get(),
         ]);
     }

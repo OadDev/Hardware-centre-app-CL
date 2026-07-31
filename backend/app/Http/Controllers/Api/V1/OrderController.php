@@ -41,7 +41,7 @@ class OrderController extends Controller
         ]);
 
         $customer = $request->user();
-        $items = $customer->cartItems()->with(['product.seller', 'productVariant'])->get();
+        $items = $customer->cartItems()->with(['product.seller.categoryCommissions', 'product.category', 'productVariant'])->get();
 
         if ($items->isEmpty()) {
             return response()->json(['message' => 'Your cart is empty'], 422);
@@ -77,7 +77,7 @@ class OrderController extends Controller
             $seller = $product->seller;
             $unitPrice = $item->unit_price;
             $lineTotal = $unitPrice * $item->quantity;
-            $commissionPct = (float) $seller->commission_pct;
+            $commissionPct = $seller->commissionRateFor($product->category);
 
             $order->items()->create([
                 'product_id' => $product->id,

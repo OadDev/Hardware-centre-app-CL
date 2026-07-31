@@ -427,6 +427,15 @@ function kpiCard({ label, value, sub, icon: iconName, trend, trendUp=true, accen
 
 function formField(label, type, placeholder, value='', id='') { return `<div><label class="block text-xs font-medium text-ink-500 dark:text-ink-400 mb-1.5">${label}</label><input ${id?`id="${id}"`:''} type="${type}" placeholder="${placeholder}" value="${value}" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-800 focus-ring outline-none"></div>`; }
 function formSelect(label, options, selectedIdx=0, id='') { return `<div><label class="block text-xs font-medium text-ink-500 dark:text-ink-400 mb-1.5">${label}</label><select ${id?`id="${id}"`:''} class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-800 focus-ring outline-none">${options.map((o,i)=>`<option ${i===selectedIdx?'selected':''}>${o}</option>`).join('')}</select></div>`; }
+function formCategorySelect(label, categories, id='') {
+  const topLevel = categories.filter(c => !c.parentId);
+  const groups = topLevel.map(top => {
+    const subs = categories.filter(c => c.parentId === top.id);
+    if (!subs.length) return `<option value="${top.name}">${top.name}</option>`;
+    return `<optgroup label="${top.name}">${subs.map(s=>`<option value="${s.name}">${s.name}</option>`).join('')}</optgroup>`;
+  }).join('');
+  return `<div><label class="block text-xs font-medium text-ink-500 dark:text-ink-400 mb-1.5">${label}</label><select ${id?`id="${id}"`:''} class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-800 focus-ring outline-none">${groups}</select></div>`;
+}
 function formTextarea(label, placeholder, rows=3, id='') { return `<div><label class="block text-xs font-medium text-ink-500 dark:text-ink-400 mb-1.5">${label}</label><textarea ${id?`id="${id}"`:''} rows="${rows}" placeholder="${placeholder}" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-800 focus-ring outline-none resize-none"></textarea></div>`; }
 function toggleSwitch(checked=false, id='') {
   return `<button ${id?`id="${id}"`:''} data-checked="${checked}" onclick="window.__flipToggle(this)" class="toggle-track relative w-11 h-6 rounded-full ${checked?'bg-brand-600':'bg-ink-200 dark:bg-ink-700'} flex-shrink-0">

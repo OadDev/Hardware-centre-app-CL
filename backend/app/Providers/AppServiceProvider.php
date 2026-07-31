@@ -32,7 +32,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         View::composer('web.*', function ($view) {
-            $view->with('navCategories', Category::where('status', 'Active')->orderBy('sort_order')->get());
+            $view->with('navCategories', Category::topLevel()->where('status', 'Active')->orderBy('sort_order')->with([
+                'children' => fn ($q) => $q->where('status', 'Active')->orderBy('sort_order')->limit(4),
+            ])->get());
         });
     }
 }

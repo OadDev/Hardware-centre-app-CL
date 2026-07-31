@@ -41,8 +41,8 @@
         <div><div style="font-size:19px;font-weight:800;font-family:'Manrope',sans-serif;">{{ $cat->name }}</div><div style="font-size:12.5px;color:var(--muted);margin-top:2px;">{{ number_format($cat->products_count) }} items · Verified suppliers · Best trade prices</div></div>
       </div>
       <div class="subcat-grid">
-        @foreach(\App\Support\CategorySubcategories::forIcon($cat->icon) as $sub)
-        <div class="subcat-chip">{{ $sub }} <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></div>
+        @foreach($cat->children as $sub)
+        <a href="{{ route('web.search') }}?category={{ $sub->icon }}" class="subcat-chip">{{ $sub->name }} <span style="color:#9CA3AF;">({{ number_format($sub->products_count) }})</span> <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></a>
         @endforeach
       </div>
       @if($cat->products->count())

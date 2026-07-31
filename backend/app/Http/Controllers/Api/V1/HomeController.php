@@ -22,7 +22,7 @@ class HomeController extends Controller
 
         return response()->json([
             'banners' => BannerResource::collection(Banner::where('status', 'Active')->orderBy('sort_order')->get()),
-            'categories' => CategoryResource::collection(Category::where('status', 'Active')->orderBy('sort_order')->limit(7)->get()),
+            'categories' => CategoryResource::collection(Category::topLevel()->where('status', 'Active')->orderBy('sort_order')->limit(7)->get()),
             'popular' => ProductResource::collection((clone $base)->orderByDesc('reviews_count')->limit(4)->get()),
             'deals' => ProductResource::collection((clone $base)->where('tag', 'Deal')->orderByDesc('rating')->limit(4)->get()),
             'trending' => ProductResource::collection((clone $base)->orderByDesc('sold_count')->limit(4)->get()),

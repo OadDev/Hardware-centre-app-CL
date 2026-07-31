@@ -14,6 +14,7 @@ class CategoryResource extends JsonResource
         return [
             'id' => $this->icon,
             'name' => $this->name,
+            'parent_id' => $this->relationLoaded('parent') ? $this->parent?->icon : null,
             'count' => $this->products_count ?? $this->products()->count(),
             'status' => $this->status,
             'icon_image' => $this->icon_url,
