@@ -94,35 +94,3 @@ jobs:
               "$PHP_BIN" artisan config:cache
             fi
           '
-
-      - name: Check whether failures move around under concurrent load
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          SSHPASS: ${{ secrets.DEPLOY_PASSWORD }}
-        run: |
-          sshpass -e ssh -p "$DEPLOY_PORT" \
-            -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-            "$DEPLOY_USER@$DEPLOY_HOST" '
-            [ -f ~/.bashrc ] && source ~/.bashrc
-            [ -f ~/.bash_profile ] && source ~/.bash_profile
-
-            COOKIE_JAR=/tmp/diag_admin_cookies.txt
-            rm -f "$COOKIE_JAR"
-            LOGIN_PAGE=$(curl -s -c "$COOKIE_JAR" https://hardwarecenters.com/admin/login)
-            TOKEN=$(echo "$LOGIN_PAGE" | grep -oP "name=\"_token\" value=\"\K[^\"]+" | head -1)
-            curl -s -b "$COOKIE_JAR" -c "$COOKIE_JAR" -X POST https://hardwarecenters.com/admin/login \
-              -d "_token=$TOKEN&email=admin@hardwarecentre.in&password=password" -o /dev/null
-
-            ENDPOINTS="dashboard sellers customers products categories brands orders returns coupons banners settlements commission gst shipping payments shiprocket notifications roles settings warehouses warehouses/inventory warehouses/shipments warehouses/dispatch-queue"
-
-            for round in 1 2 3; do
-              echo "--- round $round ---"
-              for ep in $ENDPOINTS; do
-                (code=$(curl -s -o /dev/null -w "%{http_code}" -b "$COOKIE_JAR" "https://hardwarecenters.com/admin/api/$ep"); if [ "$code" != "200" ]; then echo "FAIL $ep -> $code"; fi) &
-              done
-              wait
-              echo "round $round done"
-            done
-          '
