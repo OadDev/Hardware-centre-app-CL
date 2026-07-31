@@ -134,4 +134,17 @@ jobs:
             echo "--- most recent log entries ---"
             latest=$(ls -t "$BACKEND_DIR"/storage/logs/*.log 2>/dev/null | head -1 || true)
             if [ -n "$latest" ]; then grep -E "^\[20" "$latest" | tail -40; else echo "no log files found"; fi
+
+            echo "--- connections by user, right now, sampled 5x over 20s ---"
+            for i in 1 2 3 4 5; do
+              "$PHP_BIN" artisan tinker --execute="
+                \$rows = DB::select(\"select user, host, db, command, state, count(*) as cnt from information_schema.processlist group by user, host, db, command, state order by cnt desc limit 15\");
+                foreach (\$rows as \$r) { echo \$r->user . \" \" . \$r->command . \" \" . (\$r->state ?: '"'"'-'"'"') . \" x\" . \$r->cnt . PHP_EOL; }
+                \$myUser = config('"'"'database.connections.mysql.username'"'"');
+                \$mine = DB::select(\"select count(*) as cnt from information_schema.processlist where user = ?\", [\$myUser]);
+                echo \"MY_USER_TOTAL(\" . \$myUser . \")=\" . \$mine[0]->cnt . PHP_EOL;
+                echo \"---\" . PHP_EOL;
+              " 2>&1 | grep -v "^$"
+              sleep 4
+            done
           '
