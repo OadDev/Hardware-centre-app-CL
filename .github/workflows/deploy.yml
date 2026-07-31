@@ -58,7 +58,7 @@ jobs:
             bash "$APP_DIR/scripts/deploy.sh"
           '
 
-      - name: Diagnose MySQL socket connectivity
+      - name: Fix DB_HOST to use TCP instead of the broken FPM socket path
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
@@ -70,23 +70,24 @@ jobs:
             "$DEPLOY_USER@$DEPLOY_HOST" '
             [ -f ~/.bashrc ] && source ~/.bashrc
             [ -f ~/.bash_profile ] && source ~/.bash_profile
-            ENV_FILE="$HOME/domains/hardwarecenters.com/app/backend/.env"
-            echo "--- .env DB_* (password masked) ---"
-            grep -E "^DB_" "$ENV_FILE" | sed -E "s/^(DB_PASSWORD=).*/\1***MASKED***/"
-            echo "--- pdo_mysql.default_socket / mysqli.default_socket (CLI php85 ini) ---"
-            /opt/alt/php85/usr/bin/php -i 2>/dev/null | grep -i "default_socket"
-            echo "--- common mysql socket file locations ---"
-            ls -la /var/lib/mysql/mysql.sock /var/run/mysqld/mysqld.sock /tmp/mysql.sock 2>/dev/null || true
-            echo "--- can php85 CLI actually connect via TCP 127.0.0.1:3306? ---"
-            /opt/alt/php85/usr/bin/php -r "
-              \$host = getenv(\"DB_HOST\") ?: \"127.0.0.1\";
-              try {
-                \$pdo = new PDO(\"mysql:host=127.0.0.1;port=3306\", \"root\", \"\", [PDO::ATTR_TIMEOUT => 3]);
-                echo \"TCP 127.0.0.1:3306 reachable (auth aside)\" . PHP_EOL;
-              } catch (\Throwable \$e) {
-                echo \"TCP attempt result: \" . \$e->getMessage() . PHP_EOL;
-              }
-            "
-            echo "--- FPM pool / ini files for this domain (best-effort search) ---"
-            find /etc /opt/alt -iname "*hardwarecenters*" 2>/dev/null | head -20 || true
+            set -euo pipefail
+
+            BACKEND_DIR="$HOME/domains/hardwarecenters.com/app/backend"
+            ENV_FILE="$BACKEND_DIR/.env"
+
+            echo "--- before ---"; grep -E "^DB_HOST=" "$ENV_FILE"
+            sed -i "s/^DB_HOST=localhost$/DB_HOST=127.0.0.1/" "$ENV_FILE"
+            echo "--- after ---"; grep -E "^DB_HOST=" "$ENV_FILE"
+
+            PHP_BIN=""
+            for v in 85 84 83 82; do
+              candidate="/opt/alt/php${v}/usr/bin/php"
+              if [ -x "$candidate" ]; then PHP_BIN="$candidate"; break; fi
+            done
+
+            cd "$BACKEND_DIR"
+            "$PHP_BIN" artisan config:clear
+            "$PHP_BIN" artisan config:cache
+            echo "--- verifying DB connection over TCP with real app credentials ---"
+            "$PHP_BIN" artisan migrate:status | tail -5
           '
