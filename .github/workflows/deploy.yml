@@ -94,3 +94,25 @@ jobs:
               "$PHP_BIN" artisan config:cache
             fi
           '
+
+      - name: Show current error state
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          SSHPASS: ${{ secrets.DEPLOY_PASSWORD }}
+        run: |
+          sshpass -e ssh -p "$DEPLOY_PORT" \
+            -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            "$DEPLOY_USER@$DEPLOY_HOST" '
+            [ -f ~/.bashrc ] && source ~/.bashrc
+            [ -f ~/.bash_profile ] && source ~/.bash_profile
+            BACKEND_DIR="$HOME/domains/hardwarecenters.com/app/backend"
+            latest=$(ls -t "$BACKEND_DIR"/storage/logs/*.log 2>/dev/null | head -1 || true)
+            echo "--- last 3 distinct error timestamps ---"
+            if [ -n "$latest" ]; then grep -oE "^\[20[0-9-]+ [0-9:]+\]" "$latest" | tail -3; fi
+            echo "--- current server time ---"
+            date
+            echo "--- one full error entry (first line only) ---"
+            if [ -n "$latest" ]; then grep "production.ERROR" "$latest" | tail -1; fi
+          '
