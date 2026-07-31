@@ -10,6 +10,34 @@ BACKEND_DIR="$APP_DIR/backend"
 
 cd "$BACKEND_DIR"
 
+# The server's default `php` (and therefore `composer`, which is itself a
+# php-shebang script) resolves through a CloudLinux selector symlink
+# (/usr/bin/php -> /etc/cl.selector/php-cli) that stays on PHP 7.2
+# regardless of the per-domain PHP-FPM version configured in hPanel. Laravel
+# requires >=8.2, so resolve a compatible interpreter directly from the
+# CloudLinux alt-php installs instead of depending on that selector.
+PHP_BIN=""
+for v in 85 84 83 82; do
+  candidate="/opt/alt/php${v}/usr/bin/php"
+  if [ -x "$candidate" ]; then
+    PHP_BIN="$candidate"
+    break
+  fi
+done
+if [ -z "$PHP_BIN" ]; then
+  echo "No PHP >=8.2 binary found under /opt/alt/phpXX/usr/bin/php" >&2
+  exit 1
+fi
+echo "Using PHP: $PHP_BIN ($("$PHP_BIN" -r 'echo PHP_VERSION;'))"
+
+COMPOSER_BIN="$(command -v composer || true)"
+if [ -z "$COMPOSER_BIN" ]; then
+  echo "composer not found on PATH" >&2
+  exit 1
+fi
+composer() { "$PHP_BIN" "$COMPOSER_BIN" "$@"; }
+artisan() { "$PHP_BIN" artisan "$@"; }
+
 composer install --no-dev --optimize-autoloader --no-interaction
 
 if [ ! -f .env ]; then
@@ -21,7 +49,7 @@ if [ ! -f .env ]; then
     exit 1
   fi
   cp .env.example .env
-  php artisan key:generate --force
+  artisan key:generate --force
   sed -i "s|^SETUP_TOKEN=.*|SETUP_TOKEN=${SETUP_TOKEN}|" .env
 fi
 
@@ -47,11 +75,11 @@ cp -r public/. "$PUBLIC_DIR"/
 sed -i "s|__DIR__\.'/\.\./|__DIR__.'/../app/backend/|g" "$PUBLIC_DIR/index.php"
 
 if [ -f storage/app/installed.lock ]; then
-  php artisan migrate --force
-  php artisan config:cache
-  php artisan route:cache
+  artisan migrate --force
+  artisan config:cache
+  artisan route:cache
 else
-  php artisan config:clear
-  php artisan route:clear
+  artisan config:clear
+  artisan route:clear
   echo "Not installed yet — visit https://hardwarecenters.com/setup to finish installation."
 fi
