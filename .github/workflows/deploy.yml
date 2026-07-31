@@ -37,6 +37,18 @@ jobs:
               cd "$APP_DIR"
               git fetch origin "$BRANCH"
               git reset --hard "origin/$BRANCH"
+            elif [ -d "$APP_DIR" ]; then
+              # $APP_DIR exists but isn'\''t a git checkout (e.g. its .git got
+              # lost some other way) — clone would refuse to touch a non-empty
+              # directory, so adopt it as a git checkout in place instead.
+              # reset --hard makes tracked files match the remote exactly;
+              # untracked files (.env, storage/, vendor/) are left alone.
+              cd "$APP_DIR"
+              git init
+              git remote add origin "$REPO_URL" 2>/dev/null || git remote set-url origin "$REPO_URL"
+              git fetch origin "$BRANCH"
+              git checkout -B "$BRANCH" "origin/$BRANCH"
+              git reset --hard "origin/$BRANCH"
             else
               git clone --branch "$BRANCH" --single-branch "$REPO_URL" "$APP_DIR"
             fi
