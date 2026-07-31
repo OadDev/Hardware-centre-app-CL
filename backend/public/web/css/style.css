@@ -406,6 +406,52 @@ p{ margin:0; }
 .benefit-card h4{ font-size:16px; margin-top:16px; }
 .benefit-card p{ font-size:13.5px; color:var(--muted); margin-top:8px; line-height:1.6; }
 
+/* ---------- Product detail page ---------- */
+.pdp-grid{ display:grid; grid-template-columns:1fr 1fr; gap:44px; align-items:start; }
+.pdp-hero{ position:relative; height:360px; border-radius:var(--radius-lg); background:linear-gradient(135deg,var(--surface),#eef1f4); display:flex; align-items:center; justify-content:center; text-align:center; padding:20px; overflow:hidden; }
+.pdp-hero span{ font-size:14px; font-weight:700; color:var(--muted-2); line-height:1.4; }
+.pdp-hero img{ width:100%; height:100%; object-fit:cover; }
+.pdp-off-badge{ position:absolute; bottom:16px; left:16px; padding:6px 12px; border-radius:9px; background:var(--orange); color:#fff; font-size:12.5px; font-weight:800; }
+.pdp-thumbs{ display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
+.pdp-thumb{ width:64px; height:64px; border-radius:11px; border:2px solid var(--border-soft); background:var(--surface); cursor:pointer; overflow:hidden; }
+.pdp-thumb img{ width:100%; height:100%; object-fit:cover; }
+.pdp-thumb.active{ border-color:var(--orange); }
+.pdp-brand{ font-size:11.5px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--orange-dark); }
+.pdp-name{ font-size:26px; font-weight:800; letter-spacing:-.4px; margin-top:8px; line-height:1.3; }
+.pdp-price-row{ display:flex; align-items:baseline; gap:12px; margin-top:16px; }
+.pdp-price{ font-family:var(--font-head); font-size:30px; font-weight:800; color:var(--ink); }
+.pdp-mrp{ font-size:16px; color:var(--muted-2); text-decoration:line-through; }
+.pdp-off{ font-size:13.5px; font-weight:700; color:var(--green-dark); }
+.pdp-tax-note{ font-size:12.5px; color:var(--muted); margin-top:4px; }
+.pdp-info-cards{ display:flex; gap:12px; margin-top:20px; }
+.pdp-info-card{ flex:1; display:flex; align-items:center; gap:10px; border-radius:13px; padding:13px; }
+.pdp-info-card .t1{ font-size:13px; font-weight:700; color:var(--ink); }
+.pdp-info-card .t2{ font-size:11px; color:var(--muted); margin-top:1px; }
+.pdp-variant-group{ margin-top:20px; }
+.pdp-variant-label{ font-size:12.5px; font-weight:700; color:#374151; margin-bottom:8px; }
+.pdp-variant-row{ display:flex; gap:8px; flex-wrap:wrap; }
+.pdp-actions{ display:flex; gap:12px; margin-top:26px; }
+.pdp-actions .btn{ flex:1; }
+.pdp-spec-box{ border:1px solid var(--border-soft); border-radius:var(--radius-lg); overflow:hidden; }
+.pdp-spec-row{ display:flex; padding:13px 16px; border-bottom:1px solid var(--border-soft); font-size:13.5px; }
+.pdp-spec-row:last-child{ border-bottom:none; }
+.pdp-spec-row .lbl{ flex:0 0 42%; color:var(--muted); }
+.pdp-spec-row .val{ flex:1; font-weight:600; color:var(--ink); }
+.pdp-rating-summary{ display:flex; align-items:center; gap:24px; margin:16px 0 22px; }
+.pdp-rating-big{ text-align:center; flex-shrink:0; }
+.pdp-rating-big .num{ font-family:var(--font-head); font-size:38px; font-weight:800; }
+.pdp-rating-big .stars{ color:#F59E0B; font-size:13px; margin-top:4px; }
+.pdp-rating-big .cnt{ font-size:11.5px; color:var(--muted-2); margin-top:4px; }
+.pdp-bar-row{ display:flex; align-items:center; gap:8px; }
+.pdp-bar-row .n{ width:10px; font-size:11px; color:var(--muted-2); }
+.pdp-bar-track{ flex:1; height:7px; border-radius:4px; background:var(--border-soft); overflow:hidden; }
+.pdp-bar-fill{ height:100%; background:#F59E0B; }
+.pdp-review{ border-top:1px solid var(--border-soft); padding:16px 0; }
+.pdp-review-avatar{ width:36px; height:36px; border-radius:50%; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; flex-shrink:0; }
+.pdp-review-name{ font-size:13.5px; font-weight:700; }
+.pdp-review-meta{ font-size:11px; color:var(--muted-2); margin-top:1px; }
+.pdp-review-text{ font-size:13.5px; color:#4B5563; line-height:1.6; margin-top:10px; }
+
 .stat-strip{ display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
 .stat-box{ text-align:center; }
 .stat-box .n{ font-family:var(--font-head); font-size:36px; font-weight:800; color:var(--ink); }

@@ -119,7 +119,7 @@
       : '';
     var mrpHTML = off > 0 ? '<span class="prod-mrp">' + fmtINR(p.mrp) + '</span>' : '';
     return (
-      '<a class="prod-card" href="/categories#' + p.cat + '" style="width:100%;" data-brand="' + p.brand + '">' +
+      '<a class="prod-card" href="/product/' + p.id + '" style="width:100%;" data-brand="' + p.brand + '">' +
       '<div class="prod-thumb" style="background:linear-gradient(135deg,#F8FAFC,#EEF1F4);">' +
       '<span>' + p.brand + '<br>' + p.name + '</span>' + tagHTML +
       '<button class="prod-wish" data-wish-id="' + p.id + '" aria-label="Save"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><path d="M12 21s-7.5-4.6-10-9.1C.4 8.8 1.6 5.5 4.7 5c2-.3 3.6.8 4.3 2 .7-1.2 2.3-2.3 4.3-2 3.1.5 4.3 3.8 2.7 6.9C19.5 16.4 12 21 12 21Z"/></svg></button>' +
@@ -393,5 +393,42 @@
     e.preventDefault();
     e.stopPropagation();
     showToast("Download the Hardware Centre app to complete your purchase.");
+  });
+
+  // ---------------- Product detail page ----------------
+  var pdpWishBtn = document.querySelector("[data-pdp-wish]");
+  if (pdpWishBtn) {
+    var wishlist = loadWishlist();
+    var pid = pdpWishBtn.getAttribute("data-pdp-wish");
+    var paintPdpWish = function (active) {
+      pdpWishBtn.classList.toggle("btn-primary", active);
+      pdpWishBtn.classList.toggle("btn-outline", !active);
+      pdpWishBtn.lastChild.textContent = active ? "Saved" : "Save";
+    };
+    paintPdpWish(!!wishlist[pid]);
+    pdpWishBtn.addEventListener("click", function () {
+      var w = loadWishlist();
+      if (w[pid]) delete w[pid]; else w[pid] = true;
+      saveWishlist(w);
+      paintPdpWish(!!w[pid]);
+    });
+  }
+
+  document.querySelectorAll("[data-pdp-thumb]").forEach(function (thumb) {
+    thumb.addEventListener("click", function () {
+      var url = thumb.getAttribute("data-pdp-thumb");
+      var heroImg = document.getElementById("pdp-hero-img");
+      if (heroImg) heroImg.src = url;
+      document.querySelectorAll("[data-pdp-thumb]").forEach(function (t) { t.classList.remove("active"); });
+      thumb.classList.add("active");
+    });
+  });
+
+  document.querySelectorAll("[data-variant-option]").forEach(function (chip) {
+    chip.addEventListener("click", function () {
+      var key = chip.getAttribute("data-variant-option").split(":")[0];
+      document.querySelectorAll('[data-variant-option^="' + key + ':"]').forEach(function (c) { c.classList.remove("active"); });
+      chip.classList.add("active");
+    });
   });
 })();

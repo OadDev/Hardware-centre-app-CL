@@ -18,6 +18,7 @@ use App\Http\Controllers\Web\ContactController;
 use App\Http\Controllers\Web\DownloadAppController;
 use App\Http\Controllers\Web\HomeController;
 use App\Http\Controllers\Web\OrdersController;
+use App\Http\Controllers\Web\ProductController;
 use App\Http\Controllers\Web\SearchController;
 use App\Http\Controllers\Web\SellController;
 use App\Http\Controllers\Web\SupportController;
@@ -31,6 +32,7 @@ Route::name('web.')->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
     Route::get('/categories', [CategoriesController::class, 'index'])->name('categories');
     Route::get('/search', [SearchController::class, 'index'])->name('search');
+    Route::get('/product/{product:product_code}', [ProductController::class, 'show'])->name('product');
     Route::get('/about', [AboutController::class, 'index'])->name('about');
     Route::get('/contact', [ContactController::class, 'index'])->name('contact');
     Route::get('/sell', [SellController::class, 'index'])->name('sell');

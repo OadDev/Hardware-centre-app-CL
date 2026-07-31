@@ -5,7 +5,7 @@ $off = $p->mrp > 0 ? round((1 - (float) $p->price / (float) $p->mrp) * 100) : 0;
 $tagBg = $p->tag === 'Deal' ? '#FFF7ED' : ($p->tag === 'Bestseller' ? '#FFF7ED' : '#F0FDF4');
 $tagColor = in_array($p->tag, ['Deal', 'Bestseller']) ? '#EA580C' : '#16A34A';
 @endphp
-<a class="prod-card" href="{{ route('web.categories') }}#{{ $p->category->icon }}" style="{{ $width ? 'width:'.$width.';flex-shrink:0;' : 'width:100%;' }}" data-brand="{{ $p->brand->name }}" data-search-target="{{ $p->name }} {{ $p->brand->name }}">
+<a class="prod-card" href="{{ route('web.product', $p->product_code) }}" style="{{ $width ? 'width:'.$width.';flex-shrink:0;' : 'width:100%;' }}" data-brand="{{ $p->brand->name }}" data-search-target="{{ $p->name }} {{ $p->brand->name }}">
   <div class="prod-thumb" style="background:linear-gradient(135deg,#F8FAFC,#EEF1F4);">
     <span>{{ $p->brand->name }}<br>{{ $p->name }}</span>
     @if($p->tag)
