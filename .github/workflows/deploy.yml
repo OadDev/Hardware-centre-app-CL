@@ -88,6 +88,15 @@ jobs:
             cd "$BACKEND_DIR"
             "$PHP_BIN" artisan config:clear
             "$PHP_BIN" artisan config:cache
-            echo "--- verifying DB connection over TCP with real app credentials ---"
+            echo "--- verifying DB connection over TCP with real app credentials (CLI) ---"
             "$PHP_BIN" artisan migrate:status | tail -5
+
+            echo "--- hitting the live site over HTTPS right now ---"
+            curl -s -o /dev/null -w "admin/login -> %{http_code}\n" https://hardwarecenters.com/admin/login
+            date -u
+            echo "--- log file mtimes ---"
+            ls -la "$BACKEND_DIR/storage/logs"
+            echo "--- last 60 lines of the log, right now ---"
+            latest=$(ls -t "$BACKEND_DIR"/storage/logs/*.log 2>/dev/null | head -1 || true)
+            if [ -n "$latest" ]; then tail -n 60 "$latest"; else echo "no log files found"; fi
           '
