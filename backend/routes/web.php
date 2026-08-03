@@ -13,7 +13,9 @@ use App\Http\Controllers\Seller\WarehouseController as SellerWarehouseController
 use App\Http\Controllers\SetupController;
 use App\Http\Controllers\Web\AboutController;
 use App\Http\Controllers\Web\BlogController;
+use App\Http\Controllers\Web\CartController;
 use App\Http\Controllers\Web\CategoriesController;
+use App\Http\Controllers\Web\CheckoutController;
 use App\Http\Controllers\Web\ContactController;
 use App\Http\Controllers\Web\DownloadAppController;
 use App\Http\Controllers\Web\HomeController;
@@ -33,6 +35,9 @@ Route::name('web.')->group(function () {
     Route::get('/categories', [CategoriesController::class, 'index'])->name('categories');
     Route::get('/search', [SearchController::class, 'index'])->name('search');
     Route::get('/product/{product:product_code}', [ProductController::class, 'show'])->name('product');
+    Route::get('/cart', [CartController::class, 'index'])->name('cart');
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
+    Route::get('/order-confirmation/{order_no}', [CheckoutController::class, 'confirmation'])->name('order-confirmation');
     Route::get('/about', [AboutController::class, 'index'])->name('about');
     Route::get('/contact', [ContactController::class, 'index'])->name('contact');
     Route::get('/sell', [SellController::class, 'index'])->name('sell');

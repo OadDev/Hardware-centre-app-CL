@@ -16,7 +16,7 @@
 </section>
 
 <section class="section-tight">
-  <div class="container" style="display:grid;grid-template-columns:260px 1fr;gap:32px;align-items:start;">
+  <div class="container search-layout">
     <aside>
       <div class="card" style="padding:20px;">
         <div style="font-size:14px;font-weight:800;margin-bottom:6px;">Filter by Brand</div>

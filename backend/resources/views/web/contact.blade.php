@@ -22,7 +22,7 @@
 </section>
 
 <section class="section-tight">
-  <div class="container" style="display:grid;grid-template-columns:1.1fr .9fr;gap:44px;align-items:start;">
+  <div class="container two-col-split" style="align-items:start;">
     <div class="card" style="padding:32px;">
       <h2 class="section-title" style="font-size:22px;">Send us a message</h2>
       <p class="section-sub" style="margin-top:8px;">Fill out the form and our team will get back to you shortly.</p>

@@ -23,7 +23,7 @@
 </section>
 
 <section class="section">
-  <div class="container" style="display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:center;">
+  <div class="container two-col-split">
     <div class="ph-box" style="height:340px;background:linear-gradient(135deg,#1F2937,#374151);"><span style="color:rgba(255,255,255,.7);">Warehouse &amp; supplier network photo</span></div>
     <div>
       <span class="eyebrow">Why we started</span>

@@ -72,9 +72,9 @@ $images = $product->images->pluck('url')->filter()->values();
       @endforeach
 
       <div class="pdp-info-cards">
-        <div class="pdp-info-card" style="background:{{ $product->stock > 0 ? 'var(--green-bg)' : 'var(--red-bg)' }};">
+        <div class="pdp-info-card" data-pdp-stock-card style="background:{{ $product->stock > 0 ? 'var(--green-bg)' : 'var(--red-bg)' }};">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{ $product->stock > 0 ? '#16A34A' : '#EF4444' }}" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m22 4-10 10-3-3"/></svg>
-          <div><div class="t1">{{ $product->stock_status }}</div><div class="t2">{{ $product->stock > 0 ? 'Ready to ship' : 'Currently unavailable' }}</div></div>
+          <div><div class="t1" data-pdp-stock-title>{{ $variants->isNotEmpty() ? 'Select an option' : $product->stock_status }}</div><div class="t2" data-pdp-stock-sub>{{ $variants->isNotEmpty() ? '' : ($product->stock > 0 ? 'Ready to ship' : 'Currently unavailable') }}</div></div>
         </div>
         <div class="pdp-info-card" style="background:var(--surface);border:1px solid var(--border);">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="1.8"><rect x="1" y="6" width="13" height="11" rx="1.5"/><path d="M14 9h4l3 3v5h-7"/><circle cx="6" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg>
@@ -84,8 +84,17 @@ $images = $product->images->pluck('url')->filter()->values();
 
       <div class="pdp-actions">
         <button class="btn btn-outline btn-block" data-pdp-wish="{{ $product->product_code }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1F2937" stroke-width="2" style="margin-right:6px;vertical-align:-3px;"><path d="M12 21s-7.5-4.6-10-9.1C.4 8.8 1.6 5.5 4.7 5c2-.3 3.6.8 4.3 2 .7-1.2 2.3-2.3 4.3-2 3.1.5 4.3 3.8 2.7 6.9C19.5 16.4 12 21 12 21Z"/></svg>Save</button>
-        <button class="btn btn-primary btn-block" data-add-to-cart>Add to Cart</button>
+        <button class="btn btn-primary btn-block" data-pdp data-add-to-cart="{{ $product->product_code }}" @if($variants->isEmpty() && $product->stock <= 0) disabled @endif>Add to Cart</button>
       </div>
+
+      @if($variants->isNotEmpty())
+      <script type="application/json" id="pdp-variants-data">{!! json_encode($variants->map(fn ($v) => [
+        'id' => $v->variant_code,
+        'attributes' => $v->options,
+        'price' => (float) $v->effective_price,
+        'stock' => $v->stock,
+      ])->values(), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) !!}</script>
+      @endif
     </div>
   </div>
 </section>

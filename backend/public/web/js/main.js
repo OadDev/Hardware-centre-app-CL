@@ -17,6 +17,245 @@
     return "₹" + Math.round(n).toLocaleString("en-IN");
   }
 
+  // ---------------- Customer session (Sanctum token, shared with the app's API) ----------------
+  var TOKEN_KEY = "hc_customer_token";
+  var CUSTOMER_KEY = "hc_customer";
+
+  function getToken() { return localStorage.getItem(TOKEN_KEY); }
+  function getCustomer() {
+    try { return JSON.parse(localStorage.getItem(CUSTOMER_KEY) || "null"); } catch (e) { return null; }
+  }
+  function isLoggedIn() { return !!getToken(); }
+  function setSession(token, customer) {
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(CUSTOMER_KEY, JSON.stringify(customer));
+    paintAccountUI();
+    refreshCartBadge();
+  }
+  function clearSession() {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(CUSTOMER_KEY);
+    paintAccountUI();
+    refreshCartBadge();
+  }
+
+  function apiFetch(path, options) {
+    options = options || {};
+    var headers = Object.assign({ Accept: "application/json" }, options.headers || {});
+    if (options.body && !(options.body instanceof FormData)) headers["Content-Type"] = "application/json";
+    var token = getToken();
+    if (token) headers.Authorization = "Bearer " + token;
+
+    return fetch(API_BASE + path, Object.assign({}, options, { headers: headers })).then(function (r) {
+      if (r.status === 401 && token) clearSession();
+      return r.json().catch(function () { return {}; }).then(function (data) {
+        if (!r.ok) {
+          var err = new Error(data.message || "Something went wrong. Please try again.");
+          err.data = data;
+          throw err;
+        }
+        return data;
+      });
+    });
+  }
+
+  function refreshCartBadge() {
+    var dots = document.querySelectorAll("[data-cart-badge]");
+    var texts = document.querySelectorAll("[data-cart-badge-text]");
+    if (!isLoggedIn()) {
+      dots.forEach(function (el) { el.style.display = "none"; });
+      texts.forEach(function (el) { el.textContent = ""; });
+      return;
+    }
+    apiFetch("/cart")
+      .then(function (data) {
+        var count = (data.totals && data.totals.count) || 0;
+        dots.forEach(function (el) { el.style.display = count > 0 ? "block" : "none"; });
+        texts.forEach(function (el) { el.textContent = count > 0 ? "(" + count + ")" : ""; });
+      })
+      .catch(function () {});
+  }
+
+  // ---------------- Login modal (phone/email OTP, same flow as the app) ----------------
+  var otpChannelPromise = null;
+  function getOtpChannel() {
+    if (!otpChannelPromise) {
+      otpChannelPromise = apiFetch("/auth/otp/channel").then(function (d) { return d.channel; }).catch(function () { return "email"; });
+    }
+    return otpChannelPromise;
+  }
+
+  var loginModalEl = null;
+  var loginOnSuccess = null;
+  var loginChannel = "email";
+  var loginContact = "";
+
+  function ensureLoginModal() {
+    if (loginModalEl) return loginModalEl;
+    var wrap = document.createElement("div");
+    wrap.className = "hc-modal-backdrop";
+    wrap.setAttribute("data-login-modal", "");
+    wrap.innerHTML =
+      '<div class="hc-modal-sheet">' +
+        '<button type="button" class="hc-modal-close" data-login-close aria-label="Close">' +
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
+        '</button>' +
+        '<div data-login-step="contact">' +
+          '<h3 class="hc-modal-title">Login or Sign Up</h3>' +
+          '<p class="hc-modal-sub" data-login-contact-label>Enter your mobile number to continue</p>' +
+          '<div class="field" style="margin-top:16px;"><input type="text" data-login-contact placeholder="10-digit mobile number" /></div>' +
+          '<div class="hc-modal-error" data-login-error style="display:none;"></div>' +
+          '<button type="button" class="btn btn-primary btn-block" style="margin-top:16px;" data-login-send>Send OTP</button>' +
+        '</div>' +
+        '<div data-login-step="otp" style="display:none;">' +
+          '<h3 class="hc-modal-title">Enter verification code</h3>' +
+          '<p class="hc-modal-sub" data-login-otp-sub></p>' +
+          '<div class="field" style="margin-top:16px;"><input type="text" maxlength="6" inputmode="numeric" data-login-otp placeholder="6-digit code" /></div>' +
+          '<div class="hc-modal-error" data-login-error-otp style="display:none;"></div>' +
+          '<button type="button" class="btn btn-primary btn-block" style="margin-top:16px;" data-login-verify>Verify &amp; Continue</button>' +
+          '<button type="button" class="hc-modal-link" data-login-back>&larr; Use a different number</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(wrap);
+    loginModalEl = wrap;
+
+    var stepContact = wrap.querySelector('[data-login-step="contact"]');
+    var stepOtp = wrap.querySelector('[data-login-step="otp"]');
+
+    var showStep = function (step) {
+      stepContact.style.display = step === "contact" ? "" : "none";
+      stepOtp.style.display = step === "otp" ? "" : "none";
+      wrap.querySelector("[data-login-error]").style.display = "none";
+      wrap.querySelector("[data-login-error-otp]").style.display = "none";
+    };
+
+    var closeModal = function () {
+      wrap.classList.remove("show");
+      loginOnSuccess = null;
+    };
+
+    wrap.addEventListener("click", function (e) {
+      if (e.target === wrap) closeModal();
+    });
+    wrap.querySelector("[data-login-close]").addEventListener("click", closeModal);
+    wrap.querySelector("[data-login-back]").addEventListener("click", function () { showStep("contact"); });
+
+    wrap.querySelector("[data-login-send]").addEventListener("click", function () {
+      var btn = this;
+      var input = wrap.querySelector("[data-login-contact]");
+      var errorEl = wrap.querySelector("[data-login-error]");
+      var value = input.value.trim();
+      errorEl.style.display = "none";
+
+      if (!value) {
+        errorEl.textContent = loginChannel === "sms" ? "Enter your mobile number." : "Enter your email address.";
+        errorEl.style.display = "";
+        return;
+      }
+
+      btn.disabled = true;
+      var payload = loginChannel === "sms" ? { phone: value } : { email: value };
+      apiFetch("/auth/otp/request", { method: "POST", body: JSON.stringify(payload) })
+        .then(function (data) {
+          btn.disabled = false;
+          loginContact = value;
+          wrap.querySelector("[data-login-otp-sub]").textContent = data.message || "We've sent you a verification code.";
+          wrap.querySelector("[data-login-otp]").value = data.debug_otp || "";
+          showStep("otp");
+          wrap.querySelector("[data-login-otp]").focus();
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          errorEl.textContent = err.message;
+          errorEl.style.display = "";
+        });
+    });
+
+    wrap.querySelector("[data-login-verify]").addEventListener("click", function () {
+      var btn = this;
+      var input = wrap.querySelector("[data-login-otp]");
+      var errorEl = wrap.querySelector("[data-login-error-otp]");
+      var code = input.value.trim();
+      errorEl.style.display = "none";
+
+      if (!code) {
+        errorEl.textContent = "Enter the 6-digit code.";
+        errorEl.style.display = "";
+        return;
+      }
+
+      btn.disabled = true;
+      var payload = loginChannel === "sms" ? { phone: loginContact, otp: code } : { email: loginContact, otp: code };
+      apiFetch("/auth/otp/verify", { method: "POST", body: JSON.stringify(payload) })
+        .then(function (data) {
+          btn.disabled = false;
+          setSession(data.token, data.customer);
+          closeModal();
+          showToast("Welcome, " + (data.customer.name || "there").split(" ")[0] + "!");
+          if (loginOnSuccess) {
+            var cb = loginOnSuccess;
+            loginOnSuccess = null;
+            cb();
+          }
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          errorEl.textContent = err.message;
+          errorEl.style.display = "";
+        });
+    });
+
+    return wrap;
+  }
+
+  function openLoginModal(onSuccess) {
+    var wrap = ensureLoginModal();
+    loginOnSuccess = onSuccess || null;
+    wrap.querySelector('[data-login-step="contact"]').style.display = "";
+    wrap.querySelector('[data-login-step="otp"]').style.display = "none";
+    wrap.querySelector("[data-login-contact]").value = "";
+    getOtpChannel().then(function (channel) {
+      loginChannel = channel;
+      wrap.querySelector("[data-login-contact-label]").textContent = channel === "sms" ? "Enter your mobile number to continue" : "Enter your email address to continue";
+      wrap.querySelector("[data-login-contact]").placeholder = channel === "sms" ? "10-digit mobile number" : "you@example.com";
+    });
+    wrap.classList.add("show");
+    setTimeout(function () { wrap.querySelector("[data-login-contact]").focus(); }, 50);
+  }
+
+  function paintAccountUI() {
+    var customer = getCustomer();
+    document.querySelectorAll("[data-account-label]").forEach(function (el) {
+      el.textContent = customer ? "Hi, " + (customer.name || "there").split(" ")[0] : "Login / Sign Up";
+    });
+    document.querySelectorAll("[data-account-trigger]").forEach(function (link) {
+      if (link.dataset.accountBound) return;
+      link.dataset.accountBound = "1";
+      link.addEventListener("click", function (e) {
+        e.preventDefault();
+        if (isLoggedIn()) {
+          if (confirm("Log out of your Hardware Centers account?")) {
+            apiFetch("/logout", { method: "POST" }).catch(function () {}).then(function () {
+              clearSession();
+              showToast("Logged out");
+              if (window.location.pathname === "/cart" || window.location.pathname === "/checkout") {
+                window.location.href = "/";
+              }
+            });
+          }
+        } else {
+          openLoginModal();
+        }
+      });
+    });
+  }
+
+  // Runs on every page load so the header always reflects the current session.
+  document.addEventListener("DOMContentLoaded", function () {
+    paintAccountUI();
+    refreshCartBadge();
+  });
+
   // Mobile nav drawer
   var toggle = document.querySelector(".mobile-toggle");
   var drawer = document.querySelector(".mobile-nav");
@@ -128,7 +367,7 @@
       '<div class="prod-name">' + p.name + '</div>' +
       '<div class="prod-rating"><svg width="12" height="12" viewBox="0 0 24 24" fill="#F59E0B" stroke="none" stroke-width="0"><path d="m12 2 3 6.5 7 .6-5.3 4.6L18.4 21 12 17.3 5.6 21l1.7-7.3L2 9.1l7-.6L12 2Z"/></svg> ' + Number(p.rating).toFixed(1) + ' <span class="rc">(' + Number(p.reviews).toLocaleString('en-IN') + ')</span></div>' +
       '<div class="prod-price-row"><div><span class="prod-price">' + fmtINR(p.price) + '</span>' + mrpHTML + '</div>' +
-      '<button class="prod-add" data-add-to-cart aria-label="Add to cart"><svg width="15" height="15" viewBox="0 0 24 24" fill="#fff" stroke="none" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button></div>' +
+      '<button class="prod-add" data-add-to-cart="' + p.id + '" aria-label="Add to cart"' + (p.stock <= 0 ? ' disabled' : '') + '><svg width="15" height="15" viewBox="0 0 24 24" fill="#fff" stroke="none" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button></div>' +
       '</div></a>'
     );
   }
@@ -386,13 +625,35 @@
   }
   bindWishButtons(document);
 
-  // ---------------- Add to cart -> nudge to download the app ----------------
+  // ---------------- Add to cart ----------------
   document.addEventListener("click", function (e) {
     var btn = e.target.closest("[data-add-to-cart]");
-    if (!btn) return;
+    if (!btn || btn.disabled) return;
     e.preventDefault();
     e.stopPropagation();
-    showToast("Download the Hardware Centers app to complete your purchase.");
+
+    var code = btn.getAttribute("data-add-to-cart");
+    if (!code) return;
+    var variant = btn.getAttribute("data-variant") || null;
+
+    var run = function () {
+      var payload = { product_code: code, quantity: 1 };
+      if (variant) payload.variant_code = variant;
+      btn.disabled = true;
+      apiFetch("/cart/items", { method: "POST", body: JSON.stringify(payload) })
+        .then(function () {
+          btn.disabled = false;
+          showToast("Added to cart");
+          refreshCartBadge();
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          showToast(err.message);
+        });
+    };
+
+    if (isLoggedIn()) run();
+    else openLoginModal(run);
   });
 
   // ---------------- Product detail page ----------------
@@ -424,11 +685,400 @@
     });
   });
 
-  document.querySelectorAll("[data-variant-option]").forEach(function (chip) {
-    chip.addEventListener("click", function () {
-      var key = chip.getAttribute("data-variant-option").split(":")[0];
-      document.querySelectorAll('[data-variant-option^="' + key + ':"]').forEach(function (c) { c.classList.remove("active"); });
-      chip.classList.add("active");
+  var variantDataEl = document.getElementById("pdp-variants-data");
+  var pdpAddBtn = document.querySelector('[data-add-to-cart][data-pdp]');
+  var pdpVariants = [];
+  if (variantDataEl) {
+    try { pdpVariants = JSON.parse(variantDataEl.textContent) || []; } catch (e) { pdpVariants = []; }
+  }
+  if (pdpAddBtn && pdpVariants.length) {
+    var selectedOptions = {};
+    document.querySelectorAll(".pdp-variant-group").forEach(function (group) {
+      var active = group.querySelector("[data-variant-option].active");
+      if (active) selectedOptions[active.getAttribute("data-variant-option").split(":")[0]] = active.getAttribute("data-variant-option").split(":")[1];
     });
-  });
+
+    var priceEl = document.querySelector(".pdp-price");
+    var stockTitleEl = document.querySelector("[data-pdp-stock-title]");
+    var stockSubEl = document.querySelector("[data-pdp-stock-sub]");
+    var stockCardEl = document.querySelector("[data-pdp-stock-card]");
+
+    var applySelection = function () {
+      var groups = Array.from(document.querySelectorAll(".pdp-variant-group")).map(function (g) {
+        return g.querySelector("[data-variant-option]").getAttribute("data-variant-option").split(":")[0];
+      });
+      var match = pdpVariants.find(function (v) {
+        return groups.every(function (key) { return v.attributes[key] === selectedOptions[key]; });
+      });
+
+      if (match) {
+        pdpAddBtn.setAttribute("data-variant", match.id);
+        if (priceEl) priceEl.textContent = "₹" + Math.round(match.price).toLocaleString("en-IN");
+        var inStock = match.stock > 0;
+        pdpAddBtn.disabled = !inStock;
+        if (stockTitleEl) stockTitleEl.textContent = inStock ? match.stock + " in stock" : "Out of Stock";
+        if (stockSubEl) stockSubEl.textContent = inStock ? "Ready to ship" : "Currently unavailable";
+        if (stockCardEl) stockCardEl.style.background = inStock ? "var(--green-bg)" : "var(--red-bg)";
+      } else {
+        pdpAddBtn.removeAttribute("data-variant");
+        pdpAddBtn.disabled = true;
+        if (stockTitleEl) stockTitleEl.textContent = "Select an option";
+        if (stockSubEl) stockSubEl.textContent = "";
+      }
+    };
+
+    document.querySelectorAll("[data-variant-option]").forEach(function (chip) {
+      chip.addEventListener("click", function () {
+        var parts = chip.getAttribute("data-variant-option").split(":");
+        selectedOptions[parts[0]] = parts[1];
+        document.querySelectorAll('[data-variant-option^="' + parts[0] + ':"]').forEach(function (c) { c.classList.remove("active"); });
+        chip.classList.add("active");
+        applySelection();
+      });
+    });
+
+    applySelection();
+  } else {
+    document.querySelectorAll("[data-variant-option]").forEach(function (chip) {
+      chip.addEventListener("click", function () {
+        var key = chip.getAttribute("data-variant-option").split(":")[0];
+        document.querySelectorAll('[data-variant-option^="' + key + ':"]').forEach(function (c) { c.classList.remove("active"); });
+        chip.classList.add("active");
+      });
+    });
+  }
+
+  // ---------------- Cart page ----------------
+  var cartPage = document.getElementById("cart-page");
+  if (cartPage) {
+    var loggedOutEl = cartPage.querySelector("[data-cart-logged-out]");
+    var loggedInEl = cartPage.querySelector("[data-cart-logged-in]");
+    var emptyEl = cartPage.querySelector("[data-cart-empty]");
+    var layoutEl = cartPage.querySelector("[data-cart-layout]");
+    var itemsEl = cartPage.querySelector("[data-cart-items]");
+
+    var cartItemHTML = function (item) {
+      var p = item.product;
+      var img = (p.images && p.images[0])
+        ? '<img src="' + p.images[0] + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:11px;" />'
+        : '<span>' + p.brand + '<br>' + p.name + '</span>';
+      return '<div class="cart-item" data-cart-item data-product="' + p.id + '" data-variant="' + (item.variant ? item.variant.id : '') + '">' +
+        '<div class="cart-item-thumb">' + img + '</div>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div class="cart-item-name">' + p.name + '</div>' +
+          '<div class="cart-item-meta">' + p.brand + (item.variant ? ' · ' + item.variant.label : '') + '</div>' +
+          '<div class="cart-item-bottom">' +
+            '<div class="qty-stepper"><button type="button" data-qty="-1">−</button><span>' + item.quantity + '</span><button type="button" data-qty="1">+</button></div>' +
+            '<button type="button" class="cart-item-remove" data-cart-remove>' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg> Remove' +
+            '</button>' +
+            '<div class="cart-item-price">' + fmtINR(item.line_total) + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    };
+
+    var renderCart = function (data) {
+      var items = data.items || [];
+      var totals = data.totals || { sub: 0, disc: 0, gst: 0, deliv: 0, total: 0 };
+
+      emptyEl.style.display = items.length ? "none" : "";
+      layoutEl.style.display = items.length ? "" : "none";
+
+      if (items.length) {
+        itemsEl.innerHTML = items.map(cartItemHTML).join("");
+        cartPage.querySelector("[data-cart-sub]").textContent = fmtINR(totals.sub);
+        cartPage.querySelector("[data-cart-gst]").textContent = fmtINR(totals.gst);
+        cartPage.querySelector("[data-cart-deliv]").textContent = totals.deliv === 0 ? "Free" : fmtINR(totals.deliv);
+        cartPage.querySelector("[data-cart-total]").textContent = fmtINR(totals.total);
+        var discRow = cartPage.querySelector("[data-cart-disc-row]");
+        if (totals.disc > 0) {
+          discRow.style.display = "";
+          cartPage.querySelector("[data-cart-disc]").textContent = "-" + fmtINR(totals.disc);
+        } else {
+          discRow.style.display = "none";
+        }
+      }
+      refreshCartBadge();
+    };
+
+    var loadCart = function () {
+      apiFetch("/cart").then(renderCart).catch(function (err) { showToast(err.message); });
+    };
+
+    var mutate = function (path, options) {
+      apiFetch(path, options).then(renderCart).catch(function (err) { showToast(err.message); });
+    };
+
+    if (!isLoggedIn()) {
+      loggedOutEl.style.display = "";
+      cartPage.querySelector("[data-cart-login-btn]").addEventListener("click", function () {
+        openLoginModal(function () { window.location.reload(); });
+      });
+    } else {
+      loggedInEl.style.display = "";
+      loadCart();
+    }
+
+    itemsEl.addEventListener("click", function (e) {
+      var row = e.target.closest("[data-cart-item]");
+      if (!row) return;
+      var productCode = row.getAttribute("data-product");
+      var variantCode = row.getAttribute("data-variant") || "";
+      var qs = variantCode ? "?variant=" + encodeURIComponent(variantCode) : "";
+
+      var qtyBtn = e.target.closest("[data-qty]");
+      if (qtyBtn) {
+        var delta = parseInt(qtyBtn.getAttribute("data-qty"), 10);
+        var currentQty = parseInt(row.querySelector(".qty-stepper span").textContent, 10);
+        var next = currentQty + delta;
+        if (next < 1) return;
+        mutate("/cart/items/" + encodeURIComponent(productCode) + qs, { method: "PATCH", body: JSON.stringify({ quantity: next }) });
+        return;
+      }
+
+      if (e.target.closest("[data-cart-remove]")) {
+        mutate("/cart/items/" + encodeURIComponent(productCode) + qs, { method: "DELETE" });
+      }
+    });
+
+    cartPage.querySelector("[data-cart-coupon-apply]").addEventListener("click", function () {
+      var input = cartPage.querySelector("[data-cart-coupon-input]");
+      var msgEl = cartPage.querySelector("[data-cart-coupon-msg]");
+      var code = input.value.trim();
+      if (!code) return;
+
+      apiFetch("/coupons/apply", { method: "POST", body: JSON.stringify({ code: code }) })
+        .then(function (data) {
+          msgEl.style.display = "";
+          msgEl.style.color = "var(--green-dark)";
+          msgEl.textContent = data.message;
+          loadCart();
+        })
+        .catch(function (err) {
+          msgEl.style.display = "";
+          msgEl.style.color = "#EF4444";
+          msgEl.textContent = err.message;
+        });
+    });
+  }
+
+  // ---------------- Checkout page ----------------
+  var checkoutPage = document.getElementById("checkout-page");
+  if (checkoutPage) {
+    var coLoggedOut = checkoutPage.querySelector("[data-checkout-logged-out]");
+    var coLoggedIn = checkoutPage.querySelector("[data-checkout-logged-in]");
+    var coAddresses = checkoutPage.querySelector("[data-checkout-addresses]");
+    var coAddForm = checkoutPage.querySelector("[data-checkout-add-address-form]");
+    var coState = { addresses: [], selectedAddressId: null, shipping: "standard", payment: "upi", totals: null };
+
+    var addressCardHTML = function (a) {
+      var active = a.id === coState.selectedAddressId;
+      return '<div class="addr-card' + (active ? ' active' : '') + '" data-address-id="' + a.id + '">' +
+        '<div class="addr-radio' + (active ? ' active' : '') + '"></div>' +
+        '<div style="flex:1;">' +
+          '<div class="addr-name-row"><span style="font-weight:700;font-size:14px;">' + a.name + '</span><span class="badge badge-orange">' + a.label + '</span></div>' +
+          '<div class="addr-line">' + a.line + ', ' + a.city + ', ' + a.state + ' ' + a.pincode + '</div>' +
+        '</div>' +
+      '</div>';
+    };
+
+    var renderAddresses = function () {
+      coAddresses.innerHTML = coState.addresses.map(addressCardHTML).join("") +
+        '<button type="button" class="addr-add-btn" data-checkout-show-add-form>' +
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Add New Address' +
+        '</button>';
+    };
+
+    var renderSummary = function () {
+      if (!coState.totals) return;
+      var t = coState.totals;
+      checkoutPage.querySelector("[data-co-sub]").textContent = fmtINR(t.sub);
+      checkoutPage.querySelector("[data-co-gst]").textContent = fmtINR(t.gst);
+      checkoutPage.querySelector("[data-co-deliv]").textContent = t.deliv === 0 ? "Free" : fmtINR(t.deliv);
+      checkoutPage.querySelector("[data-co-total]").textContent = fmtINR(t.total);
+      var discRow = checkoutPage.querySelector("[data-co-disc-row]");
+      if (t.disc > 0) {
+        discRow.style.display = "";
+        checkoutPage.querySelector("[data-co-disc]").textContent = "-" + fmtINR(t.disc);
+      } else {
+        discRow.style.display = "none";
+      }
+    };
+
+    var loadCheckout = function () {
+      Promise.all([apiFetch("/cart"), apiFetch("/addresses")])
+        .then(function (results) {
+          var cart = results[0];
+          var addresses = results[1].data || results[1];
+
+          if (!cart.items || !cart.items.length) {
+            window.location.href = "/cart";
+            return;
+          }
+
+          coState.totals = cart.totals;
+          coState.addresses = addresses;
+          if (addresses.length) coState.selectedAddressId = addresses.find(function (a) { return a.is_default; }) ? addresses.find(function (a) { return a.is_default; }).id : addresses[0].id;
+
+          renderAddresses();
+          renderSummary();
+        })
+        .catch(function (err) { showToast(err.message); });
+    };
+
+    if (!isLoggedIn()) {
+      coLoggedOut.style.display = "";
+      checkoutPage.querySelector("[data-checkout-login-btn]").addEventListener("click", function () {
+        openLoginModal(function () { window.location.reload(); });
+      });
+    } else {
+      coLoggedIn.style.display = "";
+      loadCheckout();
+    }
+
+    coAddresses.addEventListener("click", function (e) {
+      if (e.target.closest("[data-checkout-show-add-form]")) {
+        coAddForm.style.display = "";
+        coAddForm.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+      var card = e.target.closest("[data-address-id]");
+      if (card) {
+        coState.selectedAddressId = parseInt(card.getAttribute("data-address-id"), 10);
+        renderAddresses();
+      }
+    });
+
+    checkoutPage.querySelector("[data-checkout-cancel-add-form]").addEventListener("click", function () {
+      coAddForm.style.display = "none";
+    });
+
+    checkoutPage.querySelector("[data-checkout-save-address]").addEventListener("click", function () {
+      var btn = this;
+      var payload = {
+        label: coAddForm.querySelector("[name=label]").value || "Home",
+        name: coAddForm.querySelector("[name=name]").value.trim(),
+        line: coAddForm.querySelector("[name=line]").value.trim(),
+        city: coAddForm.querySelector("[name=city]").value.trim(),
+        state: coAddForm.querySelector("[name=state]").value.trim(),
+        pincode: coAddForm.querySelector("[name=pincode]").value.trim(),
+        is_default: coState.addresses.length === 0,
+      };
+      if (!payload.name || !payload.line || !payload.city || !payload.state || !payload.pincode) {
+        showToast("Fill in all address fields");
+        return;
+      }
+      btn.disabled = true;
+      apiFetch("/addresses", { method: "POST", body: JSON.stringify(payload) })
+        .then(function (res) {
+          btn.disabled = false;
+          var address = res.data || res;
+          coState.addresses.push(address);
+          coState.selectedAddressId = address.id;
+          coAddForm.style.display = "none";
+          Array.prototype.forEach.call(coAddForm.querySelectorAll("input"), function (i) { i.value = ""; });
+          renderAddresses();
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          showToast(err.message);
+        });
+    });
+
+    document.querySelectorAll("[data-ship-option]").forEach(function (row) {
+      row.addEventListener("click", function () {
+        coState.shipping = row.getAttribute("data-ship-option");
+        document.querySelectorAll("[data-ship-option]").forEach(function (r) { r.querySelector(".addr-radio").classList.toggle("active", r === row); });
+      });
+    });
+
+    document.querySelectorAll("[data-pay-option]").forEach(function (row) {
+      row.addEventListener("click", function () {
+        coState.payment = row.getAttribute("data-pay-option");
+        document.querySelectorAll("[data-pay-option]").forEach(function (r) { r.querySelector(".addr-radio").classList.toggle("active", r === row); });
+      });
+    });
+
+    var placeOrderBtn = checkoutPage.querySelector("[data-place-order]");
+    if (placeOrderBtn) {
+      placeOrderBtn.addEventListener("click", function () {
+        if (!coState.selectedAddressId) {
+          showToast("Add a delivery address first");
+          return;
+        }
+        placeOrderBtn.disabled = true;
+        placeOrderBtn.textContent = "Placing order…";
+        var payload = { address_id: coState.selectedAddressId, shipping_method: coState.shipping, payment_method: coState.payment };
+        var couponInput = checkoutPage.querySelector("[data-co-coupon-input]");
+        if (couponInput && couponInput.value.trim()) payload.coupon_code = couponInput.value.trim();
+
+        apiFetch("/orders", { method: "POST", body: JSON.stringify(payload) })
+          .then(function (res) {
+            var order = res.data || res;
+            window.location.href = "/order-confirmation/" + order.no;
+          })
+          .catch(function (err) {
+            placeOrderBtn.disabled = false;
+            placeOrderBtn.textContent = "Place Order";
+            showToast(err.message);
+          });
+      });
+    }
+  }
+
+  // ---------------- Order confirmation ----------------
+  var confirmationPage = document.getElementById("order-confirmation-page");
+  if (confirmationPage && isLoggedIn()) {
+    var orderNo = confirmationPage.getAttribute("data-order-no");
+    apiFetch("/orders/" + encodeURIComponent(orderNo))
+      .then(function (res) {
+        var o = res.data || res;
+        var detailsEl = confirmationPage.querySelector("[data-order-details]");
+        detailsEl.style.display = "";
+        detailsEl.style.padding = "18px 20px";
+        detailsEl.innerHTML =
+          o.items.map(function (item) {
+            return '<div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--border-soft);">' +
+              '<span>' + item.name + (item.variant ? ' (' + item.variant + ')' : '') + ' &times;' + item.q + '</span></div>';
+          }).join("") +
+          '<div style="display:flex;justify-content:space-between;font-size:14px;font-weight:800;padding-top:12px;">' +
+            '<span>Total Paid</span><span>' + fmtINR(o.total) + '</span>' +
+          '</div>';
+        refreshCartBadge();
+      })
+      .catch(function () {});
+  }
+
+  // ---------------- My Orders (real, logged-in customer) ----------------
+  var myOrdersRealList = document.querySelector("[data-my-orders-real-list]");
+  if (myOrdersRealList) {
+    if (isLoggedIn()) {
+      document.querySelector("[data-my-orders-real]").style.display = "";
+      document.querySelector("[data-my-orders-guest]").style.display = "none";
+      apiFetch("/orders").then(function (orders) {
+        var list = orders.data || orders;
+        myOrdersRealList.innerHTML = list.length
+          ? list.map(function (o) {
+              var badgeColor = o.status === "delivered" ? { c: "#16A34A", bg: "#F0FDF4" } : (o.status === "cancelled" || o.status === "returned") ? { c: "#EF4444", bg: "#FEF2F2" } : { c: "#EA580C", bg: "#FFF7ED" };
+              return '<div class="order-card">' +
+                '<div class="order-top"><span class="order-no">' + o.no + '</span><span class="badge" style="color:' + badgeColor.c + ';background:' + badgeColor.bg + ';">' + o.stage + '</span></div>' +
+                '<div class="order-date">' + o.date + '</div>' +
+                '<div class="order-item"><div class="thumb"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="1.6"><path d="M6 2h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></div>' +
+                '<div><div class="title">' + (o.items[0] ? o.items[0].name + (o.items.length > 1 ? ' + ' + (o.items.length - 1) + ' more' : '') : 'Order') + '</div><div class="sub">' + fmtINR(o.total) + ' total</div></div></div>' +
+                '</div>';
+            }).join("")
+          : '<p style="text-align:center;color:var(--muted);padding:30px 0;">You haven\'t placed any orders yet.</p>';
+      }).catch(function (err) { showToast(err.message); });
+
+      document.querySelector("[data-my-orders-login-toggle]")?.addEventListener("click", function () {
+        document.querySelector("[data-my-orders-real]").style.display = "none";
+        document.querySelector("[data-my-orders-guest]").style.display = "";
+      });
+    } else {
+      document.querySelector("[data-my-orders-login-btn]")?.addEventListener("click", function () {
+        openLoginModal(function () { window.location.reload(); });
+      });
+    }
+  }
 })();

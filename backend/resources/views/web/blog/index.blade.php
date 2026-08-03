@@ -16,7 +16,7 @@
 @if($featured)
 <section class="section-tight">
   <div class="container">
-    <a href="{{ route('web.blog.show', $featured) }}" class="card" style="display:grid;grid-template-columns:1fr 1fr;overflow:hidden;">
+    <a href="{{ route('web.blog.show', $featured) }}" class="card two-col-split" style="overflow:hidden;">
       <div style="background:linear-gradient(135deg,#1F2937,#111827);min-height:280px;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;"><span style="color:rgba(255,255,255,.85);font-size:12.5px;font-weight:700;">{{ $featured->category }}</span></div>
       <div style="padding:34px;">
         <span class="badge badge-orange">Featured</span>
@@ -60,7 +60,7 @@
     <h3 class="section-title" style="font-size:22px;">Get the best of the blog in your inbox</h3>
     <p class="section-sub" style="margin:10px auto 0;">One email a month — no spam, unsubscribe any time.</p>
     <form style="display:flex;gap:10px;margin-top:22px;max-width:420px;margin-left:auto;margin-right:auto;" data-api-form="{{ route('api.web.newsletter') }}">
-      <input type="email" name="email" required placeholder="you@company.com" style="flex:1;height:50px;border-radius:12px;border:1px solid var(--border);padding:0 16px;font-size:14px;font-family:inherit;" />
+      <input type="email" name="email" required placeholder="you@company.com" style="flex:1;min-width:0;height:50px;border-radius:12px;border:1px solid var(--border);padding:0 16px;font-size:14px;font-family:inherit;" />
       <button class="btn btn-primary" type="submit">Subscribe</button>
     </form>
   </div>

@@ -18,6 +18,7 @@
       <a href="{{ route('web.track-order') }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="6" width="13" height="11" rx="1.5"/><path d="M14 9h4l3 3v5h-7"/><circle cx="6" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg> Track Order</a>
       <a href="{{ route('web.sell') }}" class="accent"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FDBA74" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l6-3 6 3v13"/><path d="M15 11h6v10h-6"/><path d="M6 11h3M6 14h3M6 17h3M18 14h0M18 17h0"/></svg> Become a Seller</a>
       <a href="{{ route('seller.login') }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Seller Login</a>
+      <a href="#" data-account-trigger><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 1 0-16 0"/><circle cx="12" cy="7" r="4"/></svg> <span data-account-label>Login / Sign Up</span></a>
       <a href="{{ route('web.download-app') }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m6 11 6 6 6-6"/><path d="M4 21h16"/></svg> Get the App</a>
       <a href="{{ route('web.support') }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> Help &amp; Support</a>
     </div>
@@ -27,7 +28,7 @@
   <div class="container">
     <a href="{{ route('web.home') }}" class="brand">
       <img src="{{ asset('web/img/hc-logo.png') }}" alt="Hardware Centers logo" />
-      <span class="brand-name">Hardware <span>Centre</span></span>
+      <span class="brand-name">Hardware <span>Centers</span></span>
     </a>
     <nav><ul class="main-nav">
       <li class="{{ request()->routeIs('web.home') ? 'active' : '' }}"><a href="{{ route('web.home') }}">Home</a></li>
@@ -56,7 +57,7 @@
     </div>
     <div class="header-actions">
       <a class="icon-btn" href="{{ route('web.search') }}" aria-label="Search"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1F2937" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg></a>
-      <a class="icon-btn" href="{{ route('web.orders') }}" aria-label="Notifications"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1F2937" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></a>
+      <a class="icon-btn icon-btn-keep" href="{{ route('web.cart') }}" aria-label="Cart"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1F2937" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1.4"/><circle cx="19" cy="21" r="1.4"/><path d="M2.5 3h2l2.3 11.4a2 2 0 0 0 2 1.6h8.4a2 2 0 0 0 2-1.6L21 7H6"/></svg><span class="icon-dot" data-cart-badge style="display:none;"></span></a>
       <a class="icon-btn" href="{{ route('web.orders') }}" aria-label="Orders"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1F2937" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></a>
       <a class="btn btn-primary btn-sm" href="{{ route('web.sell') }}">Become a Seller</a>
       <button class="mobile-toggle" aria-label="Menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1F2937" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
@@ -67,9 +68,11 @@
   <div class="backdrop"></div>
   <div class="panel">
     <button class="close-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1F2937" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    <a href="#" data-account-trigger><span data-account-label>Login / Sign Up</span></a>
     <a href="{{ route('web.home') }}">Home</a>
     <a href="{{ route('web.categories') }}">Categories</a>
     <a href="{{ route('web.search') }}">Search</a>
+    <a href="{{ route('web.cart') }}">Cart <span data-cart-badge-text></span></a>
     <a href="{{ route('web.blog') }}">Blog</a>
     <a href="{{ route('web.about') }}">About Us</a>
     <a href="{{ route('web.contact') }}">Contact Us</a>
@@ -86,7 +89,7 @@
 <footer class="site-footer">
   <div class="container footer-top">
     <div class="footer-brand">
-      <a href="{{ route('web.home') }}" class="brand"><img src="{{ asset('web/img/hc-logo.png') }}" alt="Hardware Centers logo" style="width:40px;height:40px;border-radius:11px;" /><span class="brand-name">Hardware <span style="color:#F97316;">Centre</span></span></a>
+      <a href="{{ route('web.home') }}" class="brand"><img src="{{ asset('web/img/hc-logo.png') }}" alt="Hardware Centers logo" style="width:40px;height:40px;border-radius:11px;" /><span class="brand-name">Hardware <span style="color:#F97316;">Centers</span></span></a>
       <p>Everything hardware, one marketplace. 8,000+ products from GST-verified suppliers, delivered to 500+ cities across India.</p>
       <div class="footer-social">
         <a href="#" aria-label="Facebook"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></a>

@@ -158,7 +158,7 @@
 @endif
 
 <section class="section">
-  <div class="container" style="display:grid;grid-template-columns:1fr 1fr;gap:22px;">
+  <div class="container two-col-cta">
     <div class="cta-band" style="padding:36px;">
       <div class="cta-band-in" style="flex-direction:column;align-items:flex-start;">
         <h3 style="font-size:21px;">Grow your business with Hardware Centers</h3>

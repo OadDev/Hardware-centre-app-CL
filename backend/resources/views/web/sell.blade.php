@@ -5,7 +5,7 @@
 
 @section('content')
 <section class="hero">
-  <div class="container" style="grid-template-columns:1.1fr .9fr;">
+  <div class="container">
     <div>
       <span class="hero-eyebrow"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FDBA74" stroke-width="1.8"><path d="M3 21V8l6-3 6 3v13"/><path d="M15 11h6v10h-6"/><path d="M6 11h3M6 14h3M6 17h3M18 14h0M18 17h0"/></svg> For Suppliers &amp; Manufacturers</span>
       <h1 style="font-size:40px;">Grow your hardware business <span class="accent">online</span></h1>
