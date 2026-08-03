@@ -11,6 +11,7 @@ import SearchScreen from '../screens/SearchScreen';
 import CategoryListingScreen from '../screens/CategoryListingScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
+import RazorpayCheckoutScreen from '../screens/RazorpayCheckoutScreen';
 import OrderSuccessScreen from '../screens/OrderSuccessScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -28,6 +29,7 @@ export default function RootNavigator() {
       <Stack.Screen name="CategoryListing" component={CategoryListingScreen} />
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
+      <Stack.Screen name="RazorpayCheckout" component={RazorpayCheckoutScreen} />
       <Stack.Screen name="OrderSuccess" component={OrderSuccessScreen} />
     </Stack.Navigator>
   );

@@ -11,6 +11,7 @@ import {
   CategoryApi,
   OrderApi,
   OtpChannel,
+  PaymentApi,
   WishlistApi,
 } from '../api/endpoints';
 import { CartResponse, Category, HomeData, Totals } from '../api/types';
@@ -71,7 +72,12 @@ type AppContextValue = {
   setShip: (id: ShippingMethod) => void;
   setPay: (id: PaymentMethod) => void;
 
-  placeOrder: () => Promise<string>;
+  beginOnlinePayment: () => Promise<{ key_id: string; gateway_order_id: string; amount: number; currency: string }>;
+  placeOrder: (gatewayFields?: {
+    gateway_order_id: string;
+    gateway_payment_id: string;
+    gateway_signature: string;
+  }) => Promise<string>;
   reorder: (order: Order) => Promise<void>;
 
   totals: Totals;
@@ -367,13 +373,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const totals: Totals = useMemo(() => (couponApplied && couponTotals ? couponTotals : cart.totals), [couponApplied, couponTotals, cart.totals]);
 
-  const placeOrder = useCallback(async (): Promise<string> => {
+  const beginOnlinePayment = useCallback(async () => {
+    return PaymentApi.createGatewayOrder({
+      coupon_code: couponApplied ? couponCode.trim().toUpperCase() : undefined,
+    });
+  }, [couponApplied, couponCode]);
+
+  const placeOrder = useCallback(async (gatewayFields?: {
+    gateway_order_id: string;
+    gateway_payment_id: string;
+    gateway_signature: string;
+  }): Promise<string> => {
     if (!selectedAddressId) throw new Error('Select a delivery address first');
     const order = await OrderApi.create({
       address_id: selectedAddressId,
       shipping_method: ship,
       payment_method: pay,
       coupon_code: couponApplied ? couponCode.trim().toUpperCase() : undefined,
+      ...gatewayFields,
     });
     setOrders((prev) => [order, ...prev]);
     setCart(EMPTY_CART);
@@ -428,6 +445,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addAddress,
     setShip,
     setPay,
+    beginOnlinePayment,
     placeOrder,
     reorder,
     totals,

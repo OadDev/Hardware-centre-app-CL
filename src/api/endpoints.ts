@@ -108,6 +108,17 @@ export const OrderApi = {
     shipping_method: 'standard' | 'express';
     payment_method: 'upi' | 'card' | 'netbanking' | 'cod';
     coupon_code?: string;
+    gateway_order_id?: string;
+    gateway_payment_id?: string;
+    gateway_signature?: string;
   }) => (await http.post<{ data: Order }>('/orders', payload)).data,
   reorder: (orderNo: string) => http.post<{ message: string }>(`/orders/${encodeURIComponent(orderNo)}/reorder`),
+};
+
+export const PaymentApi = {
+  createGatewayOrder: (payload: { coupon_code?: string }) =>
+    http.post<{ key_id: string; gateway_order_id: string; amount: number; currency: string }>(
+      '/checkout/gateway-order',
+      payload
+    ),
 };

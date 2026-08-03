@@ -32,7 +32,7 @@ function RadioDot({ active }: { active: boolean }) {
 }
 
 export default function CheckoutScreen({ navigation }: Props) {
-  const { addresses, selectedAddressId, setSelectedAddressId, ship, setShip, pay, setPay, totals, placeOrder, addAddress, showToast } = useApp();
+  const { addresses, selectedAddressId, setSelectedAddressId, ship, setShip, pay, setPay, totals, beginOnlinePayment, placeOrder, addAddress, showToast } = useApp();
   const [placing, setPlacing] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [form, setForm] = useState({ name: '', line: '', city: '', state: '', pincode: '', label: 'Home' });
@@ -45,8 +45,13 @@ export default function CheckoutScreen({ navigation }: Props) {
     }
     setPlacing(true);
     try {
-      const orderNo = await placeOrder();
-      navigation.replace('OrderSuccess', { orderNo });
+      if (pay === 'cod') {
+        const orderNo = await placeOrder();
+        navigation.replace('OrderSuccess', { orderNo });
+      } else {
+        const gatewayOrder = await beginOnlinePayment();
+        navigation.navigate('RazorpayCheckout', gatewayOrder);
+      }
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Could not place order');
     } finally {

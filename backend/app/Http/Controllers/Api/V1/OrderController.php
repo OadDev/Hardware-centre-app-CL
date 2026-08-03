@@ -8,6 +8,7 @@ use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\WarehouseInventory;
 use App\Models\WarehouseStockMovement;
+use App\Services\RazorpayService;
 use App\Support\CartCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -33,16 +34,38 @@ class OrderController extends Controller
         return new OrderResource($order);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, RazorpayService $razorpay)
     {
         $data = $request->validate([
             'address_id' => ['required', 'integer', Rule::exists('addresses', 'id')->where('customer_id', $request->user()->id)],
             'shipping_method' => ['required', Rule::in(['standard', 'express'])],
             'payment_method' => ['required', Rule::in(['upi', 'card', 'netbanking', 'cod'])],
             'coupon_code' => ['nullable', 'string'],
+            'gateway_order_id' => ['required_unless:payment_method,cod', 'string'],
+            'gateway_payment_id' => ['required_unless:payment_method,cod', 'string'],
+            'gateway_signature' => ['required_unless:payment_method,cod', 'string'],
         ]);
 
         $customer = $request->user();
+
+        // A payment can only ever pay for one order — if this payment id has
+        // already been used (e.g. the client retried after a slow response),
+        // return the order that was already created instead of charging again.
+        if (! empty($data['gateway_payment_id'])) {
+            $existing = Order::where('gateway_payment_id', $data['gateway_payment_id'])->first();
+            if ($existing) {
+                abort_unless($existing->customer_id === $customer->id, 409, 'This payment has already been used for another order.');
+                $existing->load(['items.product.brand']);
+
+                return new OrderResource($existing);
+            }
+        }
+
+        if ($data['payment_method'] !== 'cod') {
+            $verified = $razorpay->verifySignature($data['gateway_order_id'], $data['gateway_payment_id'], $data['gateway_signature']);
+            abort_unless($verified, 422, 'Payment verification failed. Please try again.');
+        }
+
         $items = $customer->cartItems()->with(['product.seller.categoryCommissions', 'product.category', 'productVariant'])->get();
 
         if ($items->isEmpty()) {
@@ -69,6 +92,9 @@ class OrderController extends Controller
             'shipping_method' => $data['shipping_method'],
             'payment_method' => $data['payment_method'],
             'payment_status' => $data['payment_method'] === 'cod' ? 'Pending' : 'Paid',
+            'gateway_provider' => $data['payment_method'] === 'cod' ? null : 'razorpay',
+            'gateway_order_id' => $data['gateway_order_id'] ?? null,
+            'gateway_payment_id' => $data['gateway_payment_id'] ?? null,
             'status' => 'Confirmed',
             'placed_at' => now(),
         ]);

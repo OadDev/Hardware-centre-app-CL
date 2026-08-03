@@ -1002,25 +1002,78 @@
 
     var placeOrderBtn = checkoutPage.querySelector("[data-place-order]");
     if (placeOrderBtn) {
+      var resetPlaceOrderBtn = function () {
+        placeOrderBtn.disabled = false;
+        placeOrderBtn.textContent = "Place Order";
+      };
+
+      var finalizeOrder = function (couponCode, extra) {
+        var payload = Object.assign(
+          { address_id: coState.selectedAddressId, shipping_method: coState.shipping, payment_method: coState.payment },
+          extra || {}
+        );
+        if (couponCode) payload.coupon_code = couponCode;
+        return apiFetch("/orders", { method: "POST", body: JSON.stringify(payload) }).then(function (res) {
+          var order = res.data || res;
+          window.location.href = "/order-confirmation/" + order.no;
+        });
+      };
+
       placeOrderBtn.addEventListener("click", function () {
         if (!coState.selectedAddressId) {
           showToast("Add a delivery address first");
           return;
         }
+        var couponInput = checkoutPage.querySelector("[data-co-coupon-input]");
+        var couponCode = couponInput && couponInput.value.trim() ? couponInput.value.trim() : undefined;
+
         placeOrderBtn.disabled = true;
         placeOrderBtn.textContent = "Placing order…";
-        var payload = { address_id: coState.selectedAddressId, shipping_method: coState.shipping, payment_method: coState.payment };
-        var couponInput = checkoutPage.querySelector("[data-co-coupon-input]");
-        if (couponInput && couponInput.value.trim()) payload.coupon_code = couponInput.value.trim();
 
-        apiFetch("/orders", { method: "POST", body: JSON.stringify(payload) })
-          .then(function (res) {
-            var order = res.data || res;
-            window.location.href = "/order-confirmation/" + order.no;
+        if (coState.payment === "cod") {
+          finalizeOrder(couponCode).catch(function (err) {
+            resetPlaceOrderBtn();
+            showToast(err.message);
+          });
+          return;
+        }
+
+        var gatewayPayload = {};
+        if (couponCode) gatewayPayload.coupon_code = couponCode;
+
+        apiFetch("/checkout/gateway-order", { method: "POST", body: JSON.stringify(gatewayPayload) })
+          .then(function (gw) {
+            if (typeof Razorpay === "undefined") {
+              throw new Error("Payment gateway failed to load. Please refresh and try again.");
+            }
+            var rzp = new Razorpay({
+              key: gw.key_id,
+              amount: gw.amount,
+              currency: gw.currency,
+              order_id: gw.gateway_order_id,
+              name: "Hardware Centers",
+              description: "Order payment",
+              theme: { color: "#F97316" },
+              handler: function (response) {
+                finalizeOrder(couponCode, {
+                  gateway_order_id: response.razorpay_order_id,
+                  gateway_payment_id: response.razorpay_payment_id,
+                  gateway_signature: response.razorpay_signature,
+                }).catch(function (err) {
+                  resetPlaceOrderBtn();
+                  showToast(err.message);
+                });
+              },
+              modal: { ondismiss: resetPlaceOrderBtn },
+            });
+            rzp.on("payment.failed", function () {
+              resetPlaceOrderBtn();
+              showToast("Payment failed. Please try again.");
+            });
+            rzp.open();
           })
           .catch(function (err) {
-            placeOrderBtn.disabled = false;
-            placeOrderBtn.textContent = "Place Order";
+            resetPlaceOrderBtn();
             showToast(err.message);
           });
       });

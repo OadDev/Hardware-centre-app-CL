@@ -30,6 +30,10 @@ use Illuminate\Support\Facades\Route;
 Route::get('/setup', [SetupController::class, 'show'])->name('setup.show');
 Route::post('/setup', [SetupController::class, 'store'])->name('setup.store');
 
+// Standalone bridge page the mobile app loads in a WebView to run Razorpay's
+// hosted Checkout — driven entirely by query-string params, no session/auth.
+Route::get('/checkout/razorpay-bridge', fn () => view('checkout.razorpay-bridge'))->name('checkout.razorpay-bridge');
+
 Route::name('web.')->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
     Route::get('/categories', [CategoriesController::class, 'index'])->name('categories');

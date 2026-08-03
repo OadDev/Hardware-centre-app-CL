@@ -19,6 +19,7 @@ export type RootStackParamList = {
   CategoryListing: { catId: string };
   ProductDetail: { id: string };
   Checkout: undefined;
+  RazorpayCheckout: { key_id: string; gateway_order_id: string; amount: number; currency: string };
   OrderSuccess: { orderNo: string };
 };
 
