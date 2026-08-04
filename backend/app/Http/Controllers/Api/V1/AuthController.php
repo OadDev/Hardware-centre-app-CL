@@ -20,7 +20,10 @@ class AuthController extends Controller
 
     public function requestOtp(Request $request, OtpService $otp)
     {
-        $channel = $otp->activeChannel();
+        // The client always tells us which channel it wants (whichever field
+        // the customer is actually filling in) — the admin's default only
+        // decides which one is shown first, it never blocks the other.
+        $channel = $request->input('channel') === 'sms' ? 'sms' : ($request->input('channel') === 'email' ? 'email' : $otp->activeChannel());
 
         if ($channel === 'sms') {
             $data = $request->validate(['phone' => ['required', 'string', 'min:8', 'max:15']]);
@@ -31,7 +34,7 @@ class AuthController extends Controller
         }
 
         try {
-            $code = $otp->send($contact);
+            $code = $otp->send($contact, $channel);
         } catch (Throwable $e) {
             Log::error('OTP send failed: '.$e->getMessage());
 
@@ -49,7 +52,7 @@ class AuthController extends Controller
 
     public function verifyOtp(Request $request, OtpService $otp)
     {
-        $channel = $otp->activeChannel();
+        $channel = $request->input('channel') === 'sms' ? 'sms' : ($request->input('channel') === 'email' ? 'email' : $otp->activeChannel());
 
         if ($channel === 'sms') {
             $data = $request->validate([
@@ -65,7 +68,7 @@ class AuthController extends Controller
             $contact = strtolower($data['email']);
         }
 
-        if (! $otp->verify($contact, $data['otp'])) {
+        if (! $otp->verify($contact, $data['otp'], $channel)) {
             return response()->json(['message' => 'Invalid or expired code.'], 422);
         }
 

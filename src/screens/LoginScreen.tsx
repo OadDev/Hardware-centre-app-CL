@@ -8,6 +8,7 @@ import { useApp } from '../context/AppContext';
 import { colors, fonts, radii } from '../theme/theme';
 import { BackButton, PrimaryButton } from '../components/UI';
 import { IconMail, IconPhone } from '../components/Icons';
+import { OtpChannel } from '../api/endpoints';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
@@ -21,7 +22,9 @@ const PHONE_RE = /^[6-9]\d{9}$/;
 // button was tapped on the Welcome screen; the underlying flow is identical.
 export default function LoginScreen({ navigation, route }: Props) {
   const { requestOtp, otpChannel, refreshOtpChannel } = useApp();
-  const isSms = otpChannel === 'sms';
+  const [channelOverride, setChannelOverride] = useState<OtpChannel | null>(null);
+  const activeChannel = channelOverride ?? otpChannel;
+  const isSms = activeChannel === 'sms';
   const [mode, setMode] = useState<'login' | 'signup'>(route.params?.mode ?? 'login');
   const isSignup = mode === 'signup';
 
@@ -48,11 +51,16 @@ export default function LoginScreen({ navigation, route }: Props) {
     }
     setError('');
     setSending(true);
-    const { ok, debugOtp } = await requestOtp(contact);
+    const { ok, debugOtp } = await requestOtp(contact, activeChannel);
     setSending(false);
     if (ok) {
-      navigation.navigate('Otp', { contact, channel: otpChannel, debugOtp });
+      navigation.navigate('Otp', { contact, channel: activeChannel, debugOtp });
     }
+  };
+
+  const switchChannel = () => {
+    setChannelOverride(isSms ? 'email' : 'sms');
+    setError('');
   };
 
   return (
@@ -100,6 +108,10 @@ export default function LoginScreen({ navigation, route }: Props) {
         </View>
 
         {!!error && <Text style={styles.error}>{error}</Text>}
+
+        <Text style={styles.channelSwitch} onPress={switchChannel}>
+          {isSms ? 'Login with Email ID instead' : 'Login with Phone Number instead'}
+        </Text>
 
         <PrimaryButton label="Send Verification Code" onPress={doContinue} loading={sending} style={{ marginTop: 24 }} />
 
@@ -158,6 +170,12 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: colors.danger,
     fontFamily: fonts.bodyMedium,
+  },
+  channelSwitch: {
+    marginTop: 14,
+    fontSize: 13,
+    fontFamily: fonts.bodySemibold,
+    color: colors.accent,
   },
   switchRow: {
     textAlign: 'center',

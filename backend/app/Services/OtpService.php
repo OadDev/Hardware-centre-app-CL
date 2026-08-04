@@ -11,9 +11,11 @@ use Illuminate\Support\Facades\Mail;
 use RuntimeException;
 
 /**
- * Sends and verifies OTP codes via whichever single channel the admin has
- * enabled (Settings > OTP Verification) — email over SMTP, or SMS via
- * Fast2SMS. Never both at once.
+ * Sends and verifies OTP codes via email (SMTP) or SMS (Fast2SMS), whichever
+ * the caller asks for. Settings > OTP Verification only picks the *default*
+ * channel shown first on the login screen — the app always lets a customer
+ * switch to the other channel instead, so an account created under one
+ * channel is never locked out if the admin later changes the default.
  *
  * Two fixed test accounts (see TEST_CONTACTS) always accept the code
  * TEST_OTP_CODE without ever actually sending anything, so the app can be
@@ -27,22 +29,26 @@ class OtpService
 
     private const TEST_OTP_CODE = '123456';
 
+    /**
+     * The channel shown by default on the login screen. Not a hard gate —
+     * send()/verify() work for either channel regardless of this setting.
+     */
     public function activeChannel(): string
     {
         return AppSetting::current()->otp_channel === 'sms' ? 'sms' : 'email';
     }
 
     /**
-     * Generates, stores, and dispatches a code to $contact. Returns the plain
-     * code so the caller can decide whether to surface it (e.g. in local dev).
+     * Generates, stores, and dispatches a code to $contact over $channel.
+     * Returns the plain code so the caller can decide whether to surface it
+     * (e.g. in local dev).
      */
-    public function send(string $contact): string
+    public function send(string $contact, string $channel): string
     {
         if ($this->isTestContact($contact)) {
             return self::TEST_OTP_CODE;
         }
 
-        $channel = $this->activeChannel();
         $code = (string) random_int(100000, 999999);
 
         Cache::put($this->cacheKey($channel, $contact), Hash::make($code), now()->addMinutes(5));
@@ -56,13 +62,12 @@ class OtpService
         return $code;
     }
 
-    public function verify(string $contact, string $code): bool
+    public function verify(string $contact, string $code, string $channel): bool
     {
         if ($this->isTestContact($contact)) {
             return $code === self::TEST_OTP_CODE;
         }
 
-        $channel = $this->activeChannel();
         $key = $this->cacheKey($channel, $contact);
         $hashed = Cache::get($key);
 

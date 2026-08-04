@@ -57,7 +57,7 @@ export default function OtpScreen({ navigation, route }: Props) {
   const resendOtp = async () => {
     setOtp(['', '', '', '', '', '']);
     setResend(60);
-    const { ok, debugOtp: newDebugOtp } = await requestOtp(contact);
+    const { ok, debugOtp: newDebugOtp } = await requestOtp(contact, channel);
     if (ok) {
       showToast(newDebugOtp ? `Dev OTP: ${newDebugOtp}` : `Code resent via ${isSms ? 'SMS' : 'email'}`);
     }
@@ -69,7 +69,7 @@ export default function OtpScreen({ navigation, route }: Props) {
       return;
     }
     setVerifying(true);
-    const ok = await verifyOtp(contact, otp.join(''));
+    const ok = await verifyOtp(contact, otp.join(''), channel);
     setVerifying(false);
     if (!ok) return;
 

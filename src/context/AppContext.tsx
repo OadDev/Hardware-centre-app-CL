@@ -52,8 +52,8 @@ type AppContextValue = {
   couponErr: string;
 
   completeOnboarding: () => void;
-  requestOtp: (contact: string) => Promise<{ ok: boolean; debugOtp: string | null }>;
-  verifyOtp: (contact: string, otp: string) => Promise<boolean>;
+  requestOtp: (contact: string, channel: OtpChannel) => Promise<{ ok: boolean; debugOtp: string | null }>;
+  verifyOtp: (contact: string, otp: string, channel: OtpChannel) => Promise<boolean>;
   enterAsGuest: () => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (payload: { name: string; business_name?: string; city?: string; state?: string }) => Promise<boolean>;
@@ -226,19 +226,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem(ONBOARD_KEY, '1').catch(() => {});
   }, []);
 
-  const requestOtp = useCallback(async (contact: string): Promise<{ ok: boolean; debugOtp: string | null }> => {
+  const requestOtp = useCallback(async (contact: string, channel: OtpChannel): Promise<{ ok: boolean; debugOtp: string | null }> => {
     try {
-      const res = await AuthApi.requestOtp(otpChannel, contact);
+      const res = await AuthApi.requestOtp(channel, contact);
       return { ok: true, debugOtp: res.debug_otp };
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : 'Could not send verification code');
       return { ok: false, debugOtp: null };
     }
-  }, [showToast, otpChannel]);
+  }, [showToast]);
 
-  const verifyOtp = useCallback(async (contact: string, otp: string): Promise<boolean> => {
+  const verifyOtp = useCallback(async (contact: string, otp: string, channel: OtpChannel): Promise<boolean> => {
     try {
-      const res = await AuthApi.verifyOtp(otpChannel, contact, otp);
+      const res = await AuthApi.verifyOtp(channel, contact, otp);
       await setToken(res.token);
       setCustomer(res.customer);
       setSession(res.customer.is_guest ? 'guest' : 'user');
@@ -250,7 +250,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       showToast(err instanceof ApiError ? err.message : 'Verification failed');
       return false;
     }
-  }, [loadUserData, showToast, otpChannel]);
+  }, [loadUserData, showToast]);
 
   const enterAsGuest = useCallback(async () => {
     try {

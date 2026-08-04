@@ -25,10 +25,12 @@ export const AuthApi = {
   getOtpChannel: () => http.get<{ channel: OtpChannel }>('/auth/otp/channel'),
   requestOtp: (channel: OtpChannel, contact: string) =>
     http.post<{ message: string; channel: OtpChannel; debug_otp: string | null }>('/auth/otp/request', {
+      channel,
       [channel === 'sms' ? 'phone' : 'email']: contact,
     }),
   verifyOtp: (channel: OtpChannel, contact: string, otp: string) =>
     http.post<{ token: string; customer: Customer }>('/auth/otp/verify', {
+      channel,
       [channel === 'sms' ? 'phone' : 'email']: contact,
       otp,
     }),
