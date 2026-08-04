@@ -6,12 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\WarehouseInventory;
 use App\Models\WarehouseStockMovement;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
 {
     private const STATUSES = ['Pending', 'Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled', 'Returned'];
+
+    private const STATUS_TEMPLATE = [
+        'Shipped' => 'order_shipped',
+        'Delivered' => 'order_delivered',
+        'Cancelled' => 'order_cancelled',
+    ];
 
     public function index(Request $request)
     {
@@ -46,7 +53,7 @@ class OrderController extends Controller
         ]);
     }
 
-    public function update(Request $request, Order $order)
+    public function update(Request $request, Order $order, NotificationService $notifications)
     {
         $data = $request->validate([
             'status' => ['required', Rule::in(self::STATUSES)],
@@ -58,11 +65,20 @@ class OrderController extends Controller
             $data['delivered_at'] = now();
         }
 
-        $wasCancelled = $order->status === 'Cancelled';
+        $previousStatus = $order->status;
         $order->update($data);
 
-        if ($data['status'] === 'Cancelled' && ! $wasCancelled) {
+        if ($data['status'] === 'Cancelled' && $previousStatus !== 'Cancelled') {
             $this->releaseWarehouseReservations($order);
+        }
+
+        if ($data['status'] !== $previousStatus && isset(self::STATUS_TEMPLATE[$data['status']])) {
+            $order->loadMissing('customer');
+            $notifications->notify(self::STATUS_TEMPLATE[$data['status']], $order->customer->email, $order->customer->phone, [
+                'customer_name' => $order->customer->name,
+                'order_id' => $order->order_no,
+                'tracking_link' => config('app.url').'/track-order',
+            ]);
         }
 
         return response()->json($this->transform($order));

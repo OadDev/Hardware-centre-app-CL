@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ShiprocketConfig;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Throwable;
 
 class ShiprocketController extends Controller
 {
@@ -53,11 +55,40 @@ class ShiprocketController extends Controller
             return response()->json(['message' => 'Add your Shiprocket API email and password before testing.'], 422);
         }
 
-        return response()->json(['message' => 'Credentials saved. Live verification requires a real Shiprocket account.']);
+        try {
+            $response = Http::post('https://apiv2.shiprocket.in/v1/external/auth/login', [
+                'email' => $config->api_email,
+                'password' => $config->api_password,
+            ]);
+        } catch (Throwable $e) {
+            return response()->json(['message' => 'Could not reach Shiprocket: '.$e->getMessage()], 502);
+        }
+
+        if (in_array($response->status(), [401, 403], true)) {
+            $config->update(['connected' => false]);
+
+            return response()->json(['message' => 'Shiprocket rejected these credentials. Double-check the API email and password.'], 422);
+        }
+
+        if (! $response->successful() || ! $response->json('token')) {
+            $config->update(['connected' => false]);
+
+            return response()->json(['message' => 'Shiprocket returned an unexpected error (HTTP '.$response->status().').'], 502);
+        }
+
+        $config->update(['auth_token' => $response->json('token'), 'connected' => true]);
+
+        return response()->json(['message' => 'Shiprocket credentials verified successfully — account connected.']);
     }
 
     public function sync()
     {
-        return response()->json(['message' => 'Order sync requires a connected Shiprocket account.']);
+        $config = ShiprocketConfig::current();
+
+        if (! $config->connected) {
+            return response()->json(['message' => 'Connect your Shiprocket account first — test your credentials above.'], 422);
+        }
+
+        return response()->json(['message' => 'Credentials are connected, but automatic order sync isn\'t implemented yet.']);
     }
 }

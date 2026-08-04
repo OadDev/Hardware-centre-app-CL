@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CustomerResource;
 use App\Models\Customer;
+use App\Services\NotificationService;
 use App\Services\OtpService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -50,7 +51,7 @@ class AuthController extends Controller
         ]);
     }
 
-    public function verifyOtp(Request $request, OtpService $otp)
+    public function verifyOtp(Request $request, OtpService $otp, NotificationService $notifications)
     {
         $channel = $request->input('channel') === 'sms' ? 'sms' : ($request->input('channel') === 'email' ? 'email' : $otp->activeChannel());
 
@@ -95,6 +96,12 @@ class AuthController extends Controller
                 ]
             );
             $customer->forceFill(['email_verified_at' => now()])->save();
+        }
+
+        if ($customer->wasRecentlyCreated) {
+            $notifications->notify('welcome_email', $customer->email, $customer->phone, [
+                'customer_name' => $customer->name,
+            ]);
         }
 
         $token = $customer->createToken('mobile')->plainTextToken;

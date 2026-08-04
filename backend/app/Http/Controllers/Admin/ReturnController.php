@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ReturnRequest;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -26,13 +27,22 @@ class ReturnController extends Controller
         return response()->json($returns);
     }
 
-    public function update(Request $request, ReturnRequest $return)
+    public function update(Request $request, ReturnRequest $return, NotificationService $notifications)
     {
         $data = $request->validate([
             'status' => ['required', Rule::in(['Pending', 'Approved', 'Rejected'])],
         ]);
 
+        $wasApproved = $return->status === 'Approved';
         $return->update($data);
+
+        if ($data['status'] === 'Approved' && ! $wasApproved) {
+            $return->loadMissing(['customer', 'order']);
+            $notifications->notify('refund_processed', $return->customer->email, $return->customer->phone, [
+                'customer_name' => $return->customer->name,
+                'order_id' => $return->order->order_no,
+            ]);
+        }
 
         return response()->json($this->transform($return));
     }

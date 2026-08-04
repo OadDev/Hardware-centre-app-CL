@@ -78,7 +78,7 @@ SECTION_RENDERERS.sellers = async function(main) {
   const totalPending = DATA.sellers.filter(s=>s.approval==='Pending').length;
   const totalSuspended = DATA.sellers.filter(s=>s.status==='Suspended').length;
   main.innerHTML = `
-    ${pageHeader('Seller Management', 'Onboard, verify and monitor vendors on your marketplace', btnPrimary('Add Seller','plus','add-seller-btn')+btnSecondary('Export CSV','download'))}
+    ${pageHeader('Seller Management', 'Onboard, verify and monitor vendors on your marketplace', btnPrimary('Add Seller','plus','add-seller-btn')+btnSecondary('Export CSV','download','export-sellers-btn'))}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       ${kpiCard({label:'Total Sellers', value: fmtNum(DATA.sellers.length), icon:'store', accent:'brand'})}
       ${kpiCard({label:'Active Sellers', value: fmtNum(totalActive), icon:'check-circle', accent:'emerald'})}
@@ -115,6 +115,13 @@ SECTION_RENDERERS.sellers = async function(main) {
         });
         closeModal(); toast('Seller account created'); await refreshSellers(); navigateTo('sellers');
       }) });
+  });
+  document.getElementById('export-sellers-btn').addEventListener('click', () => {
+    downloadCsv('sellers.csv', DATA.sellers.map(s => ({
+      seller_id: s.id, store: s.store, owner: s.name, email: s.email, phone: s.phone,
+      city: s.city, state: s.state, gst: s.gst||'', products: s.products, revenue: s.revenue,
+      commission_pct: s.commissionPct, kyc: s.approval, status: s.status,
+    })));
   });
   renderDataTable('sellers-table-inner', {
     title: 'All Sellers', subtitle: `${DATA.sellers.length} sellers registered on the marketplace`,
@@ -991,7 +998,15 @@ SECTION_RENDERERS.reports = async function(main) {
       ${card(`<div class="p-5 pb-0"><h3 class="font-semibold text-ink-900 dark:text-white">Revenue vs Commission</h3></div><div class="p-5"><canvas id="chart-rep1" height="240"></canvas></div>`)}
       ${card(`<div class="p-5 pb-0"><h3 class="font-semibold text-ink-900 dark:text-white">Top Sellers by Revenue</h3></div><div class="p-5"><canvas id="chart-rep2" height="240"></canvas></div>`)}
     </div>`;
-  main.querySelectorAll('[data-export]').forEach(b => b.addEventListener('click', () => toast(`${b.dataset.export} exported`)));
+  const REPORT_EXPORTERS = {
+    'Revenue Report': () => downloadCsv('revenue-report.csv', (DATA.monthlyRevenue||[]).map(m => ({ month: m.month, revenue: m.revenue, commission: m.commission }))),
+    'Sales Report': () => downloadCsv('sales-report.csv', DATA.orders.map(o => ({ order_id: o.id, date: o.date, customer: o.customerName, items: o.items, amount: o.amount, payment: o.payment, status: o.status }))),
+    'Seller Report': () => downloadCsv('seller-report.csv', DATA.sellers.map(s => ({ seller_id: s.id, store: s.store, owner: s.name, city: s.city, revenue: s.revenue, commission_pct: s.commissionPct, rating: s.rating, status: s.status }))),
+    'Customer Report': () => downloadCsv('customer-report.csv', DATA.customers.map(c => ({ customer_id: c.id, name: c.name, email: c.email, city: c.city, orders: c.orders, total_spend: c.totalSpend, status: c.status }))),
+    'Commission Report': () => downloadCsv('commission-report.csv', unwrap(DATA.commission.sellers).map(s => ({ seller: s.store, revenue: s.revenue, commission_pct: s.commissionPct, marketplace_earning: s.marketplaceEarning }))),
+    'Settlement Report': () => downloadCsv('settlement-report.csv', DATA.settlements.map(s => ({ settlement_id: s.id, seller: s.sellerName, amount: s.amount, mode: s.mode, status: s.status, utr: s.utr||'', date: s.date }))),
+  };
+  main.querySelectorAll('[data-export]').forEach(b => b.addEventListener('click', () => REPORT_EXPORTERS[b.dataset.export]?.()));
 
   const [revCommission, topSellers] = await Promise.all([
     api('GET', '/reports/revenue-vs-commission'), api('GET', '/reports/top-sellers'),
@@ -1164,7 +1179,7 @@ SECTION_RENDERERS.shiprocket = async function(main) {
     });
     toast('Shiprocket settings saved'); await refreshShiprocket(); navigateTo('shiprocket');
   }));
-  document.getElementById('test-shiprocket-btn').addEventListener('click', withErr(async () => { const r = await api('POST', '/shiprocket/test'); toast(r.message); }));
+  document.getElementById('test-shiprocket-btn').addEventListener('click', withErr(async () => { const r = await api('POST', '/shiprocket/test'); toast(r.message, r.message.includes('verified successfully') ? 'success' : 'error'); await refreshShiprocket(); navigateTo('shiprocket'); }));
   document.getElementById('sync-orders-btn').addEventListener('click', withErr(async () => { const r = await api('POST', '/shiprocket/sync'); toast(r.message, 'info'); }));
 };
 
@@ -1203,8 +1218,8 @@ SECTION_RENDERERS['notifications-config'] = async function(main) {
     openModal({ title:'New Broadcast Message', wide:true,
       body:`<div class="space-y-4">${formSelect('Send To',['All Customers','All Sellers','Active Sellers Only'], 0, 'bc-audience')}${formField('Subject','text','e.g. Monsoon Sale starts tomorrow!','','bc-subject')}${formTextarea('Message','Write your broadcast message...', 4, 'bc-message')}</div>`,
       confirmLabel:'Send Broadcast', onConfirm: withErr(async () => {
-        await api('POST', '/notifications/broadcast', { audience: document.getElementById('bc-audience').value, subject: document.getElementById('bc-subject').value, message: document.getElementById('bc-message').value });
-        closeModal(); toast('Broadcast sent to selected audience');
+        const r = await api('POST', '/notifications/broadcast', { audience: document.getElementById('bc-audience').value, subject: document.getElementById('bc-subject').value, message: document.getElementById('bc-message').value });
+        closeModal(); toast(r.message, 'info');
       }) });
   });
 };
@@ -1240,8 +1255,8 @@ SECTION_RENDERERS.roles = async function(main) {
   document.getElementById('add-role-btn').addEventListener('click', () => {
     openModal({ title:'Add Team Member', body:`<div class="space-y-4">${formField('Full Name','text','e.g. Anita Kapoor','','tm-name')}${formField('Email','email','team@hardwarecentre.in','','tm-email')}${formSelect('Role', r.roles.map(x=>x.name), 0, 'tm-role')}</div>`,
       confirmLabel:'Send Invite', onConfirm: withErr(async () => {
-        await api('POST', '/roles/invite', { name: document.getElementById('tm-name').value, email: document.getElementById('tm-email').value, role: document.getElementById('tm-role').value });
-        closeModal(); toast('Invitation sent successfully'); await refreshRoles(); navigateTo('roles');
+        const r = await api('POST', '/roles/invite', { name: document.getElementById('tm-name').value, email: document.getElementById('tm-email').value, role: document.getElementById('tm-role').value });
+        closeModal(); toast(r.message, r.message.includes('temporary password') ? 'warn' : 'success'); await refreshRoles(); navigateTo('roles');
       }) });
   });
 };

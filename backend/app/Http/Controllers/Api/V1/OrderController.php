@@ -8,6 +8,7 @@ use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\WarehouseInventory;
 use App\Models\WarehouseStockMovement;
+use App\Services\NotificationService;
 use App\Services\RazorpayService;
 use App\Support\CartCalculator;
 use Illuminate\Http\Request;
@@ -34,7 +35,7 @@ class OrderController extends Controller
         return new OrderResource($order);
     }
 
-    public function store(Request $request, RazorpayService $razorpay)
+    public function store(Request $request, RazorpayService $razorpay, NotificationService $notifications)
     {
         $data = $request->validate([
             'address_id' => ['required', 'integer', Rule::exists('addresses', 'id')->where('customer_id', $request->user()->id)],
@@ -165,6 +166,12 @@ class OrderController extends Controller
         $customer->cartItems()->delete();
 
         $order->load(['items.product.brand']);
+
+        $notifications->notify('order_confirmation', $customer->email, $customer->phone, [
+            'customer_name' => $customer->name,
+            'order_id' => $order->order_no,
+            'tracking_link' => config('app.url').'/track-order',
+        ]);
 
         return new OrderResource($order);
     }

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Mail\OtpMail;
 use App\Models\AppSetting;
+use App\Support\SmtpMailer;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
@@ -92,22 +93,9 @@ class OtpService
 
     protected function sendEmail(string $email, string $code): void
     {
-        $s = AppSetting::current();
-
-        if (empty($s->smtp_host)) {
+        if (! SmtpMailer::configure()) {
             throw new RuntimeException('SMTP is not configured. Set it up under Settings > OTP Verification.');
         }
-
-        config([
-            'mail.default' => 'smtp',
-            'mail.mailers.smtp.host' => $s->smtp_host,
-            'mail.mailers.smtp.port' => $s->smtp_port ?: 587,
-            'mail.mailers.smtp.username' => $s->smtp_username,
-            'mail.mailers.smtp.password' => $s->smtp_password,
-            'mail.mailers.smtp.encryption' => $s->smtp_encryption ?: 'tls',
-            'mail.from.address' => $s->smtp_from_address ?: ($s->support_email ?: 'no-reply@'.parse_url(config('app.url'), PHP_URL_HOST)),
-            'mail.from.name' => $s->smtp_from_name ?: ($s->business_name ?: config('app.name')),
-        ]);
 
         Mail::to($email)->send(new OtpMail($code));
     }

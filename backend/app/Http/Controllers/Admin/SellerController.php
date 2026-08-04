@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Seller;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -82,7 +83,7 @@ class SellerController extends Controller
         return response()->json($this->transform($seller->loadCount('products')));
     }
 
-    public function update(Request $request, Seller $seller)
+    public function update(Request $request, Seller $seller, NotificationService $notifications)
     {
         $data = $request->validate([
             'approval_status' => ['sometimes', Rule::in(['Approved', 'Pending', 'Rejected'])],
@@ -91,7 +92,14 @@ class SellerController extends Controller
             'commission_pct' => ['sometimes', 'numeric', 'min:0', 'max:100'],
         ]);
 
+        $wasApproved = $seller->approval_status === 'Approved';
         $seller->update($data);
+
+        if (($data['approval_status'] ?? null) === 'Approved' && ! $wasApproved) {
+            $notifications->notify('seller_kyc_approved', $seller->email, $seller->phone, [
+                'customer_name' => $seller->owner_name,
+            ]);
+        }
 
         return response()->json($this->transform($seller->loadCount('products')));
     }

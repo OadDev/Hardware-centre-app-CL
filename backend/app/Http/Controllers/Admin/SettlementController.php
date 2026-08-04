@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Settlement;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
 class SettlementController extends Controller
@@ -25,7 +26,7 @@ class SettlementController extends Controller
         return response()->json($settlements);
     }
 
-    public function retry(Settlement $settlement)
+    public function retry(Settlement $settlement, NotificationService $notifications)
     {
         abort_unless($settlement->status === 'Failed', 422, 'Only failed settlements can be retried');
 
@@ -33,6 +34,11 @@ class SettlementController extends Controller
             'status' => 'Paid',
             'utr' => 'UTR'.random_int(100000000000, 999999999999),
             'settled_at' => now(),
+        ]);
+
+        $settlement->loadMissing('seller');
+        $notifications->notify('settlement_paid', $settlement->seller->email, $settlement->seller->phone, [
+            'customer_name' => $settlement->seller->owner_name,
         ]);
 
         return response()->json($this->transform($settlement));
