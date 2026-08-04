@@ -45,7 +45,7 @@ type AppContextValue = {
   couponErr: string;
 
   completeOnboarding: () => void;
-  requestOtp: (contact: string) => Promise<string | null>;
+  requestOtp: (contact: string) => Promise<{ ok: boolean; debugOtp: string | null }>;
   verifyOtp: (contact: string, otp: string) => Promise<boolean>;
   enterAsGuest: () => Promise<void>;
   logout: () => Promise<void>;
@@ -198,13 +198,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem(ONBOARD_KEY, '1').catch(() => {});
   }, []);
 
-  const requestOtp = useCallback(async (contact: string): Promise<string | null> => {
+  const requestOtp = useCallback(async (contact: string): Promise<{ ok: boolean; debugOtp: string | null }> => {
     try {
       const res = await AuthApi.requestOtp(otpChannel, contact);
-      return res.debug_otp;
+      return { ok: true, debugOtp: res.debug_otp };
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : 'Could not send verification code');
-      return null;
+      return { ok: false, debugOtp: null };
     }
   }, [showToast, otpChannel]);
 

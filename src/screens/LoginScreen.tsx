@@ -31,9 +31,11 @@ export default function LoginScreen({ navigation }: Props) {
     }
     setError('');
     setSending(true);
-    const debugOtp = await requestOtp(contact);
+    const { ok, debugOtp } = await requestOtp(contact);
     setSending(false);
-    navigation.navigate('Otp', { contact, channel: otpChannel, debugOtp });
+    if (ok) {
+      navigation.navigate('Otp', { contact, channel: otpChannel, debugOtp });
+    }
   };
 
   return (
