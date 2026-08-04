@@ -57,7 +57,7 @@ export default function SplashScreen({ navigation }: Props) {
             ]}
           />
         </View>
-        <Text style={styles.brandLabel}>HARDWARE CENTRE</Text>
+        <Text style={styles.brandLabel}>HARDWARE CENTERS</Text>
       </View>
     </View>
   );
