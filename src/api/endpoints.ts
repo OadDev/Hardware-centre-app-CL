@@ -41,6 +41,11 @@ export const AuthApi = {
   logout: () => http.post<{ message: string }>('/logout'),
 };
 
+export const PushApi = {
+  register: (playerId: string) => http.post<{ message: string }>('/push/register', { player_id: playerId }),
+  unregister: () => http.post<{ message: string }>('/push/unregister'),
+};
+
 export const HomeApi = {
   get: () => http.get<HomeData>('/home'),
 };

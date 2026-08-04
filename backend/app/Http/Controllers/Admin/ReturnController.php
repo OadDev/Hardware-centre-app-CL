@@ -41,7 +41,7 @@ class ReturnController extends Controller
             $notifications->notify('refund_processed', $return->customer->email, $return->customer->phone, [
                 'customer_name' => $return->customer->name,
                 'order_id' => $return->order->order_no,
-            ]);
+            ], $return->customer->onesignal_player_id);
         }
 
         return response()->json($this->transform($return));

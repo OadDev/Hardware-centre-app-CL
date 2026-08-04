@@ -13,6 +13,7 @@ class Customer extends AuthenticatableModel
     protected $fillable = [
         'customer_code', 'name', 'email', 'phone', 'password', 'business_name',
         'gst_number', 'city', 'state', 'wallet_balance', 'status', 'is_guest',
+        'onesignal_player_id',
     ];
 
     protected $hidden = [

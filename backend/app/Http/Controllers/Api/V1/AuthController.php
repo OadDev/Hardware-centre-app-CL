@@ -101,7 +101,7 @@ class AuthController extends Controller
         if ($customer->wasRecentlyCreated) {
             $notifications->notify('welcome_email', $customer->email, $customer->phone, [
                 'customer_name' => $customer->name,
-            ]);
+            ], $customer->onesignal_player_id);
         }
 
         $token = $customer->createToken('mobile')->plainTextToken;

@@ -98,6 +98,7 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::patch('notifications/channels/{channel}', [NotificationController::class, 'updateChannel']);
     Route::patch('notifications/templates/{template}', [NotificationController::class, 'updateTemplate']);
     Route::post('notifications/broadcast', [NotificationController::class, 'broadcast']);
+    Route::post('notifications/test-push', [NotificationController::class, 'testPush']);
 
     Route::get('roles', [RoleController::class, 'index']);
     Route::patch('roles/{role}/permissions', [RoleController::class, 'updatePermissions']);

@@ -13,9 +13,11 @@ import {
   OrderApi,
   OtpChannel,
   PaymentApi,
+  PushApi,
   WishlistApi,
 } from '../api/endpoints';
 import { CartResponse, Category, HomeData, Totals } from '../api/types';
+import { initPush } from '../push/onesignal';
 
 const ONBOARD_KEY = 'hc_onboarded_v1';
 const DELIVERY_LABEL_KEY = 'hc_delivery_label_v1';
@@ -137,6 +139,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [toast, setToastState] = useState<ToastState>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastKey = useRef(0);
+  const pushPlayerIdRef = useRef<string | null>(null);
+
+  const registerPush = useCallback(async () => {
+    const id = pushPlayerIdRef.current;
+    if (!id) return;
+    const token = await getToken();
+    if (!token) return;
+    try {
+      await PushApi.register(id);
+    } catch {
+      // best-effort — push registration should never block or surface errors
+    }
+  }, []);
+
+  useEffect(() => {
+    initPush((id) => {
+      pushPlayerIdRef.current = id;
+      registerPush();
+    });
+  }, [registerPush]);
 
   const showToast = useCallback((msg: string) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -245,12 +267,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setHasOnboarded(true);
       AsyncStorage.setItem(ONBOARD_KEY, '1').catch(() => {});
       await loadUserData();
+      registerPush();
       return true;
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : 'Verification failed');
       return false;
     }
-  }, [loadUserData, showToast]);
+  }, [loadUserData, showToast, registerPush]);
 
   const enterAsGuest = useCallback(async () => {
     try {
@@ -261,12 +284,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setHasOnboarded(true);
       AsyncStorage.setItem(ONBOARD_KEY, '1').catch(() => {});
       await loadUserData();
+      registerPush();
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : 'Could not start guest session');
     }
-  }, [loadUserData, showToast]);
+  }, [loadUserData, showToast, registerPush]);
 
   const logout = useCallback(async () => {
+    try {
+      await PushApi.unregister();
+    } catch {
+      // best-effort
+    }
     try {
       await AuthApi.logout();
     } catch {

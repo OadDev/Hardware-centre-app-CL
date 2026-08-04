@@ -171,7 +171,7 @@ class OrderController extends Controller
             'customer_name' => $customer->name,
             'order_id' => $order->order_no,
             'tracking_link' => config('app.url').'/track-order',
-        ]);
+        ], $customer->onesignal_player_id);
 
         return new OrderResource($order);
     }

@@ -43,6 +43,12 @@
         {
           "locationWhenInUsePermission": "Hardware Centers uses your location to show delivery estimates and set your default delivery address."
         }
+      ],
+      [
+        "onesignal-expo-plugin",
+        {
+          "mode": "production"
+        }
       ]
     ]
   }

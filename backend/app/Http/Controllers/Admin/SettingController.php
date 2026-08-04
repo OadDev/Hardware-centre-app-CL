@@ -35,6 +35,8 @@ class SettingController extends Controller
             'smtp_from_name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'otp_channel' => ['sometimes', 'in:email,sms'],
             'fast2sms_api_key' => ['sometimes', 'nullable', 'string'],
+            'onesignal_app_id' => ['sometimes', 'nullable', 'string'],
+            'onesignal_api_key' => ['sometimes', 'nullable', 'string'],
             'ga_id' => ['sometimes', 'nullable', 'string'],
             'gmaps_key' => ['sometimes', 'nullable', 'string'],
             'meta_pixel_id' => ['sometimes', 'nullable', 'string'],

@@ -1186,6 +1186,7 @@ SECTION_RENDERERS.shiprocket = async function(main) {
 /* ===== NOTIFICATION MANAGEMENT ===== */
 SECTION_RENDERERS['notifications-config'] = async function(main) {
   const n = DATA.notifications;
+  const s = DATA.settings;
   const iconFor = { email:'mail', sms:'message-square', whatsapp:'message-circle', push:'bell' };
   main.innerHTML = `
     ${pageHeader('Notification Management', 'Configure communication channels and message templates', btnPrimary('New Broadcast','send','broadcast-btn'))}
@@ -1196,13 +1197,47 @@ SECTION_RENDERERS['notifications-config'] = async function(main) {
           ${toggleSwitch(c.enabled, 'chan-'+c.key)}
         </div>`).join('')}
     </div>
+    ${card(`<div class="p-5">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-ink-100 dark:bg-ink-800 flex items-center justify-center font-bold text-ink-600 dark:text-ink-300 text-sm">OS</div>
+        <div><p class="font-semibold text-ink-900 dark:text-white">OneSignal (Push Notifications)</p><p class="text-xs text-ink-400">${s.onesignal_app_id ? 'App ID configured' : 'Not configured yet'}</p></div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        ${formField('OneSignal App ID','text','xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', s.onesignal_app_id||'', 'os-app-id')}
+        ${formField('REST API Key','password','••••••••••••','', 'os-api-key')}
+      </div>
+      <p class="text-xs text-ink-400 mt-2">From your OneSignal app's Settings &rarr; Keys &amp; IDs. Leave the API key blank to keep the current one.</p>
+      <div class="mt-4 pt-4 border-t border-ink-100 dark:border-ink-800">
+        <p class="text-xs font-medium text-ink-500 dark:text-ink-400 mb-1.5">Send a test push (paste a subscription ID from a logged-in device)</p>
+        <div class="flex gap-2">
+          <input id="os-test-id" placeholder="Subscription ID" class="flex-1 px-3 py-2 text-sm rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-800 dark:text-white focus-ring outline-none">
+          <button id="os-test-btn" class="px-3.5 py-2 text-sm font-medium rounded-xl border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800 flex-shrink-0">Send Test</button>
+        </div>
+      </div>
+      <div class="flex justify-end mt-4">${btnPrimary('Save Changes','check','save-onesignal-btn')}</div>
+    </div>`)}
+    <div class="mt-6">
     ${card(`<div class="p-5 pb-3"><h3 class="font-semibold text-ink-900 dark:text-white">Message Templates</h3><p class="text-xs text-ink-400 mt-0.5">Customize automated messages</p></div>
       <div class="divide-y divide-ink-100 dark:divide-ink-800">${n.templates.map(t => `<div class="flex items-center justify-between px-5 py-3.5"><span class="text-sm font-medium text-ink-700 dark:text-ink-200">${t.name}</span><button data-edit-template="${t.key}" class="text-xs font-medium text-brand-600 hover:underline">Edit Template</button></div>`).join('')}</div>`)}
+    </div>
   `;
   n.channels.forEach(c => document.getElementById('chan-'+c.key).addEventListener('click', withErr(async () => {
     await api('PATCH', '/notifications/channels/'+c.key, { enabled: !c.enabled });
     toast('Channel updated'); await refreshNotifications(); navigateTo('notifications-config');
   })));
+  document.getElementById('save-onesignal-btn').addEventListener('click', withErr(async () => {
+    await api('PATCH', '/settings', {
+      onesignal_app_id: document.getElementById('os-app-id').value,
+      onesignal_api_key: document.getElementById('os-api-key').value || undefined,
+    });
+    toast('OneSignal settings saved'); await refreshSettings(); navigateTo('notifications-config');
+  }));
+  document.getElementById('os-test-btn').addEventListener('click', withErr(async () => {
+    const id = document.getElementById('os-test-id').value.trim();
+    if (!id) { toast('Paste a subscription ID first', 'warn'); return; }
+    const r = await api('POST', '/notifications/test-push', { subscription_id: id });
+    toast(r.message);
+  }));
   main.querySelectorAll('[data-edit-template]').forEach(btn => btn.addEventListener('click', () => {
     const t = n.templates.find(x=>x.key===btn.dataset.editTemplate);
     openModal({ title:`Edit Template — ${t.name}`, wide:true,

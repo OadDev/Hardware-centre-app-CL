@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\HomeController;
 use App\Http\Controllers\Api\V1\OnboardingController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\PushController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\SupplierController;
 use App\Http\Controllers\Api\V1\WebLeadController;
@@ -43,6 +44,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('me', [AuthController::class, 'me']);
     Route::patch('me', [AuthController::class, 'updateMe']);
     Route::post('logout', [AuthController::class, 'logout']);
+
+    Route::post('push/register', [PushController::class, 'register']);
+    Route::post('push/unregister', [PushController::class, 'unregister']);
 
     Route::get('cart', [CartController::class, 'index']);
     Route::post('cart/items', [CartController::class, 'store']);

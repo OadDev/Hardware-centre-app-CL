@@ -78,7 +78,7 @@ class OrderController extends Controller
                 'customer_name' => $order->customer->name,
                 'order_id' => $order->order_no,
                 'tracking_link' => config('app.url').'/track-order',
-            ]);
+            ], $order->customer->onesignal_player_id);
         }
 
         return response()->json($this->transform($order));
