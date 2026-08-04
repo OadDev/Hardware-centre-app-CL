@@ -6,6 +6,7 @@ import {
   CategoryProducts,
   Customer,
   HomeData,
+  OnboardingSlide,
   Order,
   Product,
   ProductDetail,
@@ -40,6 +41,10 @@ export const AuthApi = {
 
 export const HomeApi = {
   get: () => http.get<HomeData>('/home'),
+};
+
+export const OnboardingApi = {
+  list: async () => (await http.get<{ slides: OnboardingSlide[] }>('/onboarding')).slides,
 };
 
 export const CategoryApi = {

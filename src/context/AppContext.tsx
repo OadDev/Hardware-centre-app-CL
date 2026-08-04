@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
 import { Address, Customer, Order, User } from './types';
 import { ApiError, getToken, setToken } from '../api/client';
 import {
@@ -17,6 +18,7 @@ import {
 import { CartResponse, Category, HomeData, Totals } from '../api/types';
 
 const ONBOARD_KEY = 'hc_onboarded_v1';
+const DELIVERY_LABEL_KEY = 'hc_delivery_label_v1';
 
 const EMPTY_CART: CartResponse = { items: [], totals: { sub: 0, disc: 0, gst: 0, deliv: 0, total: 0, count: 0 } };
 
@@ -37,6 +39,10 @@ type AppContextValue = {
   wishlist: Record<string, boolean>;
   addresses: Address[];
   selectedAddressId: number | null;
+  deliveryLabel: string;
+  deliveryLoading: boolean;
+  useCurrentLocation: () => Promise<void>;
+  setDeliveryAddress: (address: Address) => void;
   orders: Order[];
   ship: ShippingMethod;
   pay: PaymentMethod;
@@ -116,6 +122,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [wishlist, setWishlist] = useState<Record<string, boolean>>({});
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
+  const [deliveryLabel, setDeliveryLabelState] = useState('');
+  const [deliveryLoading, setDeliveryLoading] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
 
   const [ship, setShip] = useState<ShippingMethod>('standard');
@@ -179,6 +187,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     refreshOtpChannel();
   }, [refreshOtpChannel]);
+
+  useEffect(() => {
+    AsyncStorage.getItem(DELIVERY_LABEL_KEY).then((v) => {
+      if (v) setDeliveryLabelState(v);
+    });
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -385,6 +399,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return address;
   }, []);
 
+  const setDeliveryLabel = useCallback((label: string) => {
+    setDeliveryLabelState(label);
+    AsyncStorage.setItem(DELIVERY_LABEL_KEY, label).catch(() => {});
+  }, []);
+
+  const useCurrentLocation = useCallback(async () => {
+    setDeliveryLoading(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        showToast('Location permission denied');
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const places = await Location.reverseGeocodeAsync({
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+      });
+      const place = places[0];
+      const locality = place?.city || place?.subregion || place?.district;
+      const label = [locality, place?.postalCode].filter(Boolean).join(' ');
+      if (!label) {
+        showToast('Could not determine your address');
+        return;
+      }
+      setDeliveryLabel(label);
+      showToast('Delivery location updated');
+    } catch {
+      showToast('Could not get your location. Check location permissions.');
+    } finally {
+      setDeliveryLoading(false);
+    }
+  }, [showToast, setDeliveryLabel]);
+
+  const setDeliveryAddress = useCallback((address: Address) => {
+    setDeliveryLabel(`${address.city} ${address.pincode}`);
+    setSelectedAddressId(address.id);
+  }, [setDeliveryLabel]);
+
   const totals: Totals = useMemo(() => (couponApplied && couponTotals ? couponTotals : cart.totals), [couponApplied, couponTotals, cart.totals]);
 
   const beginOnlinePayment = useCallback(async () => {
@@ -449,6 +502,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     wishlist,
     addresses,
     selectedAddressId,
+    deliveryLabel,
+    deliveryLoading,
     orders,
     ship,
     pay,
@@ -471,6 +526,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     applyCoupon,
     setSelectedAddressId,
     addAddress,
+    useCurrentLocation,
+    setDeliveryAddress,
     setShip,
     setPay,
     beginOnlinePayment,

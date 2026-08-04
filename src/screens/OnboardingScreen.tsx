@@ -1,20 +1,23 @@
-import React, { useRef, useState } from 'react';
-import { Dimensions, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Dimensions, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/types';
 import { useApp } from '../context/AppContext';
 import { colors, fonts } from '../theme/theme';
+import { OnboardingApi } from '../api/endpoints';
 import { PrimaryButton } from '../components/UI';
 import PlaceholderImage from '../components/PlaceholderImage';
 
 const { width } = Dimensions.get('window');
 
-const PANELS = [
-  { id: 'ob-1', ph: 'Warehouse & tools', title: 'Everything Hardware in One Place', sub: 'Browse thousands of products from verified suppliers across India.' },
-  { id: 'ob-2', ph: 'Supplier network', title: 'Verified Suppliers', sub: 'Trade with trusted distributors and manufacturers you can rely on.' },
-  { id: 'ob-3', ph: 'Products & pricing', title: 'Best Prices', sub: 'Compare quotes from multiple sellers and save more on every order.' },
-  { id: 'ob-4', ph: 'Delivery truck', title: 'Fast Delivery', sub: 'Track every order from the warehouse to your doorstep in real time.' },
+type Panel = { id: string; title: string; sub: string; ph: string; image_url: string | null };
+
+const DEFAULT_PANELS: Panel[] = [
+  { id: 'ob-1', ph: 'Warehouse & tools', title: 'Everything Hardware in One Place', sub: 'Browse thousands of products from verified suppliers across India.', image_url: null },
+  { id: 'ob-2', ph: 'Supplier network', title: 'Verified Suppliers', sub: 'Trade with trusted distributors and manufacturers you can rely on.', image_url: null },
+  { id: 'ob-3', ph: 'Products & pricing', title: 'Best Prices', sub: 'Compare quotes from multiple sellers and save more on every order.', image_url: null },
+  { id: 'ob-4', ph: 'Delivery truck', title: 'Fast Delivery', sub: 'Track every order from the warehouse to your doorstep in real time.', image_url: null },
 ];
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
@@ -22,7 +25,28 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
 export default function OnboardingScreen({ navigation }: Props) {
   const { completeOnboarding } = useApp();
   const [index, setIndex] = useState(0);
+  const [panels, setPanels] = useState<Panel[]>(DEFAULT_PANELS);
   const listRef = useRef<FlatList>(null);
+
+  useEffect(() => {
+    OnboardingApi.list()
+      .then((slides) => {
+        if (slides.length > 0) {
+          setPanels(
+            slides.map((s) => ({
+              id: String(s.id),
+              title: s.title,
+              sub: s.subtitle || '',
+              ph: s.title,
+              image_url: s.image_url,
+            }))
+          );
+        }
+      })
+      .catch(() => {
+        // Keep the built-in default panels — onboarding must never block on the network.
+      });
+  }, []);
 
   const finish = () => {
     completeOnboarding();
@@ -30,7 +54,7 @@ export default function OnboardingScreen({ navigation }: Props) {
   };
 
   const next = () => {
-    if (index < PANELS.length - 1) {
+    if (index < panels.length - 1) {
       listRef.current?.scrollToIndex({ index: index + 1, animated: true });
       setIndex(index + 1);
     } else {
@@ -48,7 +72,7 @@ export default function OnboardingScreen({ navigation }: Props) {
 
       <FlatList
         ref={listRef}
-        data={PANELS}
+        data={panels}
         keyExtractor={(item) => item.id}
         horizontal
         pagingEnabled
@@ -59,7 +83,11 @@ export default function OnboardingScreen({ navigation }: Props) {
         }}
         renderItem={({ item }) => (
           <View style={{ width, paddingHorizontal: 32 }}>
-            <PlaceholderImage seed={item.id} label={item.ph} radius={24} style={styles.panelImage} />
+            {item.image_url ? (
+              <Image source={{ uri: item.image_url }} style={styles.panelImage} resizeMode="cover" />
+            ) : (
+              <PlaceholderImage seed={item.id} label={item.ph} radius={24} style={styles.panelImage} />
+            )}
             <Text style={styles.title}>{item.title}</Text>
             <Text style={styles.sub}>{item.sub}</Text>
           </View>
@@ -68,11 +96,11 @@ export default function OnboardingScreen({ navigation }: Props) {
 
       <View style={styles.bottom}>
         <View style={styles.dots}>
-          {PANELS.map((_, i) => (
+          {panels.map((_, i) => (
             <View key={i} style={[styles.dot, i === index ? styles.dotActive : null]} />
           ))}
         </View>
-        <PrimaryButton label={index === PANELS.length - 1 ? 'Get Started' : 'Next'} onPress={next} />
+        <PrimaryButton label={index === panels.length - 1 ? 'Get Started' : 'Next'} onPress={next} />
       </View>
     </SafeAreaView>
   );
@@ -97,6 +125,7 @@ const styles = StyleSheet.create({
   panelImage: {
     width: '100%',
     height: 330,
+    borderRadius: 24,
   },
   title: {
     marginTop: 40,

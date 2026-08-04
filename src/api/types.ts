@@ -52,6 +52,7 @@ export type Banner = {
   title: string;
   sub: string;
   bg: string;
+  image_url: string | null;
   type: string;
   status: string;
 };
@@ -178,4 +179,11 @@ export type HomeData = {
 export type CategoryProducts = {
   category: Category;
   products: Product[];
+};
+
+export type OnboardingSlide = {
+  id: number;
+  title: string;
+  subtitle: string | null;
+  image_url: string | null;
 };

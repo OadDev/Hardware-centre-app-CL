@@ -825,11 +825,18 @@ SECTION_RENDERERS.banners = async function(main) {
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       ${DATA.banners.map(b => `
         <div class="bg-white dark:bg-ink-900 rounded-2xl border border-ink-200/70 dark:border-ink-800 shadow-card overflow-hidden">
-          <div class="h-32 flex items-center justify-center" style="background:${b.bg_color}">${icon('image','w-8 h-8 text-white/70')}</div>
+          <div class="h-32 flex items-center justify-center relative" style="background:${b.bg_color}">
+            ${b.image_url ? `<img src="${b.image_url}" class="absolute inset-0 w-full h-full object-cover">` : icon('image','w-8 h-8 text-white/70')}
+          </div>
           <div class="p-4">
             <div class="flex items-center justify-between mb-1"><p class="font-medium text-sm text-ink-800 dark:text-ink-100 truncate">${b.title}</p>${statusBadge(b.status)}</div>
             <p class="text-xs text-ink-400">${b.type}</p>
+            <input type="file" accept="image/*" data-banner-image-input="${b.id}" class="hidden">
             <div class="flex gap-2 mt-3">
+              <button data-upload-banner-image="${b.id}" class="flex-1 py-1.5 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800">${b.image_url?'Change Image':'Upload Image'}</button>
+              ${b.image_url ? `<button data-remove-banner-image="${b.id}" class="py-1.5 px-2.5 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800 text-rose-600">${icon('trash-2','w-3.5 h-3.5')}</button>` : ''}
+            </div>
+            <div class="flex gap-2 mt-2">
               <button data-toggle-banner="${b.id}" class="flex-1 py-1.5 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800">${b.status==='Active'?'Deactivate':'Activate'}</button>
               <button data-delete-banner="${b.id}" class="flex-1 py-1.5 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800 text-rose-600">Remove</button>
             </div>
@@ -841,11 +848,37 @@ SECTION_RENDERERS.banners = async function(main) {
       ${formField('Banner Title','text','e.g. Monsoon Tool Sale','','nba-title')}
       ${formField('Subtitle','text','e.g. Up to 30% off','','nba-subtitle')}
       ${formSelect('Banner Type',['Homepage Banner','Offer Banner','Slider Image'], 0, 'nba-type')}
+      <div><label class="block text-xs font-medium text-ink-500 dark:text-ink-400 mb-1.5">Banner Image (optional)</label>
+        <input type="file" id="nba-image" accept="image/*" class="w-full text-sm text-ink-600 dark:text-ink-300 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-ink-100 dark:file:bg-ink-700 file:text-ink-700 dark:file:text-ink-200 file:text-xs file:font-medium">
+      </div>
     </div>`, confirmLabel:'Create Banner', onConfirm: withErr(async () => {
-      await api('POST', '/banners', { title: document.getElementById('nba-title').value, subtitle: document.getElementById('nba-subtitle').value, type: document.getElementById('nba-type').value });
+      const created = await api('POST', '/banners', { title: document.getElementById('nba-title').value, subtitle: document.getElementById('nba-subtitle').value, type: document.getElementById('nba-type').value });
+      const file = document.getElementById('nba-image').files[0];
+      if (file) {
+        const fd = new FormData();
+        fd.append('image', file);
+        const res = await fetch('/admin/api/banners/'+created.id+'/image', { method:'POST', headers:{'X-CSRF-TOKEN':csrfToken()}, body: fd });
+        if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.message || 'Image upload failed'); }
+      }
       closeModal(); toast('Banner created successfully'); await refreshBanners(); navigateTo('banners');
     }) });
   });
+  main.querySelectorAll('[data-upload-banner-image]').forEach(btn => btn.addEventListener('click', () => {
+    main.querySelector(`[data-banner-image-input="${btn.dataset.uploadBannerImage}"]`).click();
+  }));
+  main.querySelectorAll('[data-banner-image-input]').forEach(input => input.addEventListener('change', withErr(async () => {
+    const file = input.files[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('image', file);
+    const res = await fetch('/admin/api/banners/'+input.dataset.bannerImageInput+'/image', { method:'POST', headers:{'X-CSRF-TOKEN':csrfToken()}, body: fd });
+    if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.message || 'Image upload failed'); }
+    toast('Banner image updated'); await refreshBanners(); navigateTo('banners');
+  })));
+  main.querySelectorAll('[data-remove-banner-image]').forEach(btn => btn.addEventListener('click', withErr(async () => {
+    await api('DELETE', '/banners/'+btn.dataset.removeBannerImage+'/image');
+    toast('Banner image removed'); await refreshBanners(); navigateTo('banners');
+  })));
   main.querySelectorAll('[data-toggle-banner]').forEach(btn => btn.addEventListener('click', withErr(async () => {
     const b = DATA.banners.find(x=>String(x.id)===btn.dataset.toggleBanner);
     await api('PATCH', '/banners/'+b.id, { title:b.title, type:b.type, status: b.status==='Active'?'Inactive':'Active' });
@@ -855,6 +888,82 @@ SECTION_RENDERERS.banners = async function(main) {
     if (!confirm('Remove this banner?')) return;
     await api('DELETE', '/banners/'+btn.dataset.deleteBanner);
     toast('Banner removed'); await refreshBanners(); navigateTo('banners');
+  })));
+};
+
+/* ===== ONBOARDING SCREENS ===== */
+SECTION_RENDERERS.onboarding = async function(main) {
+  const slidesHtml = DATA.onboardingSlides.length === 0
+    ? card('<div class="p-8 text-center text-sm text-ink-400">No onboarding slides yet — the app falls back to its built-in default slides until you add some here.</div>')
+    : `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">${DATA.onboardingSlides.map((s, i) => `
+        <div class="bg-white dark:bg-ink-900 rounded-2xl border border-ink-200/70 dark:border-ink-800 shadow-card overflow-hidden">
+          <div class="h-32 flex items-center justify-center relative bg-ink-800">
+            ${s.image_url ? `<img src="${s.image_url}" class="absolute inset-0 w-full h-full object-cover">` : icon('image','w-8 h-8 text-white/70')}
+            <span class="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-ink-900/70 text-white">#${i+1}</span>
+          </div>
+          <div class="p-4">
+            <div class="flex items-center justify-between mb-1"><p class="font-medium text-sm text-ink-800 dark:text-ink-100 truncate">${s.title}</p>${statusBadge(s.status)}</div>
+            <p class="text-xs text-ink-400 truncate">${s.subtitle||''}</p>
+            <input type="file" accept="image/*" data-onboarding-image-input="${s.id}" class="hidden">
+            <div class="flex gap-2 mt-3">
+              <button data-upload-onboarding-image="${s.id}" class="flex-1 py-1.5 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800">${s.image_url?'Change Image':'Upload Image'}</button>
+              ${s.image_url ? `<button data-remove-onboarding-image="${s.id}" class="py-1.5 px-2.5 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800 text-rose-600">${icon('trash-2','w-3.5 h-3.5')}</button>` : ''}
+            </div>
+            <div class="flex gap-2 mt-2">
+              <button data-toggle-onboarding="${s.id}" class="flex-1 py-1.5 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800">${s.status==='Active'?'Deactivate':'Activate'}</button>
+              <button data-delete-onboarding="${s.id}" class="flex-1 py-1.5 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800 text-rose-600">Remove</button>
+            </div>
+          </div>
+        </div>`).join('')}</div>`;
+  main.innerHTML = `
+    ${pageHeader('Onboarding Screens', 'Manage the welcome slides shown the first time a customer opens the app', btnPrimary('Add Slide','plus','add-onboarding-btn'))}
+    ${slidesHtml}`;
+  document.getElementById('add-onboarding-btn').addEventListener('click', () => {
+    openModal({ title:'Add Onboarding Slide', body:`<div class="space-y-4">
+      ${formField('Title','text','e.g. Everything Hardware in One Place','','nos-title')}
+      ${formField('Subtitle','text','e.g. Browse thousands of products from verified suppliers','','nos-subtitle')}
+      <div><label class="block text-xs font-medium text-ink-500 dark:text-ink-400 mb-1.5">Slide Image (optional)</label>
+        <input type="file" id="nos-image" accept="image/*" class="w-full text-sm text-ink-600 dark:text-ink-300 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-ink-100 dark:file:bg-ink-700 file:text-ink-700 dark:file:text-ink-200 file:text-xs file:font-medium">
+      </div>
+    </div>`, confirmLabel:'Create Slide', onConfirm: withErr(async () => {
+      const title = document.getElementById('nos-title').value.trim();
+      if (!title) throw new Error('Title is required');
+      const created = await api('POST', '/onboarding-slides', { title, subtitle: document.getElementById('nos-subtitle').value });
+      const file = document.getElementById('nos-image').files[0];
+      if (file) {
+        const fd = new FormData();
+        fd.append('image', file);
+        const res = await fetch('/admin/api/onboarding-slides/'+created.id+'/image', { method:'POST', headers:{'X-CSRF-TOKEN':csrfToken()}, body: fd });
+        if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.message || 'Image upload failed'); }
+      }
+      closeModal(); toast('Onboarding slide created'); await refreshOnboardingSlides(); navigateTo('onboarding');
+    }) });
+  });
+  main.querySelectorAll('[data-upload-onboarding-image]').forEach(btn => btn.addEventListener('click', () => {
+    main.querySelector(`[data-onboarding-image-input="${btn.dataset.uploadOnboardingImage}"]`).click();
+  }));
+  main.querySelectorAll('[data-onboarding-image-input]').forEach(input => input.addEventListener('change', withErr(async () => {
+    const file = input.files[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('image', file);
+    const res = await fetch('/admin/api/onboarding-slides/'+input.dataset.onboardingImageInput+'/image', { method:'POST', headers:{'X-CSRF-TOKEN':csrfToken()}, body: fd });
+    if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.message || 'Image upload failed'); }
+    toast('Slide image updated'); await refreshOnboardingSlides(); navigateTo('onboarding');
+  })));
+  main.querySelectorAll('[data-remove-onboarding-image]').forEach(btn => btn.addEventListener('click', withErr(async () => {
+    await api('DELETE', '/onboarding-slides/'+btn.dataset.removeOnboardingImage+'/image');
+    toast('Slide image removed'); await refreshOnboardingSlides(); navigateTo('onboarding');
+  })));
+  main.querySelectorAll('[data-toggle-onboarding]').forEach(btn => btn.addEventListener('click', withErr(async () => {
+    const s = DATA.onboardingSlides.find(x=>String(x.id)===btn.dataset.toggleOnboarding);
+    await api('PATCH', '/onboarding-slides/'+s.id, { title:s.title, status: s.status==='Active'?'Inactive':'Active' });
+    toast('Slide updated'); await refreshOnboardingSlides(); navigateTo('onboarding');
+  })));
+  main.querySelectorAll('[data-delete-onboarding]').forEach(btn => btn.addEventListener('click', withErr(async () => {
+    if (!confirm('Remove this onboarding slide?')) return;
+    await api('DELETE', '/onboarding-slides/'+btn.dataset.deleteOnboarding);
+    toast('Slide removed'); await refreshOnboardingSlides(); navigateTo('onboarding');
   })));
 };
 

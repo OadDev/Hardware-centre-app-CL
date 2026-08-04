@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Banner;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class BannerController extends Controller
@@ -32,9 +33,39 @@ class BannerController extends Controller
 
     public function destroy(Banner $banner)
     {
+        if ($banner->image_path) {
+            Storage::disk('uploads')->delete($banner->image_path);
+        }
         $banner->delete();
 
         return response()->json(['message' => 'Banner removed']);
+    }
+
+    public function uploadImage(Request $request, Banner $banner)
+    {
+        $request->validate([
+            'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+        ]);
+
+        if ($banner->image_path) {
+            Storage::disk('uploads')->delete($banner->image_path);
+        }
+
+        $banner->update([
+            'image_path' => $request->file('image')->store('banners', 'uploads'),
+        ]);
+
+        return response()->json($banner);
+    }
+
+    public function destroyImage(Banner $banner)
+    {
+        if ($banner->image_path) {
+            Storage::disk('uploads')->delete($banner->image_path);
+        }
+        $banner->update(['image_path' => null]);
+
+        return response()->json($banner);
     }
 
     private function validated(Request $request): array

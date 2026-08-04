@@ -37,6 +37,12 @@
           "resizeMode": "contain",
           "backgroundColor": "#1F2937"
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Hardware Centers uses your location to show delivery estimates and set your default delivery address."
+        }
       ]
     ]
   }

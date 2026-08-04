@@ -136,6 +136,7 @@ async function refreshOrders() { DATA.orders = unwrap(await api('GET', '/orders?
 async function refreshReturns() { DATA.returns = unwrap(await api('GET', '/returns?per_page=250')); }
 async function refreshCoupons() { DATA.coupons = await api('GET', '/coupons'); }
 async function refreshBanners() { DATA.banners = await api('GET', '/banners'); }
+async function refreshOnboardingSlides() { DATA.onboardingSlides = await api('GET', '/onboarding-slides'); }
 async function refreshSettlements() { DATA.settlements = unwrap(await api('GET', '/settlements?per_page=250')); }
 async function refreshWarehouseOverview() { DATA.warehouseOverview = await api('GET', '/warehouses'); }
 async function refreshWarehouseInventory() { DATA.warehouseInventory = unwrap(await api('GET', '/warehouses/inventory?per_page=250')); }
@@ -180,7 +181,7 @@ const LOAD_TASKS = [
   ['Dashboard', refreshDashboard], ['Sellers', refreshSellers], ['Customers', refreshCustomers],
   ['Products', refreshProducts], ['Categories', refreshCategories], ['Brands', refreshBrands],
   ['Orders', refreshOrders], ['Returns', refreshReturns], ['Coupons', refreshCoupons],
-  ['Banners', refreshBanners], ['Settlements', refreshSettlements], ['Commission', refreshCommission],
+  ['Banners', refreshBanners], ['Onboarding Slides', refreshOnboardingSlides], ['Settlements', refreshSettlements], ['Commission', refreshCommission],
   ['GST', refreshGst], ['Shipping', refreshShipping], ['Payments', refreshPayments],
   ['Shiprocket', refreshShiprocket], ['Notifications', refreshNotifications], ['Roles', refreshRoles],
   ['Settings', refreshSettings], ['Warehouse Overview', refreshWarehouseOverview],
@@ -194,7 +195,7 @@ async function loadAll() {
   // load doesn't crash its renderer when the admin navigates to it.
   const defaults = {
     dashboard: {}, sellers: [], customers: [], products: [], categories: [], brands: [],
-    orders: [], returns: [], coupons: [], banners: [], settlements: [],
+    orders: [], returns: [], coupons: [], banners: [], onboardingSlides: [], settlements: [],
     commission: { sellers: [], tiers: [] }, gst: {}, shipping: {}, payments: {}, shiprocket: {},
     notifications: {}, rolesData: {}, settings: {},
     warehouseOverview: { warehouses: [], dispatch_pending: 0 },
@@ -251,6 +252,7 @@ const NAV_GROUPS = [
     { key:'settlements', label:'Settlement Management', icon:'banknote' },
     { key:'coupons', label:'Coupons & Offers', icon:'ticket-percent' },
     { key:'banners', label:'Banner Management', icon:'image' },
+    { key:'onboarding', label:'Onboarding Screens', icon:'smartphone' },
   ]},
   { title:'Fulfillment', items: [
     { key:'warehouse', label:'Warehouse & FBA', icon:'warehouse' },
@@ -282,6 +284,7 @@ const SECTION_TITLES = {
   settlements: ['Settlement Management', 'Track payouts to sellers'],
   coupons: ['Coupons & Offers', 'Create and manage promotional discounts'],
   banners: ['Banner Management', 'Manage homepage and offer banners'],
+  onboarding: ['Onboarding Screens', 'Manage the welcome slides shown the first time a customer opens the app'],
   warehouse: ['Warehouse & FBA', 'Manage warehouse stock, inbound shipments and order dispatch'],
   reports: ['Reports & Analytics', 'Deep dive into marketplace performance'],
   gst: ['GST & Tax Settings', 'Configure tax rules and HSN codes'],

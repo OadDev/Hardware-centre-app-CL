@@ -28,7 +28,7 @@ const ATTRIBUTE_ORDER = ['Color', 'Size'];
 
 export default function ProductDetailScreen({ navigation, route }: Props) {
   const { id } = route.params;
-  const { wishlist, toggleWish, addToCart } = useApp();
+  const { wishlist, toggleWish, addToCart, cart } = useApp();
   const [qty, setQty] = useState(1);
   const [gallery, setGallery] = useState(0);
   const [detail, setDetail] = useState<ProductDetail | null>(null);
@@ -83,6 +83,9 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
   const images = product.images ?? [];
   const heroImage = images[gallery] ?? images[0];
   const outOfStock = variants.length > 0 ? !selectedVariant || selectedVariant.stock <= 0 : product.stock <= 0;
+  const inCart = cart.items.some(
+    (i) => i.product.id === product.id && (i.variant?.id ?? undefined) === selectedVariant?.id
+  );
   const stockLabel = variants.length > 0
     ? (selectedVariant ? (selectedVariant.stock > 0 ? `${selectedVariant.stock} in stock` : 'Out of Stock') : 'Select an option')
     : product.stock_status;
@@ -295,9 +298,11 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
         <Pressable
           style={[styles.addCartBtn, outOfStock ? styles.btnDisabled : null]}
           disabled={outOfStock}
-          onPress={() => addToCart(product.id, qty, selectedVariant?.id)}
+          onPress={() =>
+            inCart ? navigation.navigate('Main', { screen: 'Cart' }) : addToCart(product.id, qty, selectedVariant?.id)
+          }
         >
-          <Text style={styles.addCartText}>Add to Cart</Text>
+          <Text style={styles.addCartText}>{inCart ? 'Go to Cart' : 'Add to Cart'}</Text>
         </Pressable>
         <Pressable
           style={[styles.buyNowBtn, outOfStock ? styles.btnDisabled : null]}

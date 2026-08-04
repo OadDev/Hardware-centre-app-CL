@@ -3,6 +3,8 @@ import {
   ActivityIndicator,
   Dimensions,
   FlatList,
+  Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,7 +19,7 @@ import { useApp } from '../context/AppContext';
 import { colors, fonts, radii, shadow } from '../theme/theme';
 import { initials } from '../utils/format';
 import ProductCard from '../components/ProductCard';
-import { IconBell, IconBolt, IconChevronDown, IconLocation, IconMic, IconSearch, IconStar, IconVerified } from '../components/Icons';
+import { IconBell, IconBolt, IconChevronDown, IconChevronRight, IconLocation, IconMic, IconSearch, IconStar, IconVerified } from '../components/Icons';
 import { iconForCat } from '../components/CategoryIcon';
 import { SectionHeader } from '../components/UI';
 
@@ -39,10 +41,29 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function HomeScreen() {
   const navigation = useNavigation<Nav>();
-  const { wishlist, addToCart, toggleWish, user, home, categories, showToast } = useApp();
+  const {
+    wishlist,
+    addToCart,
+    toggleWish,
+    user,
+    home,
+    categories,
+    showToast,
+    addresses,
+    selectedAddressId,
+    deliveryLabel,
+    deliveryLoading,
+    useCurrentLocation,
+    setDeliveryAddress,
+  } = useApp();
   const [bannerIdx, setBannerIdx] = useState(0);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
   const bannerRef = useRef<FlatList>(null);
   const countdown = useCountdown(23091);
+
+  const selectedAddress = addresses.find((a) => a.id === selectedAddressId);
+  const deliverToText =
+    deliveryLabel || (selectedAddress ? `${selectedAddress.city} ${selectedAddress.pincode}` : 'Set delivery location');
 
   const banners = home?.banners || [];
 
@@ -82,12 +103,12 @@ export default function HomeScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
         {/* header */}
         <View style={styles.header}>
-          <View style={styles.deliverRow}>
+          <Pressable style={styles.deliverRow} onPress={() => setShowLocationPicker(true)}>
             <IconLocation size={14} />
             <Text style={styles.deliverLabel}>Deliver to</Text>
-            <Text style={styles.deliverValue}>New Delhi 110006</Text>
+            <Text style={styles.deliverValue} numberOfLines={1}>{deliverToText}</Text>
             <IconChevronDown size={14} />
-          </View>
+          </Pressable>
           <View style={styles.greetRow}>
             <View style={styles.greetLeft}>
               <View style={styles.avatar}>
@@ -125,6 +146,9 @@ export default function HomeScreen() {
               }}
               renderItem={({ item }) => (
                 <View style={[styles.banner, { width: SCREEN_W - 40, backgroundColor: item.bg }]}>
+                  {item.image_url && (
+                    <Image source={{ uri: item.image_url }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                  )}
                   <View style={styles.bannerOverlay}>
                     <Text style={styles.bannerBadge}>{item.badge}</Text>
                     <Text style={styles.bannerTitle}>{item.title}</Text>
@@ -266,6 +290,66 @@ export default function HomeScreen() {
           ))}
         </View>
       </ScrollView>
+
+      <Modal visible={showLocationPicker} animationType="slide" transparent onRequestClose={() => setShowLocationPicker(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>Delivery Location</Text>
+
+            <Pressable
+              style={styles.gpsRow}
+              disabled={deliveryLoading}
+              onPress={async () => {
+                await useCurrentLocation();
+                setShowLocationPicker(false);
+              }}
+            >
+              <View style={styles.gpsIcon}>
+                {deliveryLoading ? <ActivityIndicator size="small" color={colors.accent} /> : <IconLocation size={17} color={colors.accent} />}
+              </View>
+              <Text style={styles.gpsText}>{deliveryLoading ? 'Getting your location…' : 'Use my current location'}</Text>
+            </Pressable>
+
+            {addresses.length > 0 && (
+              <>
+                <Text style={styles.modalSectionLabel}>Saved addresses</Text>
+                <ScrollView style={{ maxHeight: 260 }}>
+                  {addresses.map((a) => (
+                    <Pressable
+                      key={a.id}
+                      style={styles.addressPickRow}
+                      onPress={() => {
+                        setDeliveryAddress(a);
+                        setShowLocationPicker(false);
+                      }}
+                    >
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={styles.addressPickName}>{a.label} · {a.name}</Text>
+                        <Text style={styles.addressPickLine} numberOfLines={1}>{a.line}, {a.city}, {a.state} {a.pincode}</Text>
+                      </View>
+                      <IconChevronRight />
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </>
+            )}
+
+            <Pressable
+              style={styles.addNewRow}
+              onPress={() => {
+                setShowLocationPicker(false);
+                navigation.navigate('Addresses');
+              }}
+            >
+              <Text style={styles.addNewText}>+ Add a new address</Text>
+            </Pressable>
+
+            <Pressable style={styles.modalCancelBtn} onPress={() => setShowLocationPicker(false)}>
+              <Text style={styles.modalCancelText}>Close</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -275,7 +359,7 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 },
   deliverRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 },
   deliverLabel: { fontSize: 12, color: colors.textMuted, fontFamily: fonts.bodyMedium },
-  deliverValue: { fontSize: 12, color: colors.text, fontFamily: fonts.bodyBold },
+  deliverValue: { fontSize: 12, color: colors.text, fontFamily: fonts.bodyBold, flexShrink: 1 },
   greetRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   greetLeft: { flexDirection: 'row', alignItems: 'center', gap: 11 },
   avatar: {
@@ -400,4 +484,35 @@ const styles = StyleSheet.create({
   supplierMeta: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   supplierRating: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.successBg, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 9 },
   supplierRatingText: { fontSize: 12, fontFamily: fonts.bodyBold, color: colors.successDark },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(15,20,28,0.5)', justifyContent: 'flex-end' },
+  modalSheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%' },
+  modalTitle: { fontSize: 18, fontFamily: fonts.displayExtra, color: colors.text, marginBottom: 16 },
+  gpsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1.5,
+    borderColor: colors.accentBorder,
+    backgroundColor: colors.accentLight,
+    borderRadius: radii.lg,
+    padding: 14,
+    marginBottom: 18,
+  },
+  gpsIcon: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
+  gpsText: { fontSize: 14, fontFamily: fonts.bodyBold, color: colors.accentDark },
+  modalSectionLabel: { fontSize: 12, fontFamily: fonts.bodyBold, color: colors.textFaint, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8 },
+  addressPickRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  addressPickName: { fontSize: 13.5, fontFamily: fonts.bodySemibold, color: colors.text },
+  addressPickLine: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  addNewRow: { paddingVertical: 14, alignItems: 'center' },
+  addNewText: { fontSize: 13.5, fontFamily: fonts.bodyBold, color: colors.accent },
+  modalCancelBtn: { height: 48, borderRadius: radii.md, borderWidth: 1.5, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  modalCancelText: { fontSize: 14.5, fontFamily: fonts.bodyBold, color: colors.textSub },
 });

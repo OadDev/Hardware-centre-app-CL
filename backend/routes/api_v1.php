@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\CartController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CouponController;
 use App\Http\Controllers\Api\V1\HomeController;
+use App\Http\Controllers\Api\V1\OnboardingController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\ProductController;
@@ -19,6 +20,8 @@ Route::get('auth/otp/channel', [AuthController::class, 'otpChannel']);
 Route::post('auth/otp/request', [AuthController::class, 'requestOtp']);
 Route::post('auth/otp/verify', [AuthController::class, 'verifyOtp']);
 Route::post('auth/guest', [AuthController::class, 'guest']);
+
+Route::get('onboarding', [OnboardingController::class, 'index']);
 
 Route::post('web/contact', [WebLeadController::class, 'contact'])->name('api.web.contact');
 Route::post('web/support-ticket', [WebLeadController::class, 'supportTicket'])->name('api.web.support-ticket');

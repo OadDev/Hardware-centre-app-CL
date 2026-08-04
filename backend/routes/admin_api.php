@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GstController;
 use App\Http\Controllers\Admin\NotificationController;
+use App\Http\Controllers\Admin\OnboardingSlideController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\ProductController;
@@ -43,6 +44,11 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::apiResource('returns', ReturnController::class)->only(['index', 'update']);
     Route::apiResource('coupons', CouponController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::apiResource('banners', BannerController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::post('banners/{banner}/image', [BannerController::class, 'uploadImage']);
+    Route::delete('banners/{banner}/image', [BannerController::class, 'destroyImage']);
+    Route::apiResource('onboarding-slides', OnboardingSlideController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::post('onboarding-slides/{onboardingSlide}/image', [OnboardingSlideController::class, 'uploadImage']);
+    Route::delete('onboarding-slides/{onboardingSlide}/image', [OnboardingSlideController::class, 'destroyImage']);
 
     Route::get('commission', [CommissionController::class, 'index']);
     Route::patch('commission/sellers/{seller}', [CommissionController::class, 'updateSeller']);
