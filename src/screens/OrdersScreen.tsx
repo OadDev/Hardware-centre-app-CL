@@ -36,7 +36,7 @@ const ACTION_LABEL: Record<OrderStatus, string> = {
 
 export default function OrdersScreen() {
   const navigation = useNavigation<Nav>();
-  const { orders, reorder, showToast } = useApp();
+  const { orders, reorder } = useApp();
   const [tab, setTab] = useState<OrderStatus>('ongoing');
 
   const filtered = useMemo(() => orders.filter((o) => o.status === tab), [orders, tab]);
@@ -44,10 +44,8 @@ export default function OrdersScreen() {
   const runAction = (order: (typeof orders)[number]) => {
     if (order.status === 'delivered' || order.status === 'cancelled') {
       reorder(order).then(() => navigation.navigate('Main', { screen: 'Cart' }));
-    } else if (order.status === 'ongoing') {
-      showToast('Tracking ' + order.no);
     } else {
-      showToast('Order ' + order.no);
+      navigation.navigate('OrderDetail', { orderNo: order.no });
     }
   };
 
@@ -82,7 +80,7 @@ export default function OrdersScreen() {
             const count = o.items.reduce((a, it) => a + it.q, 0);
             const stage = STAGE_COLORS[o.status];
             return (
-              <View key={o.no} style={styles.card}>
+              <Pressable key={o.no} style={styles.card} onPress={() => navigation.navigate('OrderDetail', { orderNo: o.no })}>
                 <View style={styles.cardTopRow}>
                   <Text style={styles.orderNo}>{o.no}</Text>
                   <View style={[styles.stagePill, { backgroundColor: stage.bg }]}>
@@ -107,7 +105,7 @@ export default function OrdersScreen() {
                     <Text style={styles.actionText}>{ACTION_LABEL[o.status]}</Text>
                   </Pressable>
                 </View>
-              </View>
+              </Pressable>
             );
           })}
         </ScrollView>

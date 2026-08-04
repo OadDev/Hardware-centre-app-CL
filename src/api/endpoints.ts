@@ -33,6 +33,8 @@ export const AuthApi = {
     }),
   guest: () => http.post<{ token: string; customer: Customer }>('/auth/guest'),
   me: async () => (await http.get<{ data: Customer }>('/me')).data,
+  updateMe: async (payload: { name: string; business_name?: string; city?: string; state?: string }) =>
+    (await http.patch<{ data: Customer }>('/me', payload)).data,
   logout: () => http.post<{ message: string }>('/logout'),
 };
 
@@ -47,11 +49,12 @@ export const CategoryApi = {
 };
 
 export const ProductApi = {
-  list: async (params: { q?: string; category?: string; sort?: string } = {}) => {
+  list: async (params: { q?: string; category?: string; sort?: string; supplier?: string } = {}) => {
     const qs = new URLSearchParams();
     if (params.q) qs.set('q', params.q);
     if (params.category) qs.set('category', params.category);
     if (params.sort) qs.set('sort', params.sort);
+    if (params.supplier) qs.set('supplier', params.supplier);
     const suffix = qs.toString() ? `?${qs.toString()}` : '';
     return (await http.get<{ data: Product[] }>(`/products${suffix}`)).data;
   },

@@ -125,6 +125,20 @@ class AuthController extends Controller
         return new CustomerResource($request->user());
     }
 
+    public function updateMe(Request $request)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'business_name' => ['nullable', 'string', 'max:150'],
+            'city' => ['nullable', 'string', 'max:100'],
+            'state' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $request->user()->update($data);
+
+        return new CustomerResource($request->user());
+    }
+
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();

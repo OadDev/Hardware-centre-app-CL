@@ -36,6 +36,10 @@ class ProductController extends Controller
             }
         }
 
+        if ($supplier = $request->query('supplier')) {
+            $query->whereHas('seller', fn ($s) => $s->where('store_name', $supplier));
+        }
+
         match ($request->query('sort', 'pop')) {
             'low' => $query->orderBy('price'),
             'high' => $query->orderByDesc('price'),

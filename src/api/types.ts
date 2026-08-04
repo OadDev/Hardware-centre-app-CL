@@ -100,6 +100,8 @@ export type OrderStatus = 'ongoing' | 'delivered' | 'cancelled' | 'returned';
 
 export type OrderItem = { id: string; q: number; name: string; brand: string; variant: string | null };
 
+export type TimelineStep = { title: string; time: string; state: 'done' | 'current' | 'pending' };
+
 export type Order = {
   no: string;
   status: OrderStatus;
@@ -115,6 +117,7 @@ export type Order = {
   payment_method: 'upi' | 'card' | 'netbanking' | 'cod';
   payment_status: string;
   shipping_method: 'standard' | 'express';
+  timeline: TimelineStep[];
 };
 
 export type Totals = {

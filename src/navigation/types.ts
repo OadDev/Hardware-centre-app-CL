@@ -8,6 +8,10 @@ export type MainTabParamList = {
   Profile: undefined;
 };
 
+export type ProductListParams =
+  | { title: string; source: 'popular' | 'trending' | 'recommended' | 'deals' }
+  | { title: string; supplier: string };
+
 export type RootStackParamList = {
   Splash: undefined;
   Onboarding: undefined;
@@ -18,6 +22,11 @@ export type RootStackParamList = {
   Search: undefined;
   CategoryListing: { catId: string };
   ProductDetail: { id: string };
+  ProductList: ProductListParams;
+  Suppliers: undefined;
+  Wishlist: undefined;
+  Addresses: undefined;
+  OrderDetail: { orderNo: string };
   Checkout: undefined;
   RazorpayCheckout: { key_id: string; gateway_order_id: string; amount: number; currency: string };
   OrderSuccess: { orderNo: string };

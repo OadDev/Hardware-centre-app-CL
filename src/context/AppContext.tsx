@@ -50,6 +50,7 @@ type AppContextValue = {
   verifyOtp: (contact: string, otp: string) => Promise<boolean>;
   enterAsGuest: () => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (payload: { name: string; business_name?: string; city?: string; state?: string }) => Promise<boolean>;
 
   addToCart: (id: string, q?: number, variantId?: string) => Promise<void>;
   incCart: (id: string, variantId?: string) => Promise<void>;
@@ -87,7 +88,7 @@ type AppContextValue = {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
-const GUEST_USER: User = { name: 'Guest', email: '', gst: '', isGuest: true };
+const GUEST_USER: User = { name: 'Guest', email: '', gst: '', businessName: '', city: '', state: '', isGuest: true };
 
 function toUser(customer: Customer | null): User {
   if (!customer) return GUEST_USER;
@@ -95,6 +96,9 @@ function toUser(customer: Customer | null): User {
     name: customer.name || 'Guest',
     email: customer.email,
     gst: customer.gst || '',
+    businessName: customer.business_name || '',
+    city: customer.city || '',
+    state: customer.state || '',
     isGuest: customer.is_guest,
   };
 }
@@ -409,6 +413,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return order.no;
   }, [selectedAddressId, ship, pay, couponApplied, couponCode, resetCoupon]);
 
+  const updateProfile = useCallback(async (payload: { name: string; business_name?: string; city?: string; state?: string }): Promise<boolean> => {
+    try {
+      const updated = await AuthApi.updateMe(payload);
+      setCustomer(updated);
+      showToast('Profile updated');
+      return true;
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not update profile');
+      return false;
+    }
+  }, [showToast]);
+
   const reorder = useCallback(async (order: Order) => {
     try {
       await OrderApi.reorder(order.no);
@@ -445,6 +461,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     verifyOtp,
     enterAsGuest,
     logout,
+    updateProfile,
     addToCart,
     incCart,
     decCart,

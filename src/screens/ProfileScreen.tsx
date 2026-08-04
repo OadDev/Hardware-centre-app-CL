@@ -1,11 +1,13 @@
-import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/types';
 import { useApp } from '../context/AppContext';
 import { colors, fonts, radii } from '../theme/theme';
+import { inr } from '../utils/format';
+import { PrimaryButton } from '../components/UI';
 import {
   IconAddress,
   IconChevronRight,
@@ -14,7 +16,6 @@ import {
   IconHelp,
   IconLogout,
   IconOrders,
-  IconSettings,
   IconVerified,
   IconWishlist,
 } from '../components/Icons';
@@ -23,24 +24,49 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ProfileScreen() {
   const navigation = useNavigation<Nav>();
-  const { user, orders, wishlist, logout, showToast } = useApp();
+  const { user, orders, wishlist, logout, showToast, updateProfile } = useApp();
+  const [showEdit, setShowEdit] = useState(false);
+  const [form, setForm] = useState({ name: user.name, business_name: user.businessName, city: user.city, state: user.state });
+  const [saving, setSaving] = useState(false);
+
+  const savedTotal = orders.reduce((sum, o) => sum + o.discount, 0);
 
   const onLogout = async () => {
     await logout();
     navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
   };
 
+  const openEdit = () => {
+    setForm({ name: user.name, business_name: user.businessName, city: user.city, state: user.state });
+    setShowEdit(true);
+  };
+
+  const onSaveProfile = async () => {
+    if (!form.name.trim()) {
+      showToast('Enter your name');
+      return;
+    }
+    setSaving(true);
+    const ok = await updateProfile({
+      name: form.name.trim(),
+      business_name: form.business_name.trim(),
+      city: form.city.trim(),
+      state: form.state.trim(),
+    });
+    setSaving(false);
+    if (ok) setShowEdit(false);
+  };
+
   const menuMain = [
     { icon: <IconOrders size={19} />, label: 'My Orders', onPress: () => navigation.navigate('Main', { screen: 'Orders' }) },
-    { icon: <IconWishlist />, label: 'My Wishlist', onPress: () => showToast(`${Object.keys(wishlist).length} items in wishlist`) },
-    { icon: <IconAddress />, label: 'Saved Addresses', onPress: () => showToast('Saved addresses') },
-    { icon: <IconGst />, label: 'GST & Business Details', onPress: () => showToast('GST: ' + user.gst) },
+    { icon: <IconWishlist />, label: 'My Wishlist', onPress: () => navigation.navigate('Wishlist') },
+    { icon: <IconAddress />, label: 'Saved Addresses', onPress: () => navigation.navigate('Addresses') },
+    { icon: <IconGst />, label: 'GST & Business Details', onPress: () => showToast(user.gst ? `GST: ${user.gst}` : 'No GST number on file') },
   ];
 
   const menuSecondary = [
     { icon: <IconOrders size={19} />, label: 'Notifications', onPress: () => showToast('No new notifications') },
-    { icon: <IconSettings />, label: 'Settings', onPress: () => showToast('Settings') },
-    { icon: <IconHelp />, label: 'Help & Support', onPress: () => showToast('Support: help@hardwarecentre.in') },
+    { icon: <IconHelp />, label: 'Help & Support', onPress: () => Linking.openURL('mailto:help@hardwarecentre.in') },
   ];
 
   return (
@@ -60,7 +86,7 @@ export default function ProfileScreen() {
               <Text style={styles.email}>{user.isGuest ? 'Guest session' : user.email}</Text>
               {!user.isGuest && <Text style={styles.gst}>GST: {user.gst}</Text>}
             </View>
-            <Pressable style={styles.editBtn} onPress={() => showToast('Edit profile')}>
+            <Pressable style={styles.editBtn} onPress={openEdit}>
               <IconEdit />
             </Pressable>
           </View>
@@ -78,7 +104,7 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={[styles.statNum, { color: colors.successDark }]}>₹14.2k</Text>
+            <Text style={[styles.statNum, { color: colors.successDark }]}>{inr(savedTotal)}</Text>
             <Text style={styles.statLabel}>Saved</Text>
           </View>
         </View>
@@ -109,6 +135,52 @@ export default function ProfileScreen() {
         </Pressable>
         <Text style={styles.version}>Hardware Centers · Version 1.0.0</Text>
       </ScrollView>
+
+      <Modal visible={showEdit} animationType="slide" transparent onRequestClose={() => setShowEdit(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>Edit Profile</Text>
+            <View style={{ gap: 12 }}>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Full name"
+                value={form.name}
+                onChangeText={(v) => setForm((f) => ({ ...f, name: v }))}
+                placeholderTextColor={colors.textFaint}
+              />
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Business name"
+                value={form.business_name}
+                onChangeText={(v) => setForm((f) => ({ ...f, business_name: v }))}
+                placeholderTextColor={colors.textFaint}
+              />
+              <TextInput
+                style={styles.modalInput}
+                placeholder="City"
+                value={form.city}
+                onChangeText={(v) => setForm((f) => ({ ...f, city: v }))}
+                placeholderTextColor={colors.textFaint}
+              />
+              <TextInput
+                style={styles.modalInput}
+                placeholder="State"
+                value={form.state}
+                onChangeText={(v) => setForm((f) => ({ ...f, state: v }))}
+                placeholderTextColor={colors.textFaint}
+              />
+            </View>
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+              <Pressable style={styles.modalCancelBtn} onPress={() => setShowEdit(false)}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </Pressable>
+              <View style={{ flex: 1 }}>
+                <PrimaryButton label="Save" onPress={onSaveProfile} loading={saving} />
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -163,4 +235,19 @@ const styles = StyleSheet.create({
   },
   logoutText: { fontSize: 14.5, fontFamily: fonts.bodyBold, color: colors.danger },
   version: { textAlign: 'center', marginTop: 18, fontSize: 11, color: colors.textFaint },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(15,20,28,0.5)', justifyContent: 'flex-end' },
+  modalSheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
+  modalTitle: { fontSize: 18, fontFamily: fonts.displayExtra, color: colors.text, marginBottom: 16 },
+  modalInput: {
+    height: 48,
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
+    borderRadius: radii.md,
+    paddingHorizontal: 14,
+    fontSize: 14,
+    color: colors.text,
+    backgroundColor: colors.bgAlt,
+  },
+  modalCancelBtn: { height: 54, paddingHorizontal: 20, borderRadius: radii.md, borderWidth: 1.5, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center' },
+  modalCancelText: { fontSize: 15, fontFamily: fonts.bodyBold, color: colors.textSub },
 });

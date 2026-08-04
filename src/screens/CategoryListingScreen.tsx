@@ -11,7 +11,7 @@ import { discountPct, inr } from '../utils/format';
 import ProductCard from '../components/ProductCard';
 import PlaceholderImage from '../components/PlaceholderImage';
 import { BackButton } from '../components/UI';
-import { IconCart, IconFilter, IconGrid, IconListView, IconSearch, IconStar } from '../components/Icons';
+import { IconCart, IconGrid, IconListView, IconSearch, IconStar } from '../components/Icons';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CategoryListing'>;
 type SortKey = 'pop' | 'low' | 'high' | 'rating';
@@ -96,10 +96,6 @@ export default function CategoryListingScreen({ navigation, route }: Props) {
         <View style={styles.controlsRow}>
           <Text style={styles.countLabel}>{listing.length} products</Text>
           <View style={styles.controlsRight}>
-            <Pressable style={styles.filterBtn}>
-              <IconFilter />
-              <Text style={styles.filterText}>Filters</Text>
-            </Pressable>
             <View style={styles.viewToggle}>
               <Pressable
                 style={[styles.viewBtn, view === 'grid' ? styles.viewBtnActive : null]}
@@ -234,17 +230,6 @@ const styles = StyleSheet.create({
   controlsRow: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   countLabel: { fontSize: 13, color: colors.textMuted, fontFamily: fonts.bodyMedium },
   controlsRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  filterBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    height: 36,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: radii.md,
-  },
-  filterText: { fontSize: 12.5, fontFamily: fonts.bodySemibold, color: colors.textSub },
   viewToggle: { flexDirection: 'row', borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radii.md, overflow: 'hidden' },
   viewBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   viewBtnActive: { backgroundColor: colors.bgDark },

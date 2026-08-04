@@ -38,6 +38,7 @@ Route::middleware('customer.optional')->group(function () {
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('me', [AuthController::class, 'me']);
+    Route::patch('me', [AuthController::class, 'updateMe']);
     Route::post('logout', [AuthController::class, 'logout']);
 
     Route::get('cart', [CartController::class, 'index']);

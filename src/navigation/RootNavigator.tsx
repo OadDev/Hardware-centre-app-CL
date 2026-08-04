@@ -10,6 +10,11 @@ import MainTabs from './MainTabs';
 import SearchScreen from '../screens/SearchScreen';
 import CategoryListingScreen from '../screens/CategoryListingScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
+import ProductListScreen from '../screens/ProductListScreen';
+import SuppliersScreen from '../screens/SuppliersScreen';
+import WishlistScreen from '../screens/WishlistScreen';
+import AddressesScreen from '../screens/AddressesScreen';
+import OrderDetailScreen from '../screens/OrderDetailScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
 import RazorpayCheckoutScreen from '../screens/RazorpayCheckoutScreen';
 import OrderSuccessScreen from '../screens/OrderSuccessScreen';
@@ -28,6 +33,11 @@ export default function RootNavigator() {
       <Stack.Screen name="Search" component={SearchScreen} options={{ animation: 'fade' }} />
       <Stack.Screen name="CategoryListing" component={CategoryListingScreen} />
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
+      <Stack.Screen name="ProductList" component={ProductListScreen} />
+      <Stack.Screen name="Suppliers" component={SuppliersScreen} />
+      <Stack.Screen name="Wishlist" component={WishlistScreen} />
+      <Stack.Screen name="Addresses" component={AddressesScreen} />
+      <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
       <Stack.Screen name="RazorpayCheckout" component={RazorpayCheckoutScreen} />
       <Stack.Screen name="OrderSuccess" component={OrderSuccessScreen} />

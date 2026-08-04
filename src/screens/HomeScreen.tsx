@@ -39,7 +39,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function HomeScreen() {
   const navigation = useNavigation<Nav>();
-  const { wishlist, addToCart, toggleWish, user, home, categories } = useApp();
+  const { wishlist, addToCart, toggleWish, user, home, categories, showToast } = useApp();
   const [bannerIdx, setBannerIdx] = useState(0);
   const bannerRef = useRef<FlatList>(null);
   const countdown = useCountdown(23091);
@@ -98,9 +98,8 @@ export default function HomeScreen() {
                 <Text style={styles.greetName}>{user.name}</Text>
               </View>
             </View>
-            <Pressable style={styles.bellBtn}>
+            <Pressable style={styles.bellBtn} onPress={() => showToast('No new notifications')}>
               <IconBell />
-              <View style={styles.bellDot} />
             </Pressable>
           </View>
           <Pressable style={styles.searchBar} onPress={() => navigation.navigate('Search')}>
@@ -154,7 +153,7 @@ export default function HomeScreen() {
         </ScrollView>
 
         {/* popular */}
-        <SectionHeader title="Popular Products" action="See all" />
+        <SectionHeader title="Popular Products" action="See all" onAction={() => navigation.navigate('ProductList', { title: 'Popular Products', source: 'popular' })} />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingLeft: 20 }} contentContainerStyle={{ paddingRight: 20, gap: 13 }}>
           {popular.map((p) => (
             <ProductCard
@@ -207,7 +206,7 @@ export default function HomeScreen() {
         </View>
 
         {/* trending */}
-        <SectionHeader title="Trending Now" action="See all" />
+        <SectionHeader title="Trending Now" action="See all" onAction={() => navigation.navigate('ProductList', { title: 'Trending Now', source: 'trending' })} />
         <View style={styles.grid}>
           {trending.map((p) => (
             <ProductCard
@@ -223,10 +222,14 @@ export default function HomeScreen() {
         </View>
 
         {/* suppliers */}
-        <SectionHeader title="Top Suppliers" action="See all" />
+        <SectionHeader title="Top Suppliers" action="See all" onAction={() => navigation.navigate('Suppliers')} />
         <View style={{ paddingHorizontal: 20, gap: 11 }}>
           {suppliers.map((s) => (
-            <Pressable key={s.id} style={styles.supplierRow}>
+            <Pressable
+              key={s.id}
+              style={styles.supplierRow}
+              onPress={() => navigation.navigate('ProductList', { title: s.name, supplier: s.name })}
+            >
               <View style={styles.supplierIcon}>
                 <IconVerified size={22} color={colors.bgDark} />
               </View>
@@ -248,7 +251,7 @@ export default function HomeScreen() {
         </View>
 
         {/* recommended */}
-        <SectionHeader title="Recommended for You" />
+        <SectionHeader title="Recommended for You" action="See all" onAction={() => navigation.navigate('ProductList', { title: 'Recommended for You', source: 'recommended' })} />
         <View style={styles.grid}>
           {recommended.map((p) => (
             <ProductCard
@@ -294,17 +297,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  bellDot: {
-    position: 'absolute',
-    top: 11,
-    right: 11,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.accent,
-    borderWidth: 1.5,
-    borderColor: '#fff',
   },
   searchBar: {
     marginTop: 16,

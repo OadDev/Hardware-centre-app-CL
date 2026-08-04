@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/types';
@@ -53,6 +53,13 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
 
   const back = () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Main', { screen: 'Home' }));
 
+  const shareProduct = () => {
+    if (!detail) return;
+    Share.share({
+      message: `${detail.product.name} — ${inr(detail.product.price)} on Hardware Centers`,
+    }).catch(() => {});
+  };
+
   if (!detail) {
     return (
       <View style={[styles.container, { alignItems: 'center', justifyContent: 'center' }]}>
@@ -94,7 +101,7 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
               <IconChevronLeft />
             </Pressable>
             <View style={{ flexDirection: 'row', gap: 9 }}>
-              <Pressable style={styles.roundBtn}>
+              <Pressable style={styles.roundBtn} onPress={shareProduct}>
                 <IconShare />
               </Pressable>
               <Pressable style={styles.roundBtn} onPress={() => toggleWish(product.id)}>
@@ -220,7 +227,10 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
 
         <View style={styles.section}>
           <Text style={styles.h2}>Sold by</Text>
-          <Pressable style={styles.supplierCard}>
+          <Pressable
+            style={styles.supplierCard}
+            onPress={() => navigation.navigate('ProductList', { title: product.supplier, supplier: product.supplier })}
+          >
             <View style={styles.supplierIcon}>
               <IconVerified size={22} color={colors.bgDark} />
             </View>
@@ -237,10 +247,7 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
         </View>
 
         <View style={[styles.section, { paddingBottom: 8 }]}>
-          <View style={styles.rowBetween}>
-            <Text style={styles.h2}>Ratings &amp; Reviews</Text>
-            <Text style={styles.writeReview}>Write a review</Text>
-          </View>
+          <Text style={styles.h2}>Ratings &amp; Reviews</Text>
           <View style={styles.ratingSummaryRow}>
             <View style={styles.ratingBig}>
               <Text style={styles.ratingBigNum}>{product.rating.toFixed(1)}</Text>
@@ -396,7 +403,6 @@ const styles = StyleSheet.create({
   supplierNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   supplierName: { fontSize: 14.5, fontFamily: fonts.bodyBold, color: colors.text },
   supplierMeta: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
-  writeReview: { fontSize: 12.5, fontFamily: fonts.bodySemibold, color: colors.accent },
   ratingSummaryRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 16, marginBottom: 6 },
   ratingBig: { alignItems: 'center' },
   ratingBigNum: { fontSize: 34, fontFamily: fonts.displayExtra, color: colors.text, lineHeight: 36 },
