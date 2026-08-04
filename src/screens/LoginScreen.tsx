@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/types';
 import { useApp } from '../context/AppContext';
@@ -14,8 +15,18 @@ const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const PHONE_RE = /^[6-9]\d{9}$/;
 
 export default function LoginScreen({ navigation }: Props) {
-  const { requestOtp, otpChannel } = useApp();
+  const { requestOtp, otpChannel, refreshOtpChannel } = useApp();
   const isSms = otpChannel === 'sms';
+
+  // Re-check which OTP channel the admin has active every time this screen
+  // is shown, not just once at app launch — otherwise a channel change made
+  // in Admin > Settings while the app is already open goes unnoticed until
+  // the app is fully restarted.
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshOtpChannel();
+    }, [refreshOtpChannel])
+  );
   const [email, setEmail] = useState('rajesh@kumarhardware.in');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');

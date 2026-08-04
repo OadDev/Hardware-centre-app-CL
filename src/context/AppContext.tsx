@@ -29,6 +29,7 @@ type AppContextValue = {
   hasOnboarded: boolean;
   session: 'guest' | 'user' | null;
   otpChannel: OtpChannel;
+  refreshOtpChannel: () => Promise<void>;
   user: User;
   home: HomeData | null;
   categories: Category[];
@@ -160,11 +161,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (ordersRes.status === 'fulfilled') setOrders(ordersRes.value);
   }, []);
 
-  useEffect(() => {
-    AuthApi.getOtpChannel()
-      .then((res) => setOtpChannel(res.channel))
-      .catch(() => {});
+  const refreshOtpChannel = useCallback(async () => {
+    try {
+      const res = await AuthApi.getOtpChannel();
+      setOtpChannel(res.channel);
+    } catch {
+      // Leave whatever channel we last knew about — the Login screen still
+      // needs to render something, and a stale-but-known value beats
+      // silently defaulting to 'email'.
+    }
   }, []);
+
+  useEffect(() => {
+    refreshOtpChannel();
+  }, [refreshOtpChannel]);
 
   useEffect(() => {
     (async () => {
@@ -415,6 +425,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     hasOnboarded,
     session,
     otpChannel,
+    refreshOtpChannel,
     user: toUser(customer),
     home,
     categories,
