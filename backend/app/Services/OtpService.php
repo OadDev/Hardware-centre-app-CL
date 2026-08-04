@@ -14,9 +14,19 @@ use RuntimeException;
  * Sends and verifies OTP codes via whichever single channel the admin has
  * enabled (Settings > OTP Verification) — email over SMTP, or SMS via
  * Fast2SMS. Never both at once.
+ *
+ * Two fixed test accounts (see TEST_CONTACTS) always accept the code
+ * TEST_OTP_CODE without ever actually sending anything, so the app can be
+ * logged into and reviewed (app store review, QA, demoing) even before real
+ * SMTP/Fast2SMS credentials are configured. They don't affect delivery or
+ * verification for any other contact.
  */
 class OtpService
 {
+    private const TEST_CONTACTS = ['9999999999', 'test@hardwarecentre.in'];
+
+    private const TEST_OTP_CODE = '123456';
+
     public function activeChannel(): string
     {
         return AppSetting::current()->otp_channel === 'sms' ? 'sms' : 'email';
@@ -28,6 +38,10 @@ class OtpService
      */
     public function send(string $contact): string
     {
+        if ($this->isTestContact($contact)) {
+            return self::TEST_OTP_CODE;
+        }
+
         $channel = $this->activeChannel();
         $code = (string) random_int(100000, 999999);
 
@@ -44,6 +58,10 @@ class OtpService
 
     public function verify(string $contact, string $code): bool
     {
+        if ($this->isTestContact($contact)) {
+            return $code === self::TEST_OTP_CODE;
+        }
+
         $channel = $this->activeChannel();
         $key = $this->cacheKey($channel, $contact);
         $hashed = Cache::get($key);
@@ -55,6 +73,11 @@ class OtpService
         Cache::forget($key);
 
         return true;
+    }
+
+    private function isTestContact(string $contact): bool
+    {
+        return in_array(strtolower($contact), self::TEST_CONTACTS, true);
     }
 
     protected function cacheKey(string $channel, string $contact): string
