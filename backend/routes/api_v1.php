@@ -23,6 +23,7 @@ Route::post('auth/otp/verify', [AuthController::class, 'verifyOtp']);
 Route::post('auth/guest', [AuthController::class, 'guest']);
 
 Route::get('onboarding', [OnboardingController::class, 'index']);
+Route::get('push/config', [PushController::class, 'config']);
 
 Route::post('web/contact', [WebLeadController::class, 'contact'])->name('api.web.contact');
 Route::post('web/support-ticket', [WebLeadController::class, 'supportTicket'])->name('api.web.support-ticket');
