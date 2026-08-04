@@ -12,7 +12,7 @@ export type RootStackParamList = {
   Splash: undefined;
   Onboarding: undefined;
   Welcome: undefined;
-  Login: undefined;
+  Login: { mode?: 'login' | 'signup' } | undefined;
   Otp: { contact: string; channel: 'email' | 'sms'; debugOtp?: string | null };
   Main: NavigatorScreenParams<MainTabParamList>;
   Search: undefined;

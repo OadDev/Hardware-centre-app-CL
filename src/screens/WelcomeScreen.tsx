@@ -22,8 +22,8 @@ export default function WelcomeScreen({ navigation }: Props) {
       <SafeAreaView edges={['bottom']} style={styles.sheet}>
         <Text style={styles.heading}>Get started</Text>
         <Text style={styles.sub}>Login or create your business account.</Text>
-        <PrimaryButton label="Login" onPress={() => navigation.navigate('Login')} style={{ marginTop: 22 }} />
-        <SecondaryButton label="Create Account" onPress={() => navigation.navigate('Login')} style={{ marginTop: 12 }} />
+        <PrimaryButton label="Login" onPress={() => navigation.navigate('Login', { mode: 'login' })} style={{ marginTop: 22 }} />
+        <SecondaryButton label="Create Account" onPress={() => navigation.navigate('Login', { mode: 'signup' })} style={{ marginTop: 12 }} />
         <Text
           style={styles.guest}
           onPress={async () => {
