@@ -22,11 +22,15 @@ const PHONE_RE = /^[6-9]\d{9}$/;
 // button was tapped on the Welcome screen; the underlying flow is identical.
 export default function LoginScreen({ navigation, route }: Props) {
   const { requestOtp, otpChannel, refreshOtpChannel } = useApp();
-  const [channelOverride, setChannelOverride] = useState<OtpChannel | null>(null);
-  const activeChannel = channelOverride ?? otpChannel;
-  const isSms = activeChannel === 'sms';
   const [mode, setMode] = useState<'login' | 'signup'>(route.params?.mode ?? 'login');
   const isSignup = mode === 'signup';
+  // New accounts default to phone/SMS with an option to try email instead;
+  // returning logins default to whichever channel the admin has active, with
+  // an option to try the other one. Both channels always work either way —
+  // this only decides which one is shown first.
+  const [channelOverride, setChannelOverride] = useState<OtpChannel | null>(isSignup ? 'sms' : null);
+  const activeChannel = channelOverride ?? otpChannel;
+  const isSms = activeChannel === 'sms';
 
   // Re-check which OTP channel the admin has active every time this screen
   // is shown, not just once at app launch — otherwise a channel change made
@@ -60,6 +64,13 @@ export default function LoginScreen({ navigation, route }: Props) {
 
   const switchChannel = () => {
     setChannelOverride(isSms ? 'email' : 'sms');
+    setError('');
+  };
+
+  const switchMode = () => {
+    const nextMode = isSignup ? 'login' : 'signup';
+    setMode(nextMode);
+    setChannelOverride(nextMode === 'signup' ? 'sms' : null);
     setError('');
   };
 
@@ -110,14 +121,16 @@ export default function LoginScreen({ navigation, route }: Props) {
         {!!error && <Text style={styles.error}>{error}</Text>}
 
         <Text style={styles.channelSwitch} onPress={switchChannel}>
-          {isSms ? 'Login with Email ID instead' : 'Login with Phone Number instead'}
+          {isSignup
+            ? (isSms ? 'Try with Email instead' : 'Try with Phone Number instead')
+            : (isSms ? 'Login with Email ID instead' : 'Login with Phone Number instead')}
         </Text>
 
         <PrimaryButton label="Send Verification Code" onPress={doContinue} loading={sending} style={{ marginTop: 24 }} />
 
         <Text style={styles.switchRow}>
           {isSignup ? 'Already have an account? ' : 'New here? '}
-          <Text style={styles.switchLink} onPress={() => setMode(isSignup ? 'login' : 'signup')}>
+          <Text style={styles.switchLink} onPress={switchMode}>
             {isSignup ? 'Login' : 'Create Account'}
           </Text>
         </Text>
