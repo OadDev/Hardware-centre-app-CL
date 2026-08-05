@@ -250,10 +250,144 @@
     });
   }
 
+  // ---------------- Delivery location (GPS or a saved address, same UX as the app) ----------------
+  var DELIVERY_LABEL_KEY = "hc_delivery_label_v1";
+
+  function getDeliveryLabel() { return localStorage.getItem(DELIVERY_LABEL_KEY) || ""; }
+  function paintDeliveryLabel() {
+    var label = getDeliveryLabel();
+    document.querySelectorAll("[data-deliver-label]").forEach(function (el) {
+      el.textContent = label || "Set delivery location";
+    });
+  }
+  function setDeliveryLabel(label) {
+    localStorage.setItem(DELIVERY_LABEL_KEY, label);
+    paintDeliveryLabel();
+  }
+
+  var deliveryModalEl = null;
+  function closeDeliveryModal() {
+    if (deliveryModalEl) deliveryModalEl.classList.remove("show");
+  }
+
+  function ensureDeliveryModal() {
+    if (deliveryModalEl) return deliveryModalEl;
+    var wrap = document.createElement("div");
+    wrap.className = "hc-modal-backdrop";
+    wrap.setAttribute("data-delivery-modal", "");
+    wrap.innerHTML =
+      '<div class="hc-modal-sheet">' +
+        '<button type="button" class="hc-modal-close" data-deliver-close aria-label="Close">' +
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
+        '</button>' +
+        '<h3 class="hc-modal-title">Delivery Location</h3>' +
+        '<p class="hc-modal-sub">Find products and delivery times for your area.</p>' +
+        '<button type="button" class="btn btn-outline btn-block" data-deliver-use-gps style="margin-top:16px;">' +
+          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:7px;vertical-align:-3px;"><path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>' +
+          '<span data-deliver-gps-label>Use My Current Location</span>' +
+        '</button>' +
+        '<div data-deliver-addresses></div>' +
+        '<a href="/checkout" class="hc-modal-link" style="display:block;margin-top:14px;">+ Add a new address</a>' +
+      '</div>';
+    document.body.appendChild(wrap);
+    deliveryModalEl = wrap;
+
+    wrap.addEventListener("click", function (e) { if (e.target === wrap) closeDeliveryModal(); });
+    wrap.querySelector("[data-deliver-close]").addEventListener("click", closeDeliveryModal);
+
+    wrap.querySelector("[data-deliver-use-gps]").addEventListener("click", function () {
+      var btn = this;
+      var label = wrap.querySelector("[data-deliver-gps-label]");
+      if (!navigator.geolocation) {
+        showToast("Location isn't supported in this browser");
+        return;
+      }
+      btn.disabled = true;
+      label.textContent = "Getting your location…";
+      navigator.geolocation.getCurrentPosition(
+        function (pos) {
+          fetch("https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=" + pos.coords.latitude + "&lon=" + pos.coords.longitude, {
+            headers: { "Accept-Language": "en" },
+          })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+              btn.disabled = false;
+              label.textContent = "Use My Current Location";
+              var a = data.address || {};
+              var city = a.city || a.town || a.village || a.suburb || "";
+              var pincode = a.postcode || "";
+              var text = [city, pincode].filter(Boolean).join(" ");
+              if (!text) {
+                showToast("Could not determine your address");
+                return;
+              }
+              setDeliveryLabel(text);
+              showToast("Delivery location updated");
+              closeDeliveryModal();
+            })
+            .catch(function () {
+              btn.disabled = false;
+              label.textContent = "Use My Current Location";
+              showToast("Could not look up your address");
+            });
+        },
+        function () {
+          btn.disabled = false;
+          label.textContent = "Use My Current Location";
+          showToast("Location permission denied");
+        },
+        { enableHighAccuracy: false, timeout: 12000 }
+      );
+    });
+
+    return wrap;
+  }
+
+  function openDeliveryModal() {
+    var wrap = ensureDeliveryModal();
+    var listEl = wrap.querySelector("[data-deliver-addresses]");
+    listEl.innerHTML = "";
+
+    if (isLoggedIn()) {
+      apiFetch("/addresses")
+        .then(function (res) {
+          var addresses = res.data || res;
+          if (!addresses || !addresses.length) return;
+          var heading = document.createElement("div");
+          heading.style.cssText = "font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:18px 0 10px;";
+          heading.textContent = "Saved addresses";
+          listEl.appendChild(heading);
+          addresses.forEach(function (a) {
+            var row = document.createElement("div");
+            row.className = "addr-card";
+            row.style.cssText = "margin-bottom:8px;";
+            row.innerHTML =
+              '<div style="flex:1;min-width:0;">' +
+                '<div style="font-weight:700;font-size:13.5px;">' + a.label + ' · ' + a.name + '</div>' +
+                '<div class="addr-line">' + a.line + ', ' + a.city + ', ' + a.state + ' ' + a.pincode + '</div>' +
+              '</div>';
+            row.addEventListener("click", function () {
+              setDeliveryLabel(a.city + " " + a.pincode);
+              showToast("Delivery location updated");
+              closeDeliveryModal();
+            });
+            listEl.appendChild(row);
+          });
+        })
+        .catch(function () {});
+    }
+
+    wrap.classList.add("show");
+  }
+
   // Runs on every page load so the header always reflects the current session.
   document.addEventListener("DOMContentLoaded", function () {
     paintAccountUI();
     refreshCartBadge();
+    paintDeliveryLabel();
+    document.querySelectorAll("[data-deliver-trigger]").forEach(function (el) {
+      el.addEventListener("click", openDeliveryModal);
+    });
   });
 
   // Mobile nav drawer

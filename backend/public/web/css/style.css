@@ -116,6 +116,9 @@ p{ margin:0; }
 .topbar{ background:var(--navy); color:#cbd5e1; font-size:12.5px; }
 .topbar .container{ display:flex; align-items:center; justify-content:space-between; height:38px; }
 .topbar-left{ display:flex; align-items:center; gap:8px; color:#e5e7eb; }
+.topbar-deliver{ background:none; border:none; padding:0; font:inherit; cursor:pointer; }
+.topbar-deliver:hover{ color:#fff; }
+.topbar-deliver:hover b{ text-decoration:underline; }
 .topbar-left svg{ flex-shrink:0; }
 .topbar-links{ display:flex; align-items:center; gap:22px; }
 .topbar-links a{ color:#cbd5e1; font-weight:500; display:flex; align-items:center; gap:6px; }
