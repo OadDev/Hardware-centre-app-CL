@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Linking, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/types';
 import { useApp } from '../context/AppContext';
 import { colors, fonts, radii, shadow } from '../theme/theme';
@@ -29,6 +29,7 @@ const ATTRIBUTE_ORDER = ['Color', 'Size'];
 export default function ProductDetailScreen({ navigation, route }: Props) {
   const { id } = route.params;
   const { wishlist, toggleWish, addToCart, cart } = useApp();
+  const insets = useSafeAreaInsets();
   const [qty, setQty] = useState(1);
   const [gallery, setGallery] = useState(0);
   const [detail, setDetail] = useState<ProductDetail | null>(null);
@@ -93,13 +94,13 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={{ paddingBottom: 110 }} showsVerticalScrollIndicator={false}>
-        <SafeAreaView edges={['top']} style={styles.imageSection}>
+        <View style={styles.imageSection}>
           {heroImage ? (
             <Image source={{ uri: heroImage }} style={styles.heroImage} resizeMode="cover" />
           ) : (
             <PlaceholderImage seed={product.id} label={product.name} style={styles.heroImage} />
           )}
-          <View style={styles.imageTopBar}>
+          <View style={[styles.imageTopBar, { top: insets.top + 14 }]}>
             <Pressable onPress={back} style={styles.roundBtn}>
               <IconChevronLeft />
             </Pressable>
@@ -126,7 +127,7 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
               <Text style={styles.videoBadgeText}>Watch Video</Text>
             </Pressable>
           )}
-        </SafeAreaView>
+        </View>
 
         {images.length > 0 ? (
           <View style={styles.galleryRow}>

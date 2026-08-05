@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/types';
 import { useApp } from '../context/AppContext';
 import { colors, fonts, radii, shadow } from '../theme/theme';
 import { inr } from '../utils/format';
-import { BackButton, PrimaryButton } from '../components/UI';
+import { BackButton } from '../components/UI';
 import { IconPlus } from '../components/Icons';
+import AddressFormModal from '../components/AddressFormModal';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Checkout'>;
 
@@ -32,15 +33,20 @@ function RadioDot({ active }: { active: boolean }) {
 }
 
 export default function CheckoutScreen({ navigation }: Props) {
-  const { addresses, selectedAddressId, setSelectedAddressId, ship, setShip, pay, setPay, totals, beginOnlinePayment, placeOrder, addAddress, showToast } = useApp();
+  const { addresses, selectedAddressId, setSelectedAddressId, ship, setShip, pay, setPay, totals, beginOnlinePayment, placeOrder, showToast } = useApp();
   const [placing, setPlacing] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [form, setForm] = useState({ name: '', line: '', city: '', state: '', pincode: '', label: 'Home' });
-  const [saving, setSaving] = useState(false);
 
   const onPlaceOrder = async () => {
     if (!selectedAddressId) {
-      showToast('Add a delivery address first');
+      Alert.alert(
+        'Save your address first',
+        'You need a delivery address before you can place this order.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Add Address', onPress: () => setShowAddForm(true) },
+        ]
+      );
       return;
     }
     setPlacing(true);
@@ -56,31 +62,6 @@ export default function CheckoutScreen({ navigation }: Props) {
       showToast(err instanceof Error ? err.message : 'Could not place order');
     } finally {
       setPlacing(false);
-    }
-  };
-
-  const onSaveAddress = async () => {
-    if (!form.name.trim() || !form.line.trim() || !form.city.trim() || !form.state.trim() || !form.pincode.trim()) {
-      showToast('Fill in all address fields');
-      return;
-    }
-    setSaving(true);
-    try {
-      await addAddress({
-        label: form.label || 'Home',
-        name: form.name.trim(),
-        line: form.line.trim(),
-        city: form.city.trim(),
-        state: form.state.trim(),
-        pincode: form.pincode.trim(),
-        is_default: addresses.length === 0,
-      });
-      setShowAddForm(false);
-      setForm({ name: '', line: '', city: '', state: '', pincode: '', label: 'Home' });
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not save address');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -205,29 +186,7 @@ export default function CheckoutScreen({ navigation }: Props) {
         </Pressable>
       </SafeAreaView>
 
-      <Modal visible={showAddForm} animationType="slide" transparent onRequestClose={() => setShowAddForm(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalSheet}>
-            <Text style={styles.modalTitle}>Add New Address</Text>
-            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 12 }}>
-              <TextInput style={styles.modalInput} placeholder="Label (Home / Shop / Warehouse)" value={form.label} onChangeText={(v) => setForm((f) => ({ ...f, label: v }))} placeholderTextColor={colors.textFaint} />
-              <TextInput style={styles.modalInput} placeholder="Contact name" value={form.name} onChangeText={(v) => setForm((f) => ({ ...f, name: v }))} placeholderTextColor={colors.textFaint} />
-              <TextInput style={styles.modalInput} placeholder="Address line" value={form.line} onChangeText={(v) => setForm((f) => ({ ...f, line: v }))} placeholderTextColor={colors.textFaint} />
-              <TextInput style={styles.modalInput} placeholder="City" value={form.city} onChangeText={(v) => setForm((f) => ({ ...f, city: v }))} placeholderTextColor={colors.textFaint} />
-              <TextInput style={styles.modalInput} placeholder="State" value={form.state} onChangeText={(v) => setForm((f) => ({ ...f, state: v }))} placeholderTextColor={colors.textFaint} />
-              <TextInput style={styles.modalInput} placeholder="Pincode" value={form.pincode} onChangeText={(v) => setForm((f) => ({ ...f, pincode: v }))} keyboardType="number-pad" placeholderTextColor={colors.textFaint} />
-            </ScrollView>
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
-              <Pressable style={styles.modalCancelBtn} onPress={() => setShowAddForm(false)}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </Pressable>
-              <View style={{ flex: 1 }}>
-                <PrimaryButton label="Save Address" onPress={onSaveAddress} loading={saving} />
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <AddressFormModal visible={showAddForm} onClose={() => setShowAddForm(false)} />
     </SafeAreaView>
   );
 }
@@ -287,19 +246,4 @@ const styles = StyleSheet.create({
   stickyVal: { fontSize: 19, fontFamily: fonts.displayExtra, color: colors.text },
   placeOrderBtn: { flex: 1, height: 52, borderRadius: radii.md, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   placeOrderText: { fontSize: 15.5, fontFamily: fonts.bodyBold, color: '#fff' },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(15,20,28,0.5)', justifyContent: 'flex-end' },
-  modalSheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%' },
-  modalTitle: { fontSize: 18, fontFamily: fonts.displayExtra, color: colors.text, marginBottom: 16 },
-  modalInput: {
-    height: 48,
-    borderWidth: 1.5,
-    borderColor: colors.borderStrong,
-    borderRadius: radii.md,
-    paddingHorizontal: 14,
-    fontSize: 14,
-    color: colors.text,
-    backgroundColor: colors.bgAlt,
-  },
-  modalCancelBtn: { height: 54, paddingHorizontal: 20, borderRadius: radii.md, borderWidth: 1.5, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center' },
-  modalCancelText: { fontSize: 15, fontFamily: fonts.bodyBold, color: colors.textSub },
 });

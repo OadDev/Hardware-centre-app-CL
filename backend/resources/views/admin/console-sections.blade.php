@@ -426,10 +426,49 @@ function openProductProfile(p) {
       <button id="drawer-add-variant-btn" class="mt-2 w-full py-2 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700">Add Option</button>
     `)}
     <div class="flex gap-2.5 mt-6 pt-5 border-t border-ink-100 dark:border-ink-800">
+      <button id="edit-product-btn" class="flex-1 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-xl">Edit Details</button>
       ${p.approval!=='Approved' ? `<button id="approve-product-btn" class="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl">Approve</button>` : ''}
       <button id="toggle-featured-btn" class="flex-1 px-4 py-2.5 bg-white dark:bg-ink-800 border border-ink-200 dark:border-ink-700 text-sm font-medium rounded-xl">${p.featured?'Unfeature':'Feature'} Product</button>
     </div>
   `, true);
+  document.getElementById('edit-product-btn')?.addEventListener('click', () => {
+    openModal({
+      title:'Edit Product', wide:true,
+      body:`<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        ${formField('Product Name','text','e.g. Cordless Drill 18V',p.name,'ep-name')}
+        ${formCategorySelect('Category', DATA.categories, 'ep-category')}
+        ${formSelect('Brand', DATA.brands.map(b=>b.name), DATA.brands.findIndex(b=>b.id===p.brandCode), 'ep-brand')}
+        ${formSelect('Seller', DATA.sellers.map(s=>s.store), DATA.sellers.findIndex(s=>s.id===p.sellerCode), 'ep-seller')}
+        ${formField('Price (₹)','number','e.g. 2499',p.price,'ep-price')}
+        ${formField('MRP (₹)','number','e.g. 2999',p.mrp,'ep-mrp')}
+        ${formField('Stock','number','e.g. 100',p.stock,'ep-stock')}
+        ${formSelect('Unit', ['piece','box','pair','coil','bag','litre','tub'], Math.max(0, ['piece','box','pair','coil','bag','litre','tub'].indexOf(p.unit)), 'ep-unit')}
+        <div class="sm:col-span-2">${formTextarea('Description', 'What makes this product worth buying', 3, 'ep-description')}</div>
+        ${formField('Video Link (optional)','url','https://youtube.com/watch?v=...',p.videoUrl||'','ep-video')}
+      </div>`,
+      confirmLabel:'Save Changes',
+      onConfirm: withErr(async () => {
+        const category = DATA.categories.find(c=>c.name===document.getElementById('ep-category').value);
+        const brand = DATA.brands.find(b=>b.name===document.getElementById('ep-brand').value);
+        const seller = DATA.sellers.find(s=>s.store===document.getElementById('ep-seller').value);
+        await api('PATCH', '/products/'+p.id, {
+          name: document.getElementById('ep-name').value,
+          category_code: category ? category.id : undefined,
+          brand_code: brand ? brand.id : undefined,
+          seller_code: seller ? seller.id : undefined,
+          price: parseFloat(document.getElementById('ep-price').value||0),
+          mrp: parseFloat(document.getElementById('ep-mrp').value||0),
+          stock: parseInt(document.getElementById('ep-stock').value||0),
+          unit: document.getElementById('ep-unit').value,
+          description: document.getElementById('ep-description').value || null,
+          video_url: document.getElementById('ep-video').value || null,
+        });
+        closeModal(); toast('Product updated'); await refreshProducts(); navigateTo('products');
+      })
+    });
+    document.getElementById('ep-category').value = p.category;
+    document.getElementById('ep-description').value = p.description || '';
+  });
   document.getElementById('drawer-upload-images-btn')?.addEventListener('click', withErr(async () => {
     const files = document.getElementById('drawer-add-images').files;
     if (!files || !files.length) { toast('Choose at least one photo', 'warn'); return; }
@@ -784,6 +823,7 @@ SECTION_RENDERERS.coupons = async function(main) {
           <div class="mt-3">${progressBar(c.usage_limit ? Math.round(c.used_count/c.usage_limit*100) : 0, (c.used_count/(c.usage_limit||1)) > 0.8 ? 'amber' : 'brand')}<p class="text-xs text-ink-400 mt-1.5">${fmtNum(c.used_count)} / ${fmtNum(c.usage_limit)} used</p></div>
           <p class="text-xs text-ink-400 mt-3 flex items-center gap-1.5">${icon('calendar','w-3.5 h-3.5')}${c.expires_at ? 'Expires '+new Date(c.expires_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : 'No expiry'}</p>
           <div class="flex gap-2 mt-4">
+            <button data-edit-coupon="${c.code}" class="flex-1 py-1.5 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800">Edit</button>
             <button data-toggle-coupon="${c.code}" class="flex-1 py-1.5 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800">${c.status==='Active'?'Deactivate':'Activate'}</button>
             <button data-delete-coupon="${c.code}" class="flex-1 py-1.5 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800 text-rose-600">Delete</button>
           </div>
@@ -813,6 +853,32 @@ SECTION_RENDERERS.coupons = async function(main) {
       })
     });
   });
+  main.querySelectorAll('[data-edit-coupon]').forEach(btn => btn.addEventListener('click', () => {
+    const c = DATA.coupons.find(x=>x.code===btn.dataset.editCoupon);
+    openModal({
+      title:'Edit Coupon', wide:true,
+      body:`<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        ${formField('Coupon Code','text','e.g. SUMMER25',c.code,'eco-code')}
+        ${formSelect('Discount Type',['Percentage','Flat'], c.type==='Flat'?1:0, 'eco-type')}
+        ${formField('Discount Value','number','e.g. 10',c.value,'eco-value')}
+        ${formField('Minimum Order Value (₹)','number','e.g. 500',c.min_order,'eco-min')}
+        ${formField('Usage Limit','number','e.g. 1000',c.usage_limit,'eco-limit')}
+        ${formField('Expiry Date','date','',c.expires_at ? c.expires_at.substring(0,10) : '','eco-expiry')}
+      </div>`,
+      confirmLabel:'Save Changes', onConfirm: withErr(async () => {
+        await api('PATCH', '/coupons/'+c.code, {
+          code: document.getElementById('eco-code').value.toUpperCase(),
+          type: document.getElementById('eco-type').value,
+          value: parseFloat(document.getElementById('eco-value').value||0),
+          min_order: parseFloat(document.getElementById('eco-min').value||0),
+          usage_limit: parseInt(document.getElementById('eco-limit').value||0),
+          expires_at: document.getElementById('eco-expiry').value || null,
+          status: c.status,
+        });
+        closeModal(); toast('Coupon updated'); await refreshCoupons(); navigateTo('coupons');
+      })
+    });
+  }));
   main.querySelectorAll('[data-toggle-coupon]').forEach(btn => btn.addEventListener('click', withErr(async () => {
     const c = DATA.coupons.find(x=>x.code===btn.dataset.toggleCoupon);
     await api('PATCH', '/coupons/'+c.code, { code:c.code, type:c.type, value:c.value, min_order:c.min_order, usage_limit:c.usage_limit, status: c.status==='Active'?'Inactive':'Active' });
@@ -836,8 +902,8 @@ SECTION_RENDERERS.banners = async function(main) {
             ${b.image_url ? `<img src="${b.image_url}" class="absolute inset-0 w-full h-full object-cover">` : icon('image','w-8 h-8 text-white/70')}
           </div>
           <div class="p-4">
-            <div class="flex items-center justify-between mb-1"><p class="font-medium text-sm text-ink-800 dark:text-ink-100 truncate">${b.title}</p>${statusBadge(b.status)}</div>
-            <p class="text-xs text-ink-400">${b.type}</p>
+            <div class="flex items-center justify-between mb-1"><p class="font-medium text-sm ${b.title ? 'text-ink-800 dark:text-ink-100' : 'text-ink-400 italic'} truncate">${b.title || 'Untitled banner'}</p>${statusBadge(b.status)}</div>
+            <p class="text-xs text-ink-400">${b.type}${b.subtitle ? ' · '+b.subtitle : ''}</p>
             <input type="file" accept="image/*" data-banner-image-input="${b.id}" class="hidden">
             <div class="flex gap-2 mt-3">
               <button data-upload-banner-image="${b.id}" class="flex-1 py-1.5 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800">${b.image_url?'Change Image':'Upload Image'}</button>

@@ -533,7 +533,7 @@ function formCategorySelect(label, categories, id='') {
   const groups = topLevel.map(top => {
     const subs = categories.filter(c => c.parentId === top.id);
     if (!subs.length) return `<option value="${top.name}">${top.name}</option>`;
-    return `<optgroup label="${top.name}">${subs.map(s=>`<option value="${s.name}">${s.name}</option>`).join('')}</optgroup>`;
+    return `<optgroup label="${top.name}"><option value="${top.name}">${top.name} (general)</option>${subs.map(s=>`<option value="${s.name}">${s.name}</option>`).join('')}</optgroup>`;
   }).join('');
   return `<div><label class="block text-xs font-medium text-ink-500 dark:text-ink-400 mb-1.5">${label}</label><select ${id?`id="${id}"`:''} class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-800 focus-ring outline-none">${groups}</select></div>`;
 }

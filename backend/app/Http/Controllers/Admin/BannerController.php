@@ -71,7 +71,7 @@ class BannerController extends Controller
     private function validated(Request $request): array
     {
         return $request->validate([
-            'title' => ['required', 'string', 'max:255'],
+            'title' => ['nullable', 'string', 'max:255'],
             'subtitle' => ['nullable', 'string', 'max:255'],
             'badge_label' => ['nullable', 'string', 'max:60'],
             'type' => ['required', Rule::in(['Homepage Banner', 'Offer Banner', 'Slider Image'])],
