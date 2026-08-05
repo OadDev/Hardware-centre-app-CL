@@ -28,12 +28,25 @@
 
           <div data-checkout-add-address-form style="display:none;margin-top:16px;border-top:1px solid var(--border-soft);padding-top:16px;">
             <div style="font-size:13.5px;font-weight:700;margin-bottom:12px;">Add New Address</div>
+            <button type="button" class="btn btn-outline btn-block" data-checkout-use-location style="margin-bottom:16px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:7px;vertical-align:-3px;"><path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>
+              <span data-checkout-use-location-label>Use Current Location</span>
+            </button>
+            <div class="field-hint" style="margin:-10px 0 16px;">We'll fill in the fields below from your location — you can still edit anything before saving.</div>
             <div class="form-grid">
               <div class="field"><label>Label</label><input type="text" name="label" placeholder="Home / Shop / Warehouse" /></div>
               <div class="field"><label>Contact Name</label><input type="text" name="name" placeholder="Full name" /></div>
               <div class="field full"><label>Address Line</label><input type="text" name="line" placeholder="House no., street, area" /></div>
               <div class="field"><label>City</label><input type="text" name="city" /></div>
-              <div class="field"><label>State</label><input type="text" name="state" /></div>
+              <div class="field">
+                <label>State</label>
+                <select name="state">
+                  <option value="">Select state</option>
+                  @foreach($indianStates as $state)
+                  <option value="{{ $state }}">{{ $state }}</option>
+                  @endforeach
+                </select>
+              </div>
               <div class="field"><label>Pincode</label><input type="text" name="pincode" /></div>
             </div>
             <div style="display:flex;gap:10px;margin-top:16px;">

@@ -939,8 +939,7 @@
 
     coAddresses.addEventListener("click", function (e) {
       if (e.target.closest("[data-checkout-show-add-form]")) {
-        coAddForm.style.display = "";
-        coAddForm.scrollIntoView({ behavior: "smooth", block: "center" });
+        showAddAddressForm();
         return;
       }
       var card = e.target.closest("[data-address-id]");
@@ -953,6 +952,72 @@
     checkoutPage.querySelector("[data-checkout-cancel-add-form]").addEventListener("click", function () {
       coAddForm.style.display = "none";
     });
+
+    var showAddAddressForm = function () {
+      coAddForm.style.display = "";
+      coAddForm.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+
+    var coUseLocationBtn = checkoutPage.querySelector("[data-checkout-use-location]");
+    if (coUseLocationBtn) {
+      coUseLocationBtn.addEventListener("click", function () {
+        var label = checkoutPage.querySelector("[data-checkout-use-location-label]");
+        if (!navigator.geolocation) {
+          showToast("Location isn't supported in this browser");
+          return;
+        }
+        coUseLocationBtn.disabled = true;
+        label.textContent = "Getting your location…";
+        navigator.geolocation.getCurrentPosition(
+          function (pos) {
+            var lat = pos.coords.latitude, lon = pos.coords.longitude;
+            fetch("https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=" + lat + "&lon=" + lon, {
+              headers: { "Accept-Language": "en" },
+            })
+              .then(function (res) { return res.json(); })
+              .then(function (data) {
+                coUseLocationBtn.disabled = false;
+                label.textContent = "Use Current Location";
+                var a = data.address || {};
+                var line = [a.house_number, a.road].filter(Boolean).join(" ") || a.suburb || a.neighbourhood || "";
+                var city = a.city || a.town || a.village || a.suburb || "";
+                var state = a.state || "";
+                var pincode = a.postcode || "";
+                if (line) coAddForm.querySelector("[name=line]").value = line;
+                if (city) coAddForm.querySelector("[name=city]").value = city;
+                if (pincode) coAddForm.querySelector("[name=pincode]").value = pincode;
+                var stateSelect = coAddForm.querySelector("[name=state]");
+                if (state) {
+                  var matched = Array.prototype.some.call(stateSelect.options, function (o) { return o.value === state; });
+                  if (!matched) {
+                    var opt = document.createElement("option");
+                    opt.value = state;
+                    opt.textContent = state;
+                    stateSelect.insertBefore(opt, stateSelect.options[1] || null);
+                  }
+                  stateSelect.value = state;
+                }
+                if (!line && !city && !state) {
+                  showToast("Could not determine your address — enter it manually");
+                } else {
+                  showToast("Address filled from your location — check and edit if needed");
+                }
+              })
+              .catch(function () {
+                coUseLocationBtn.disabled = false;
+                label.textContent = "Use Current Location";
+                showToast("Could not look up your address — enter it manually");
+              });
+          },
+          function () {
+            coUseLocationBtn.disabled = false;
+            label.textContent = "Use Current Location";
+            showToast("Location permission denied");
+          },
+          { enableHighAccuracy: false, timeout: 12000 }
+        );
+      });
+    }
 
     checkoutPage.querySelector("[data-checkout-save-address]").addEventListener("click", function () {
       var btn = this;
@@ -978,6 +1043,7 @@
           coState.selectedAddressId = address.id;
           coAddForm.style.display = "none";
           Array.prototype.forEach.call(coAddForm.querySelectorAll("input"), function (i) { i.value = ""; });
+          coAddForm.querySelector("[name=state]").value = "";
           renderAddresses();
         })
         .catch(function (err) {
@@ -1021,7 +1087,8 @@
 
       placeOrderBtn.addEventListener("click", function () {
         if (!coState.selectedAddressId) {
-          showToast("Add a delivery address first");
+          showToast("Save a delivery address first");
+          showAddAddressForm();
           return;
         }
         var couponInput = checkoutPage.querySelector("[data-co-coupon-input]");

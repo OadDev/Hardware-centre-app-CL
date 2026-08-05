@@ -7,7 +7,7 @@
 <meta name="description" content="@yield('description', "Hardware Centers — India's B2B hardware marketplace. Shop 8,000+ products across electrical, plumbing, paint, tools, construction and more from GST-verified suppliers.")" />
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link rel="icon" href="{{ asset('web/img/hc-logo.png') }}" />
-<link rel="stylesheet" href="{{ asset('web/css/style.css') }}" />
+<link rel="stylesheet" href="{{ asset('web/css/style.css') }}?v={{ @filemtime(public_path('web/css/style.css')) ?: '1' }}" />
 @stack('styles')
 </head>
 <body>
@@ -138,7 +138,7 @@
   </div>
 </footer>
 <div class="toast" data-toast><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> <span data-toast-text>Thanks! We'll be in touch shortly.</span></div>
-<script src="{{ asset('web/js/main.js') }}"></script>
+<script src="{{ asset('web/js/main.js') }}?v={{ @filemtime(public_path('web/js/main.js')) ?: '1' }}"></script>
 @stack('scripts')
 </body>
 </html>
