@@ -438,6 +438,9 @@ p{ margin:0; }
 .pdp-variant-row{ display:flex; gap:8px; flex-wrap:wrap; }
 .pdp-actions{ display:flex; gap:12px; margin-top:26px; }
 .pdp-actions .btn{ flex:1; }
+.pdp-wish-btn{ flex-shrink:0; width:50px; height:50px; border-radius:13px; border:1.5px solid var(--border); background:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:border-color .15s ease, background .15s ease; }
+.pdp-wish-btn:hover{ border-color:var(--orange-light-border); background:var(--orange-light-bg); }
+.pdp-wish-btn.active{ border-color:#FCA5A5; background:#FEF2F2; }
 .pdp-spec-box{ border:1px solid var(--border-soft); border-radius:var(--radius-lg); overflow:hidden; }
 .pdp-spec-row{ display:flex; padding:13px 16px; border-bottom:1px solid var(--border-soft); font-size:13.5px; }
 .pdp-spec-row:last-child{ border-bottom:none; }
@@ -596,7 +599,6 @@ p{ margin:0; }
   .site-header .container{ gap:10px; }
   .brand-name{ font-size:16px; }
   .subcat-grid{ grid-template-columns:1fr; }
-  .pdp-actions{ flex-direction:column; }
   .pdp-info-cards{ flex-direction:column; }
   .pdp-rating-summary{ flex-direction:column; align-items:flex-start; gap:14px; }
   .cart-item{ flex-wrap:wrap; }

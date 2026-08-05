@@ -34,7 +34,7 @@ export default function ProductCard({
           <PlaceholderImage seed={product.id} label={product.brand} style={styles.image} />
         )}
         <Pressable onPress={onToggleWish} hitSlop={8} style={styles.wishBtn}>
-          <IconHeart size={16} color={wished ? colors.danger : 'none'} stroke={wished ? colors.danger : colors.textFaint} />
+          <IconHeart size={16} color={wished ? colors.danger : colors.textFaint} stroke={wished ? colors.danger : colors.textFaint} />
         </Pressable>
         {!!product.tag && (
           <View style={[styles.tag, { backgroundColor: tagBg }]}>

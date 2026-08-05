@@ -11,7 +11,7 @@ $tagColor = in_array($p->tag, ['Deal', 'Bestseller']) ? '#EA580C' : '#16A34A';
     @if($p->tag)
     <div class="prod-tag" style="background:{{ $tagBg }};color:{{ $tagColor }};">{{ $p->tag }}</div>
     @endif
-    <button class="prod-wish" data-wish-id="{{ $p->product_code }}" aria-label="Save"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><path d="M12 21s-7.5-4.6-10-9.1C.4 8.8 1.6 5.5 4.7 5c2-.3 3.6.8 4.3 2 .7-1.2 2.3-2.3 4.3-2 3.1.5 4.3 3.8 2.7 6.9C19.5 16.4 12 21 12 21Z"/></svg></button>
+    <button class="prod-wish" data-wish-id="{{ $p->product_code }}" aria-label="Save"><svg width="16" height="16" viewBox="0 0 24 24" fill="#9CA3AF" stroke="#9CA3AF" stroke-width="1.5"><path d="M12 21s-7.5-4.6-10-9.1C.4 8.8 1.6 5.5 4.7 5c2-.3 3.6.8 4.3 2 .7-1.2 2.3-2.3 4.3-2 3.1.5 4.3 3.8 2.7 6.9C19.5 16.4 12 21 12 21Z"/></svg></button>
   </div>
   <div class="prod-body">
     <div class="prod-brand">{{ $p->brand->name }}</div>

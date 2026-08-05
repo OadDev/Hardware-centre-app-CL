@@ -28,7 +28,7 @@ const ATTRIBUTE_ORDER = ['Color', 'Size'];
 
 export default function ProductDetailScreen({ navigation, route }: Props) {
   const { id } = route.params;
-  const { wishlist, toggleWish, addToCart, cart } = useApp();
+  const { wishlist, toggleWish, addToCart, cart, deliveryLabel } = useApp();
   const insets = useSafeAreaInsets();
   const [qty, setQty] = useState(1);
   const [gallery, setGallery] = useState(0);
@@ -109,7 +109,7 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
                 <IconShare />
               </Pressable>
               <Pressable style={styles.roundBtn} onPress={() => toggleWish(product.id)}>
-                <IconHeart size={19} color={wished ? colors.danger : 'none'} stroke={wished ? colors.danger : colors.text} strokeWidth={2} />
+                <IconHeart size={19} color={wished ? colors.danger : colors.textFaint} stroke={wished ? colors.danger : colors.textFaint} strokeWidth={2} />
               </Pressable>
             </View>
           </View>
@@ -204,7 +204,7 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
               <IconTruck />
               <View>
                 <Text style={styles.infoCardTitle}>Delivery in {product.eta}–{product.eta + 1} days</Text>
-                <Text style={styles.infoCardSub}>to New Delhi</Text>
+                <Text style={styles.infoCardSub}>{deliveryLabel ? `to ${deliveryLabel}` : 'set your location for exact delivery'}</Text>
               </View>
             </View>
           </View>

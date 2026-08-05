@@ -78,13 +78,13 @@ $images = $product->images->pluck('url')->filter()->values();
         </div>
         <div class="pdp-info-card" style="background:var(--surface);border:1px solid var(--border);">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="1.8"><rect x="1" y="6" width="13" height="11" rx="1.5"/><path d="M14 9h4l3 3v5h-7"/><circle cx="6" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg>
-          <div><div class="t1">Delivery in {{ $product->eta_days }}–{{ $product->eta_days + 1 }} days</div><div class="t2">to New Delhi</div></div>
+          <div><div class="t1">Delivery in {{ $product->eta_days }}–{{ $product->eta_days + 1 }} days</div><div class="t2" data-pdp-delivery-to>to your location</div></div>
         </div>
       </div>
 
       <div class="pdp-actions">
-        <button class="btn btn-outline btn-block" data-pdp-wish="{{ $product->product_code }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1F2937" stroke-width="2" style="margin-right:6px;vertical-align:-3px;"><path d="M12 21s-7.5-4.6-10-9.1C.4 8.8 1.6 5.5 4.7 5c2-.3 3.6.8 4.3 2 .7-1.2 2.3-2.3 4.3-2 3.1.5 4.3 3.8 2.7 6.9C19.5 16.4 12 21 12 21Z"/></svg>Save</button>
-        <button class="btn btn-primary btn-block" data-pdp data-add-to-cart="{{ $product->product_code }}" @if($variants->isEmpty() && $product->stock <= 0) disabled @endif>Add to Cart</button>
+        <button class="pdp-wish-btn" data-pdp-wish="{{ $product->product_code }}" aria-label="Save"><svg width="19" height="19" viewBox="0 0 24 24" fill="#9CA3AF" stroke="#9CA3AF" stroke-width="1.5"><path d="M12 21s-7.5-4.6-10-9.1C.4 8.8 1.6 5.5 4.7 5c2-.3 3.6.8 4.3 2 .7-1.2 2.3-2.3 4.3-2 3.1.5 4.3 3.8 2.7 6.9C19.5 16.4 12 21 12 21Z"/></svg></button>
+        <button class="btn btn-primary" data-pdp data-add-to-cart="{{ $product->product_code }}" @if($variants->isEmpty() && $product->stock <= 0) disabled @endif>Add to Cart</button>
       </div>
 
       @if($variants->isNotEmpty())
