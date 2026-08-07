@@ -100,7 +100,13 @@ class OtpService
         Mail::to($email)->send(new OtpMail($code));
     }
 
-    protected function sendSms(string $phone, string $code): void
+    /**
+     * Public (not just protected) so Admin\SettingController::testSms() can
+     * call the exact same code path a real OTP send uses — a "test" that
+     * exercises different request-building logic than production isn't
+     * actually testing anything.
+     */
+    public function sendSms(string $phone, string $code): void
     {
         $s = AppSetting::current();
 
@@ -108,13 +114,33 @@ class OtpService
             throw new RuntimeException('Fast2SMS is not configured. Set it up under Settings > OTP Verification.');
         }
 
-        $response = Http::asForm()
-            ->withHeaders(['Authorization' => $s->fast2sms_api_key])
-            ->post('https://www.fast2sms.com/dev/bulkV2', [
-                'route' => 'otp',
+        $number = self::normalizeIndianMobile($phone);
+
+        // Fast2SMS's OTP route needs per-account "website verification"
+        // before it'll send anything (see status_code 996). The DLT SMS
+        // route bypasses that entirely, but needs a registered Sender ID +
+        // DLT Content Template ID — use it whenever both are configured,
+        // and only fall back to the OTP route otherwise.
+        if ($s->fast2sms_sender_id && $s->fast2sms_dlt_template_id) {
+            $response = Http::withHeaders([
+                'Authorization' => $s->fast2sms_api_key,
+                'Content-Type' => 'application/json',
+            ])->post('https://www.fast2sms.com/dev/bulkV2', [
+                'route' => 'dlt',
+                'sender_id' => $s->fast2sms_sender_id,
+                'message' => $s->fast2sms_dlt_template_id,
                 'variables_values' => $code,
-                'numbers' => self::normalizeIndianMobile($phone),
+                'numbers' => $number,
             ]);
+        } else {
+            $response = Http::asForm()
+                ->withHeaders(['Authorization' => $s->fast2sms_api_key])
+                ->post('https://www.fast2sms.com/dev/bulkV2', [
+                    'route' => 'otp',
+                    'variables_values' => $code,
+                    'numbers' => $number,
+                ]);
+        }
 
         // Fast2SMS returns HTTP 200 even for most rejected requests (bad key,
         // insufficient wallet balance, invalid number, DLT issues, etc.) —

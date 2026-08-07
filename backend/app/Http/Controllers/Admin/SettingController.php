@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use App\Services\OtpService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Throwable;
 
 class SettingController extends Controller
@@ -38,6 +37,8 @@ class SettingController extends Controller
             'smtp_from_name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'otp_channel' => ['sometimes', 'in:email,sms'],
             'fast2sms_api_key' => ['sometimes', 'nullable', 'string'],
+            'fast2sms_sender_id' => ['sometimes', 'nullable', 'string', 'max:6'],
+            'fast2sms_dlt_template_id' => ['sometimes', 'nullable', 'string', 'max:60'],
             'onesignal_app_id' => ['sometimes', 'nullable', 'string'],
             'onesignal_api_key' => ['sometimes', 'nullable', 'string'],
             'ga_id' => ['sometimes', 'nullable', 'string'],
@@ -56,7 +57,7 @@ class SettingController extends Controller
         return response()->json($settings);
     }
 
-    public function testSms(Request $request)
+    public function testSms(Request $request, OtpService $otp)
     {
         $data = $request->validate(['phone' => ['required', 'string', 'min:8', 'max:15']]);
 
@@ -70,20 +71,13 @@ class SettingController extends Controller
             return response()->json(['message' => 'Enter a plain 10-digit Indian mobile number (no country code).'], 422);
         }
 
+        // Reuses the exact same code path a real OTP send uses (OTP route
+        // or DLT route, whichever is configured) so this test is honest
+        // about what a customer would actually experience.
         try {
-            $response = Http::asForm()
-                ->withHeaders(['Authorization' => $settings->fast2sms_api_key])
-                ->post('https://www.fast2sms.com/dev/bulkV2', [
-                    'route' => 'otp',
-                    'variables_values' => '123456',
-                    'numbers' => $number,
-                ]);
+            $otp->sendSms($number, '123456');
         } catch (Throwable $e) {
-            return response()->json(['message' => 'Could not reach Fast2SMS: '.$e->getMessage()], 502);
-        }
-
-        if (! $response->successful() || $response->json('return') !== true) {
-            return response()->json(['message' => 'Fast2SMS rejected the request: '.$response->body()], 422);
+            return response()->json(['message' => $e->getMessage()], 422);
         }
 
         return response()->json(['message' => 'Test SMS sent to '.$number.' — check that phone for code 123456.']);

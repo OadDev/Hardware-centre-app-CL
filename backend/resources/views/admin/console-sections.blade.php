@@ -1464,12 +1464,18 @@ SECTION_RENDERERS.settings = async function(main) {
             ${formField('Fast2SMS API Key','password','••••••••••','', 'st-fast2sms-key')}
             <p class="text-xs text-ink-400">From fast2sms.com &rarr; Dev API &rarr; API Key. Leave blank to keep the current key.</p>
             <div class="pt-3 mt-1 border-t border-ink-100 dark:border-ink-800">
+              <p class="text-xs font-semibold text-ink-600 dark:text-ink-300 mb-2">DLT SMS (recommended)</p>
+              ${formField('DLT Sender ID','text','e.g. HDWCTR', s.fast2sms_sender_id || '', 'st-fast2sms-sender')}
+              <div class="mt-3">${formField('DLT Content Template ID','text','The message_id / Template ID from Fast2SMS DLT Manager', s.fast2sms_dlt_template_id || '', 'st-fast2sms-template')}</div>
+              <p class="text-xs text-ink-400 mt-1.5">When both are set, OTPs send via the DLT route instead of the OTP route (which needs separate Fast2SMS website verification). Your DLT template must contain exactly one {#var#} variable for the OTP code.</p>
+            </div>
+            <div class="pt-3 mt-1 border-t border-ink-100 dark:border-ink-800">
               <label class="block text-xs font-medium text-ink-500 dark:text-ink-400 mb-1.5">Send Test SMS</label>
               <div class="flex gap-2">
                 <input id="st-test-sms-phone" type="tel" placeholder="10-digit mobile number" class="flex-1 px-3.5 py-2.5 text-sm rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-800 focus-ring outline-none">
                 <button id="st-test-sms-btn" class="px-4 py-2.5 text-sm font-medium rounded-xl border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800 flex-shrink-0">Send Test</button>
               </div>
-              <p class="text-xs text-ink-400 mt-1.5">Save the API key above first, then send a real OTP to your own phone to confirm delivery.</p>
+              <p class="text-xs text-ink-400 mt-1.5">Save changes above first, then send a real OTP to your own phone to confirm delivery.</p>
             </div>
           </div></div>`)}
         </div>
@@ -1478,6 +1484,8 @@ SECTION_RENDERERS.settings = async function(main) {
         await api('PATCH', '/settings', {
           otp_channel: document.querySelector('input[name="otp-channel"]:checked').value,
           fast2sms_api_key: document.getElementById('st-fast2sms-key').value || undefined,
+          fast2sms_sender_id: document.getElementById('st-fast2sms-sender').value,
+          fast2sms_dlt_template_id: document.getElementById('st-fast2sms-template').value,
         });
         toast('OTP settings saved'); await refreshSettings(); navigateTo('settings');
       }));
