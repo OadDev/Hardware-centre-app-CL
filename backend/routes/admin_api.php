@@ -106,4 +106,5 @@ Route::prefix('api')->name('api.')->group(function () {
 
     Route::get('settings', [SettingController::class, 'show']);
     Route::patch('settings', [SettingController::class, 'update']);
+    Route::post('settings/test-sms', [SettingController::class, 'testSms']);
 });

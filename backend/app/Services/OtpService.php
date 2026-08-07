@@ -109,15 +109,36 @@ class OtpService
         }
 
         $response = Http::asForm()
-            ->withHeaders(['authorization' => $s->fast2sms_api_key])
+            ->withHeaders(['Authorization' => $s->fast2sms_api_key])
             ->post('https://www.fast2sms.com/dev/bulkV2', [
                 'route' => 'otp',
                 'variables_values' => $code,
-                'numbers' => $phone,
+                'numbers' => self::normalizeIndianMobile($phone),
             ]);
 
-        if (! $response->successful() || $response->json('return') === false) {
+        // Fast2SMS returns HTTP 200 even for most rejected requests (bad key,
+        // insufficient wallet balance, invalid number, DLT issues, etc.) —
+        // the only reliable success signal is an explicit `return: true` in
+        // the JSON body, so anything else (including a malformed/non-JSON
+        // body) must be treated as a failure rather than assumed to be fine.
+        if (! $response->successful() || $response->json('return') !== true) {
             throw new RuntimeException('Fast2SMS request failed: '.$response->body());
         }
+    }
+
+    /**
+     * Fast2SMS's OTP route expects a bare 10-digit Indian mobile number —
+     * no country code, spaces, or symbols. Customers/admins may type
+     * "+91 98765 43210" or similar, so strip everything down before sending.
+     */
+    public static function normalizeIndianMobile(string $phone): string
+    {
+        $digits = preg_replace('/\D/', '', $phone);
+
+        if (strlen($digits) === 12 && str_starts_with($digits, '91')) {
+            $digits = substr($digits, 2);
+        }
+
+        return $digits;
     }
 }

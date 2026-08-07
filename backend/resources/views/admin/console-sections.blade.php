@@ -1463,6 +1463,14 @@ SECTION_RENDERERS.settings = async function(main) {
           ${card(`<div class="p-5"><p class="font-semibold text-ink-900 dark:text-white mb-4">Fast2SMS</p><div class="space-y-3">
             ${formField('Fast2SMS API Key','password','••••••••••','', 'st-fast2sms-key')}
             <p class="text-xs text-ink-400">From fast2sms.com &rarr; Dev API &rarr; API Key. Leave blank to keep the current key.</p>
+            <div class="pt-3 mt-1 border-t border-ink-100 dark:border-ink-800">
+              <label class="block text-xs font-medium text-ink-500 dark:text-ink-400 mb-1.5">Send Test SMS</label>
+              <div class="flex gap-2">
+                <input id="st-test-sms-phone" type="tel" placeholder="10-digit mobile number" class="flex-1 px-3.5 py-2.5 text-sm rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-800 focus-ring outline-none">
+                <button id="st-test-sms-btn" class="px-4 py-2.5 text-sm font-medium rounded-xl border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800 flex-shrink-0">Send Test</button>
+              </div>
+              <p class="text-xs text-ink-400 mt-1.5">Save the API key above first, then send a real OTP to your own phone to confirm delivery.</p>
+            </div>
           </div></div>`)}
         </div>
         <div class="flex justify-end mt-5">${btnPrimary('Save Changes','check','save-otp-btn')}</div>`;
@@ -1472,6 +1480,12 @@ SECTION_RENDERERS.settings = async function(main) {
           fast2sms_api_key: document.getElementById('st-fast2sms-key').value || undefined,
         });
         toast('OTP settings saved'); await refreshSettings(); navigateTo('settings');
+      }));
+      document.getElementById('st-test-sms-btn').addEventListener('click', withErr(async () => {
+        const phone = document.getElementById('st-test-sms-phone').value.trim();
+        if (!phone) { toast('Enter a phone number first', 'warn'); return; }
+        const r = await api('POST', '/settings/test-sms', { phone });
+        toast(r.message);
       }));
     }
     refreshIcons();

@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
+use App\Services\OtpService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Throwable;
 
 class SettingController extends Controller
 {
@@ -51,5 +54,38 @@ class SettingController extends Controller
         $settings->update($data);
 
         return response()->json($settings);
+    }
+
+    public function testSms(Request $request)
+    {
+        $data = $request->validate(['phone' => ['required', 'string', 'min:8', 'max:15']]);
+
+        $settings = AppSetting::current();
+        if (empty($settings->fast2sms_api_key)) {
+            return response()->json(['message' => 'Add a Fast2SMS API key and save it before testing.'], 422);
+        }
+
+        $number = OtpService::normalizeIndianMobile($data['phone']);
+        if (strlen($number) !== 10) {
+            return response()->json(['message' => 'Enter a plain 10-digit Indian mobile number (no country code).'], 422);
+        }
+
+        try {
+            $response = Http::asForm()
+                ->withHeaders(['Authorization' => $settings->fast2sms_api_key])
+                ->post('https://www.fast2sms.com/dev/bulkV2', [
+                    'route' => 'otp',
+                    'variables_values' => '123456',
+                    'numbers' => $number,
+                ]);
+        } catch (Throwable $e) {
+            return response()->json(['message' => 'Could not reach Fast2SMS: '.$e->getMessage()], 502);
+        }
+
+        if (! $response->successful() || $response->json('return') !== true) {
+            return response()->json(['message' => 'Fast2SMS rejected the request: '.$response->body()], 422);
+        }
+
+        return response()->json(['message' => 'Test SMS sent to '.$number.' — check that phone for code 123456.']);
     }
 }
