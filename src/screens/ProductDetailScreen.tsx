@@ -24,7 +24,7 @@ import {
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProductDetail'>;
 
-const ATTRIBUTE_ORDER = ['Color', 'Size'];
+const PREFERRED_ATTRIBUTE_ORDER = ['Color', 'Size'];
 
 export default function ProductDetailScreen({ navigation, route }: Props) {
   const { id } = route.params;
@@ -71,7 +71,12 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
 
   const { product, reviews, rating_breakdown: ratingBars } = detail;
   const variants = product.variants ?? [];
-  const attributeGroups = ATTRIBUTE_ORDER.map((key) => ({
+  const allAttributeKeys = Array.from(new Set(variants.flatMap((v) => Object.keys(v.attributes ?? {}))));
+  const attributeOrder = [
+    ...PREFERRED_ATTRIBUTE_ORDER.filter((k) => allAttributeKeys.includes(k)),
+    ...allAttributeKeys.filter((k) => !PREFERRED_ATTRIBUTE_ORDER.includes(k)),
+  ];
+  const attributeGroups = attributeOrder.map((key) => ({
     key,
     values: Array.from(new Set(variants.map((v) => v.attributes[key]).filter((v): v is string => !!v))),
   })).filter((g) => g.values.length > 0);

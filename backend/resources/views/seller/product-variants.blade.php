@@ -14,14 +14,33 @@
   <div class="font-bold text-ink-900 mb-4">Add an option</div>
   <form method="POST" action="{{ route('seller.products.variants.store', $product) }}" class="grid grid-cols-2 md:grid-cols-5 gap-3">
     @csrf
-    <div><label class="block text-xs font-medium text-ink-500 mb-1">Color</label><input name="color" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
-    <div><label class="block text-xs font-medium text-ink-500 mb-1">Size</label><input name="size" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
+    <div class="col-span-2 md:col-span-5">
+      <label class="block text-xs font-medium text-ink-500 mb-1">Attributes (e.g. Color, Size, Units)</label>
+      <div id="attr-rows" class="space-y-2">
+        <div class="grid grid-cols-2 gap-2 attr-row">
+          <input name="attr_keys[]" placeholder="Attribute (e.g. Color)" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200">
+          <input name="attr_values[]" placeholder="Value (e.g. Red)" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200">
+        </div>
+      </div>
+      <button type="button" id="add-attr-row" class="mt-2 text-xs font-semibold text-brand-600">+ Add another attribute</button>
+    </div>
     <div><label class="block text-xs font-medium text-ink-500 mb-1">Price override (₹)</label><input type="number" step="0.01" name="price" placeholder="Same as base price" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
     <div><label class="block text-xs font-medium text-ink-500 mb-1">Stock</label><input type="number" name="stock" required class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
     <div><label class="block text-xs font-medium text-ink-500 mb-1">SKU (optional)</label><input name="sku" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
     <div class="col-span-2 md:col-span-5"><button type="submit" class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold">Add Option</button></div>
   </form>
 </div>
+
+<script>
+document.getElementById('add-attr-row')?.addEventListener('click', function () {
+  var wrap = document.getElementById('attr-rows');
+  var row = document.createElement('div');
+  row.className = 'grid grid-cols-2 gap-2 attr-row';
+  row.innerHTML = '<input name="attr_keys[]" placeholder="Attribute (e.g. Size)" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200">'
+    + '<input name="attr_values[]" placeholder="Value (e.g. XL)" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200">';
+  wrap.appendChild(row);
+});
+</script>
 
 <div class="bg-white rounded-2xl border border-ink-200/70 p-5">
   <div class="font-bold text-ink-900 mb-4">Options ({{ $product->variants->count() }})</div>

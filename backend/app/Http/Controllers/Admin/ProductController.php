@@ -131,26 +131,20 @@ class ProductController extends Controller
         $required = $isUpdate ? 'sometimes' : 'required';
 
         $data = $request->validate([
-            'color' => ['nullable', 'string', 'max:60'],
-            'size' => ['nullable', 'string', 'max:60'],
+            'options' => [$required, 'array'],
+            'options.*' => ['nullable', 'string', 'max:60'],
             'sku' => ['nullable', 'string', 'max:60'],
             'price' => ['nullable', 'numeric', 'min:0'],
             'stock' => [$required, 'integer', 'min:0'],
             'status' => ['sometimes', Rule::in(['Active', 'Inactive'])],
         ]);
 
-        $options = array_filter([
-            'Color' => $data['color'] ?? null,
-            'Size' => $data['size'] ?? null,
-        ]);
+        if (array_key_exists('options', $data)) {
+            $data['options'] = array_filter($data['options'], fn ($v) => $v !== null && $v !== '');
 
-        if (! $isUpdate) {
-            abort_if(empty($options), 422, 'Enter at least a color or size for the variant.');
-        }
-
-        unset($data['color'], $data['size']);
-        if (! $isUpdate || ! empty($options)) {
-            $data['options'] = $options;
+            if (! $isUpdate) {
+                abort_if(empty($data['options']), 422, 'Enter at least one attribute (e.g. Color, Size, Units).');
+            }
         }
 
         return $data;

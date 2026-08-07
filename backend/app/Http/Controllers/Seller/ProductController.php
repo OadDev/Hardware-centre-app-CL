@@ -168,24 +168,32 @@ class ProductController extends Controller
         $required = $isUpdate ? 'sometimes' : 'required';
 
         $data = $request->validate([
-            'color' => ['nullable', 'string', 'max:60'],
-            'size' => ['nullable', 'string', 'max:60'],
+            'attr_keys' => ['nullable', 'array'],
+            'attr_keys.*' => ['nullable', 'string', 'max:60'],
+            'attr_values' => ['nullable', 'array'],
+            'attr_values.*' => ['nullable', 'string', 'max:60'],
             'sku' => ['nullable', 'string', 'max:60'],
             'price' => ['nullable', 'numeric', 'min:0'],
             'stock' => [$required, 'integer', 'min:0'],
             'status' => ['sometimes', Rule::in(['Active', 'Inactive'])],
         ]);
 
-        $options = array_filter([
-            'Color' => $data['color'] ?? null,
-            'Size' => $data['size'] ?? null,
-        ]);
-
-        if (! $isUpdate) {
-            abort_if(empty($options), 422, 'Enter at least a color or size for the variant.');
+        $keys = $data['attr_keys'] ?? [];
+        $values = $data['attr_values'] ?? [];
+        $options = [];
+        foreach ($keys as $i => $key) {
+            $key = trim((string) $key);
+            $value = trim((string) ($values[$i] ?? ''));
+            if ($key !== '' && $value !== '') {
+                $options[$key] = $value;
+            }
         }
 
-        unset($data['color'], $data['size']);
+        if (! $isUpdate) {
+            abort_if(empty($options), 422, 'Enter at least one attribute (e.g. Color, Size, Units).');
+        }
+
+        unset($data['attr_keys'], $data['attr_values']);
         if (! $isUpdate || ! empty($options)) {
             $data['options'] = $options;
         }

@@ -403,7 +403,7 @@ function openProductProfile(p) {
       <button id="drawer-upload-images-btn" class="mt-2 w-full py-2 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700">Upload Photos</button>
       ${p.videoUrl ? `<a href="${p.videoUrl}" target="_blank" class="block mt-3 text-sm text-brand-600 font-medium">▶ Watch product video</a>` : ''}
     `)}
-    ${drawerSection('Options (Color, Size, etc.)', `
+    ${drawerSection('Options (Color, Size, Units, etc.)', `
       <div class="space-y-2 mb-3">
         ${(p.variants||[]).map(v => `
           <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-ink-200 dark:border-ink-700">
@@ -417,9 +417,14 @@ function openProductProfile(p) {
             </div>
           </div>`).join('') || `<p class="text-xs text-ink-400">No options yet — customers buy the base product.</p>`}
       </div>
+      <div id="drawer-variant-attrs" class="space-y-2 mb-2">
+        <div class="grid grid-cols-2 gap-2 drawer-variant-attr-row">
+          <input placeholder="Attribute (e.g. Color, Size, Units)" class="variant-attr-key px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
+          <input placeholder="Value (e.g. Red, XL, 12mm)" class="variant-attr-value px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
+        </div>
+      </div>
+      <button id="drawer-add-attr-row-btn" type="button" class="mb-2 text-xs font-medium text-brand-600 dark:text-brand-400">+ Add another attribute</button>
       <div class="grid grid-cols-2 gap-2">
-        <input id="drawer-variant-color" placeholder="Color" class="px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
-        <input id="drawer-variant-size" placeholder="Size" class="px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
         <input id="drawer-variant-price" type="number" step="0.01" placeholder="Price override (₹)" class="px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
         <input id="drawer-variant-stock" type="number" placeholder="Stock" class="px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
       </div>
@@ -482,14 +487,27 @@ function openProductProfile(p) {
     await api('DELETE', '/products/'+p.id+'/images/'+btn.dataset.removeImage);
     toast('Photo removed'); await refreshProducts(); navigateTo('products');
   })));
+  document.getElementById('drawer-add-attr-row-btn')?.addEventListener('click', () => {
+    const wrap = document.getElementById('drawer-variant-attrs');
+    const row = document.createElement('div');
+    row.className = 'grid grid-cols-2 gap-2 drawer-variant-attr-row';
+    row.innerHTML = `
+      <input placeholder="Attribute (e.g. Color, Size, Units)" class="variant-attr-key px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
+      <input placeholder="Value (e.g. Red, XL, 12mm)" class="variant-attr-value px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
+    `;
+    wrap.appendChild(row);
+  });
   document.getElementById('drawer-add-variant-btn')?.addEventListener('click', withErr(async () => {
-    const color = document.getElementById('drawer-variant-color').value.trim();
-    const size = document.getElementById('drawer-variant-size').value.trim();
-    if (!color && !size) { toast('Enter at least a color or size', 'warn'); return; }
+    const options = {};
+    document.querySelectorAll('.drawer-variant-attr-row').forEach(row => {
+      const key = row.querySelector('.variant-attr-key').value.trim();
+      const value = row.querySelector('.variant-attr-value').value.trim();
+      if (key && value) options[key] = value;
+    });
+    if (!Object.keys(options).length) { toast('Enter at least one attribute (e.g. Color, Size, Units)', 'warn'); return; }
     const priceVal = document.getElementById('drawer-variant-price').value;
     await api('POST', '/products/'+p.id+'/variants', {
-      color: color || undefined,
-      size: size || undefined,
+      options,
       price: priceVal ? parseFloat(priceVal) : undefined,
       stock: parseInt(document.getElementById('drawer-variant-stock').value || 0),
     });

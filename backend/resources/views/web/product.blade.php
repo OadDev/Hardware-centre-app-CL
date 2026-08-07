@@ -53,9 +53,12 @@ $images = $product->images->pluck('url')->filter()->values();
       <div class="pdp-tax-note">Inclusive of all taxes · per {{ $product->unit }}</div>
 
       @php
-        $attributeOrder = ['Color', 'Size'];
         $variants = $product->variants->where('status', 'Active')->values();
-        $attributeGroups = collect($attributeOrder)->map(fn ($key) => [
+        $preferredOrder = ['Color', 'Size'];
+        $allKeys = $variants->flatMap(fn ($v) => array_keys($v->options ?? []))->unique()->values();
+        $attributeOrder = collect($preferredOrder)->filter(fn ($k) => $allKeys->contains($k))
+          ->concat($allKeys->diff($preferredOrder));
+        $attributeGroups = $attributeOrder->map(fn ($key) => [
           'key' => $key,
           'values' => $variants->pluck('options.'.$key)->filter()->unique()->values(),
         ])->filter(fn ($g) => $g['values']->count() > 0);
