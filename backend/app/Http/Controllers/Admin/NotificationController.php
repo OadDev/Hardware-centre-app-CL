@@ -33,6 +33,7 @@ class NotificationController extends Controller
         $data = $request->validate([
             'subject' => ['sometimes', 'nullable', 'string', 'max:255'],
             'body' => ['required', 'string'],
+            'sms_template_id' => ['sometimes', 'nullable', 'string', 'max:60'],
         ]);
         $template->update($data);
 

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class NotificationTemplate extends Model
 {
-    protected $fillable = ['key', 'name', 'subject', 'body', 'variables'];
+    protected $fillable = ['key', 'name', 'subject', 'body', 'variables', 'sms_template_id'];
 
     protected function casts(): array
     {

@@ -1284,7 +1284,7 @@ SECTION_RENDERERS['notifications-config'] = async function(main) {
     </div>`)}
     <div class="mt-6">
     ${card(`<div class="p-5 pb-3"><h3 class="font-semibold text-ink-900 dark:text-white">Message Templates</h3><p class="text-xs text-ink-400 mt-0.5">Customize automated messages</p></div>
-      <div class="divide-y divide-ink-100 dark:divide-ink-800">${n.templates.map(t => `<div class="flex items-center justify-between px-5 py-3.5"><span class="text-sm font-medium text-ink-700 dark:text-ink-200">${t.name}</span><button data-edit-template="${t.key}" class="text-xs font-medium text-brand-600 hover:underline">Edit Template</button></div>`).join('')}</div>`)}
+      <div class="divide-y divide-ink-100 dark:divide-ink-800">${n.templates.map(t => `<div class="flex items-center justify-between px-5 py-3.5"><span class="text-sm font-medium text-ink-700 dark:text-ink-200 flex items-center gap-2">${t.name}${t.sms_template_id ? '<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">SMS ON</span>' : ''}</span><button data-edit-template="${t.key}" class="text-xs font-medium text-brand-600 hover:underline">Edit Template</button></div>`).join('')}</div>`)}
     </div>
   `;
   n.channels.forEach(c => document.getElementById('chan-'+c.key).addEventListener('click', withErr(async () => {
@@ -1306,11 +1306,20 @@ SECTION_RENDERERS['notifications-config'] = async function(main) {
   }));
   main.querySelectorAll('[data-edit-template]').forEach(btn => btn.addEventListener('click', () => {
     const t = n.templates.find(x=>x.key===btn.dataset.editTemplate);
+    const varList = (t.variables||[]).map(v=>'{#var#} &rarr; '+v).join(', ') || 'none';
     openModal({ title:`Edit Template — ${t.name}`, wide:true,
-      body: `<div>${formTextarea('Message Body','', 5, 'template-body')}</div><p class="text-xs text-ink-400 mt-2">Variables: @{{customer_name}}, @{{order_id}}, @{{tracking_link}}</p>`,
+      body: `<div>${formTextarea('Message Body (Email/Push)','', 5, 'template-body')}</div>
+        <p class="text-xs text-ink-400 mt-2">Variables: ${(t.variables||[]).map(v=>'@{{'+v+'}}').join(', ') || 'none'}</p>
+        <div class="mt-4 pt-4 border-t border-ink-100 dark:border-ink-800">
+          ${formField('SMS DLT Template ID (optional)','text','e.g. 220782', t.sms_template_id||'', 'template-sms-id')}
+          <p class="text-xs text-ink-400 mt-1.5">The Message ID from your Fast2SMS DLT Manager for this event's approved template. Leave blank to skip SMS for this notification. Your DLT template's {#var#} placeholders, in order, receive: ${varList}.</p>
+        </div>`,
       confirmLabel:'Save Template', onConfirm: withErr(async () => {
         document.getElementById('template-body').value = document.getElementById('template-body').value || t.body;
-        await api('PATCH', '/notifications/templates/'+t.key, { body: document.getElementById('template-body').value || t.body });
+        await api('PATCH', '/notifications/templates/'+t.key, {
+          body: document.getElementById('template-body').value || t.body,
+          sms_template_id: document.getElementById('template-sms-id').value || null,
+        });
         closeModal(); toast('Template updated successfully'); await refreshNotifications(); navigateTo('notifications-config');
       }) });
     document.getElementById('template-body').value = t.body;

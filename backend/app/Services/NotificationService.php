@@ -36,7 +36,7 @@ class NotificationService
             $this->trySendEmail($email, $subject, $body);
         }
         if ($phone && $this->channelEnabled('sms')) {
-            $this->trySendSms($phone, $body);
+            $this->trySendTemplatedSms($phone, $template, $vars);
         }
         if ($pushPlayerId && $this->channelEnabled('push')) {
             $this->trySendPush($pushPlayerId, $subject, $body);
@@ -117,6 +117,61 @@ class NotificationService
         }
     }
 
+    /**
+     * Sends a real order/account notification over SMS via Fast2SMS's DLT
+     * route — the only route that reliably delivers to DND-registered
+     * numbers in India for non-OTP transactional content. Requires the
+     * template to have a DLT-approved Template ID saved (set under
+     * Notification Management > Message Templates > Edit Template); a
+     * template with no ID configured is silently skipped, same as an
+     * unconfigured email/push channel.
+     */
+    private function trySendTemplatedSms(string $phone, NotificationTemplate $template, array $vars): bool
+    {
+        if (! $template->sms_template_id) {
+            return false;
+        }
+
+        $s = AppSetting::current();
+        if (empty($s->fast2sms_api_key) || empty($s->fast2sms_sender_id)) {
+            return false;
+        }
+
+        // variables_values must be pipe-separated, in the same order as the
+        // {#var#} placeholders in the DLT-approved template text — that
+        // order is exactly the template's own `variables` list, the same
+        // list used to substitute {{var}} in the email/push body above.
+        $values = collect($template->variables ?? [])
+            ->map(fn ($key) => (string) ($vars[$key] ?? ''))
+            ->implode('|');
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => $s->fast2sms_api_key,
+                'Content-Type' => 'application/json',
+            ])->post('https://www.fast2sms.com/dev/bulkV2', [
+                'route' => 'dlt',
+                'sender_id' => $s->fast2sms_sender_id,
+                'message' => $template->sms_template_id,
+                'variables_values' => $values,
+                'numbers' => OtpService::normalizeIndianMobile($phone),
+            ]);
+
+            return $response->successful() && $response->json('return') === true;
+        } catch (Throwable $e) {
+            Log::error('Notification SMS failed: '.$e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * Ad-hoc free-text SMS for admin broadcasts, where there's no
+     * pre-approved DLT template to attach — Fast2SMS's "Quick SMS" route
+     * (route=q) is the only option for arbitrary text, but TRAI blocks it
+     * for most real (DND-registered) numbers, so broadcast SMS will often
+     * fail even when this reports the request as accepted by Fast2SMS.
+     */
     private function trySendSms(string $phone, string $message): bool
     {
         $s = AppSetting::current();
@@ -126,7 +181,7 @@ class NotificationService
 
         try {
             $response = Http::asForm()
-                ->withHeaders(['authorization' => $s->fast2sms_api_key])
+                ->withHeaders(['Authorization' => $s->fast2sms_api_key])
                 ->post('https://www.fast2sms.com/dev/bulkV2', [
                     'route' => 'q',
                     'message' => $message,
@@ -135,7 +190,7 @@ class NotificationService
                     'numbers' => $phone,
                 ]);
 
-            return $response->successful() && $response->json('return') !== false;
+            return $response->successful() && $response->json('return') === true;
         } catch (Throwable $e) {
             Log::error('Notification SMS failed: '.$e->getMessage());
 
