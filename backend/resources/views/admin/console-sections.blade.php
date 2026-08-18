@@ -160,6 +160,7 @@ function openSellerProfile(s) {
         ${drawerRow('Bank Account', s.bankAccountMasked ? (s.bankAccountHolder+' · '+s.bankAccountMasked+' · '+(s.bankIfsc||'')) : 'Not submitted by seller yet')}
         ${drawerRow('Razorpay Status', statusBadge(s.razorpayAccountStatus||'Not Linked'))}
         ${s.razorpayAccountError ? `<p class="text-xs text-amber-600 dark:text-amber-400 mt-1.5">${s.razorpayAccountError}</p>` : ''}
+        ${(s.razorpayAccountError||'').toLowerCase().includes('route feature not enabled') ? `<p class="text-xs text-ink-400 mt-1.5">This isn't fixable from here — Route (split payouts) has to be turned on for <b>our own</b> Razorpay account by Razorpay themselves, usually after their team reviews your business KYC/activation. Contact Razorpay support to request Route activation. Until it's on, this seller's payouts fall back to manual bank transfer below.</p>` : ''}
         <button id="link-razorpay-btn" ${!s.hasPayoutDetails ? 'disabled' : ''} class="mt-3 w-full py-2 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 disabled:opacity-50 disabled:cursor-not-allowed">
           ${s.hasPayoutDetails ? ((s.razorpayAccountStatus||'Not Linked') === 'Not Linked' ? 'Link Razorpay Account' : 'Re-submit Razorpay Account') : 'Waiting for seller to submit bank details'}
         </button>
