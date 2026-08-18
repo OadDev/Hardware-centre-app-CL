@@ -848,7 +848,8 @@ const ORDER_STATUSES = ['Pending','Confirmed','Packed','Shipped','Out for Delive
 function openOrderProfile(o) {
   openDrawer(o.id, `
     <div class="grid grid-cols-2 gap-3 mb-5">${miniStat('Amount', fmtINR(o.amount))}${miniStat('Items', o.items)}</div>
-    ${drawerSection('Details', `${drawerRow('Customer', o.customerName)}${drawerRow('Payment', statusBadge(o.payment))}${drawerRow('Placed', new Date(o.date).toLocaleDateString('en-IN'))}`)}
+    ${drawerSection('Details', `${drawerRow('Customer', o.customerName)}<div id="order-customer-phone"></div>${drawerRow('Payment', statusBadge(o.payment))}${drawerRow('Placed', new Date(o.date).toLocaleDateString('en-IN'))}`)}
+    ${drawerSection('Delivery Address', `<div id="order-address-loading" class="text-xs text-ink-400">Loading address…</div><div id="order-address"></div>`)}
     ${drawerSection('Products & Sellers', `<div id="order-items-loading" class="text-xs text-ink-400">Loading order items…</div><div id="order-items-list" class="space-y-2"></div>`)}
     <div class="mt-4">${formSelect('Update Status', ORDER_STATUSES, ORDER_STATUSES.indexOf(o.status), 'order-status-select')}</div>
     <div class="flex gap-2.5 mt-6 pt-5 border-t border-ink-100 dark:border-ink-800">
@@ -863,6 +864,21 @@ function openOrderProfile(o) {
   (async () => {
     try {
       const full = await api('GET', '/orders/'+o.id);
+      const phoneEl = document.getElementById('order-customer-phone');
+      if (phoneEl && full.customerPhone) phoneEl.innerHTML = drawerRow('Phone', full.customerPhone);
+
+      const addrLoading = document.getElementById('order-address-loading');
+      const addrEl = document.getElementById('order-address');
+      if (addrLoading) addrLoading.remove();
+      if (addrEl) {
+        addrEl.innerHTML = full.address ? `
+          <div class="px-3 py-2 rounded-lg border border-ink-200 dark:border-ink-700 text-sm text-ink-700 dark:text-ink-200">
+            <div class="font-medium text-ink-900 dark:text-white">${full.address.contactName || o.customerName}</div>
+            <div class="mt-0.5">${full.address.line}</div>
+            <div>${full.address.city}, ${full.address.state} - ${full.address.pincode}</div>
+          </div>` : `<p class="text-xs text-ink-400">No address on file for this order.</p>`;
+      }
+
       const list = document.getElementById('order-items-list');
       const loading = document.getElementById('order-items-loading');
       if (loading) loading.remove();
@@ -876,6 +892,8 @@ function openOrderProfile(o) {
     } catch (e) {
       const loading = document.getElementById('order-items-loading');
       if (loading) loading.textContent = 'Could not load order items.';
+      const addrLoading = document.getElementById('order-address-loading');
+      if (addrLoading) addrLoading.textContent = 'Could not load address.';
     }
   })();
 }

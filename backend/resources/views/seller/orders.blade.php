@@ -10,7 +10,7 @@
   @else
   <table class="w-full text-sm">
     <thead><tr class="text-left text-ink-400 border-b border-ink-100">
-      <th class="py-2 font-medium">Order</th><th class="font-medium">Customer</th><th class="font-medium">Product</th><th class="font-medium">Qty</th><th class="font-medium">Line Total</th><th class="font-medium">Commission</th><th class="font-medium">Status</th><th class="font-medium">Placed</th>
+      <th class="py-2 font-medium">Order</th><th class="font-medium">Customer</th><th class="font-medium">Ship To</th><th class="font-medium">Product</th><th class="font-medium">Qty</th><th class="font-medium">Line Total</th><th class="font-medium">Commission</th><th class="font-medium">Status</th><th class="font-medium">Placed</th>
     </tr></thead>
     <tbody>
       @foreach($items as $item)
@@ -19,6 +19,14 @@
         <td>
           <div class="font-medium text-ink-900">{{ $item->order->customer->name ?? 'Guest' }}</div>
           <div class="text-xs text-ink-400">{{ $item->order->customer->phone ?? $item->order->customer->email ?? '' }}</div>
+        </td>
+        <td class="max-w-[180px]">
+          @if($item->order->address)
+          <div class="text-xs text-ink-600">{{ $item->order->address->line }}</div>
+          <div class="text-xs text-ink-400">{{ $item->order->address->city }}, {{ $item->order->address->state }} - {{ $item->order->address->pincode }}</div>
+          @else
+          <span class="text-xs text-ink-300">—</span>
+          @endif
         </td>
         <td>
           <div class="font-medium text-ink-900">{{ $item->product->name }}</div>

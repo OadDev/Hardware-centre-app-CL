@@ -12,7 +12,7 @@ class OrderController extends Controller
         $seller = $request->user()->seller;
 
         $items = $seller->orderItems()
-            ->with(['order.customer', 'product'])
+            ->with(['order.customer', 'order.address', 'product'])
             ->orderByDesc('created_at')
             ->paginate(15);
 

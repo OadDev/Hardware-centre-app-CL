@@ -43,6 +43,14 @@ class OrderController extends Controller
 
         return response()->json([
             ...$this->transform($order),
+            'customerPhone' => $order->customer->phone,
+            'address' => $order->address ? [
+                'contactName' => $order->address->contact_name,
+                'line' => $order->address->line,
+                'city' => $order->address->city,
+                'state' => $order->address->state,
+                'pincode' => $order->address->pincode,
+            ] : null,
             'items' => $order->items->map(fn ($item) => [
                 'product' => $item->product->name,
                 'seller' => $item->seller->store_name,
