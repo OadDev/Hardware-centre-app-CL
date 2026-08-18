@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductResource;
+use App\Models\AppSetting;
 use App\Models\Product;
 use Illuminate\Http\Request;
 
@@ -63,6 +64,7 @@ class ProductController extends Controller
                 ['stars' => 3, 'pct' => 22],
                 ['stars' => 2, 'pct' => 8],
             ],
+            'contact_number' => AppSetting::current()->contact_number,
         ]);
     }
 }

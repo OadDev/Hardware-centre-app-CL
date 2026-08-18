@@ -14,12 +14,14 @@ import {
   IconChevronLeft,
   IconHeart,
   IconMinus,
+  IconPhone,
   IconPlay,
   IconPlus,
   IconShare,
   IconStar,
   IconTruck,
   IconVerified,
+  IconWhatsapp,
 } from '../components/Icons';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProductDetail'>;
@@ -95,6 +97,10 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
   const stockLabel = variants.length > 0
     ? (selectedVariant ? (selectedVariant.stock > 0 ? `${selectedVariant.stock} in stock` : 'Out of Stock') : 'Select an option')
     : product.stock_status;
+
+  const contactDigits = detail.contact_number?.replace(/\D/g, '') ?? '';
+  const waNumber = contactDigits.length === 10 ? `91${contactDigits}` : contactDigits;
+  const waMessage = encodeURIComponent(`Hi, I am interested in ${product.name}`);
 
   return (
     <View style={styles.container}>
@@ -190,6 +196,19 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
                     <Text style={styles.tierPrice}>{inr(tier.price)} / {product.unit}</Text>
                   </View>
                 ))}
+            </View>
+          )}
+
+          {!!waNumber && (
+            <View style={styles.contactRow}>
+              <Pressable style={styles.contactBtn} onPress={() => Linking.openURL(`tel:+${waNumber}`)}>
+                <IconPhone size={17} color={colors.accentDark} />
+                <Text style={styles.contactBtnText}>Buy on Call</Text>
+              </Pressable>
+              <Pressable style={styles.contactBtn} onPress={() => Linking.openURL(`https://wa.me/${waNumber}?text=${waMessage}`)}>
+                <IconWhatsapp size={17} />
+                <Text style={styles.contactBtnText}>Buy on Chat</Text>
+              </Pressable>
             </View>
           )}
 
@@ -406,6 +425,9 @@ const styles = StyleSheet.create({
   tierRowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
   tierRange: { fontSize: 13, color: colors.textMuted },
   tierPrice: { fontSize: 13, fontFamily: fonts.bodyBold, color: colors.text },
+  contactRow: { flexDirection: 'row', gap: 10, marginTop: 14 },
+  contactBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 11, borderRadius: 12, borderWidth: 1.5, borderColor: colors.border },
+  contactBtnText: { fontSize: 13.5, fontFamily: fonts.bodyBold, color: colors.text },
   optionGroup: { marginTop: 16 },
   optionLabel: { fontSize: 12.5, fontFamily: fonts.bodyBold, color: colors.textSub, marginBottom: 8 },
   optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

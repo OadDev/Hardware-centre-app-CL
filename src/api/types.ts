@@ -169,6 +169,7 @@ export type ProductDetail = {
   product: Product;
   reviews: Review[];
   rating_breakdown: RatingBar[];
+  contact_number: string | null;
 };
 
 export type HomeData = {
