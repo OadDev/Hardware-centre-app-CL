@@ -14,15 +14,27 @@
   <div class="font-bold text-ink-900 mb-4">Add an option</div>
   <form method="POST" action="{{ route('seller.products.variants.store', $product) }}" class="grid grid-cols-2 md:grid-cols-5 gap-3">
     @csrf
+    @php($existingAttrKeys = $product->variants->flatMap(fn ($v) => array_keys($v->options ?: []))->unique()->values())
     <div class="col-span-2 md:col-span-5">
       <label class="block text-xs font-medium text-ink-500 mb-1">Attributes (e.g. Color, Size, Units)</label>
+      @if($existingAttrKeys->isNotEmpty())
+      <p class="text-xs text-ink-400 mb-2">This product's options already use: <b>{{ $existingAttrKeys->implode(', ') }}</b>. Fill in a value for each below — every option on the same product needs the same attribute types, or customers won't be able to pick a combination.</p>
+      @endif
       <div id="attr-rows" class="space-y-2">
+        @forelse($existingAttrKeys as $key)
+        <div class="grid grid-cols-2 gap-2 attr-row">
+          <div class="flex items-center px-3 py-2 text-sm rounded-lg bg-ink-50 text-ink-500 border border-ink-200">{{ $key }}</div>
+          <input type="hidden" name="attr_keys[]" value="{{ $key }}">
+          <input name="attr_values[]" required placeholder="Value for {{ $key }}" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200">
+        </div>
+        @empty
         <div class="grid grid-cols-2 gap-2 attr-row">
           <input name="attr_keys[]" placeholder="Attribute (e.g. Color)" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200">
           <input name="attr_values[]" placeholder="Value (e.g. Red)" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200">
         </div>
+        @endforelse
       </div>
-      <button type="button" id="add-attr-row" class="mt-2 text-xs font-semibold text-brand-600">+ Add another attribute</button>
+      <button type="button" id="add-attr-row" class="mt-2 text-xs font-semibold text-brand-600">+ Add {{ $existingAttrKeys->isNotEmpty() ? 'a new attribute type' : 'another attribute' }}</button>
     </div>
     <div><label class="block text-xs font-medium text-ink-500 mb-1">Price override (₹)</label><input type="number" step="0.01" name="price" placeholder="Same as base price" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
     <div><label class="block text-xs font-medium text-ink-500 mb-1">Stock</label><input type="number" name="stock" required class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>

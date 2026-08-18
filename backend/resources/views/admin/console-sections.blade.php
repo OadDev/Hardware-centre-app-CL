@@ -438,13 +438,31 @@ function openProductProfile(p) {
             </div>
           </div>`).join('') || `<p class="text-xs text-ink-400">No options yet — customers buy the base product.</p>`}
       </div>
-      <div id="drawer-variant-attrs" class="space-y-2 mb-2">
-        <div class="grid grid-cols-2 gap-2 drawer-variant-attr-row">
-          <input placeholder="Attribute (e.g. Color, Size, Units)" class="variant-attr-key px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
-          <input placeholder="Value (e.g. Red, XL, 12mm)" class="variant-attr-value px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
-        </div>
-      </div>
-      <button id="drawer-add-attr-row-btn" type="button" class="mb-2 text-xs font-medium text-brand-600 dark:text-brand-400">+ Add another attribute</button>
+      ${(() => {
+        const existingKeys = Array.from(new Set((p.variants||[]).flatMap(v => Object.keys(v.attributes||{}))));
+        if (existingKeys.length) {
+          return `
+            <p class="text-[11px] text-ink-400 mb-2">This product's options already use: <b>${existingKeys.join(', ')}</b>. Fill in a value for each below — every option on the same product needs the same attribute types, or customers won't be able to pick a combination.</p>
+            <div id="drawer-variant-attrs" class="space-y-2 mb-2">
+              ${existingKeys.map(k => `
+                <div class="grid grid-cols-2 gap-2 drawer-variant-attr-row" data-locked-key="${k}">
+                  <div class="px-2.5 py-1.5 text-sm rounded-lg bg-ink-50 dark:bg-ink-800/60 text-ink-500 dark:text-ink-400 border border-ink-200 dark:border-ink-700">${k}</div>
+                  <input placeholder="Value for ${k}" class="variant-attr-value px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
+                </div>`).join('')}
+            </div>
+            <button id="drawer-add-attr-row-btn" type="button" class="mb-2 text-xs font-medium text-brand-600 dark:text-brand-400">+ Add a new attribute type</button>
+          `;
+        }
+        return `
+          <div id="drawer-variant-attrs" class="space-y-2 mb-2">
+            <div class="grid grid-cols-2 gap-2 drawer-variant-attr-row">
+              <input placeholder="Attribute (e.g. Color, Size, Units)" class="variant-attr-key px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
+              <input placeholder="Value (e.g. Red, XL, 12mm)" class="variant-attr-value px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
+            </div>
+          </div>
+          <button id="drawer-add-attr-row-btn" type="button" class="mb-2 text-xs font-medium text-brand-600 dark:text-brand-400">+ Add another attribute</button>
+        `;
+      })()}
       <div class="grid grid-cols-2 gap-2">
         <input id="drawer-variant-price" type="number" step="0.01" placeholder="Price override (₹)" class="px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
         <input id="drawer-variant-stock" type="number" placeholder="Stock" class="px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
@@ -520,11 +538,14 @@ function openProductProfile(p) {
   });
   document.getElementById('drawer-add-variant-btn')?.addEventListener('click', withErr(async () => {
     const options = {};
+    let missingLocked = false;
     document.querySelectorAll('.drawer-variant-attr-row').forEach(row => {
-      const key = row.querySelector('.variant-attr-key').value.trim();
+      const key = row.dataset.lockedKey || (row.querySelector('.variant-attr-key')?.value.trim() || '');
       const value = row.querySelector('.variant-attr-value').value.trim();
       if (key && value) options[key] = value;
+      else if (row.dataset.lockedKey) missingLocked = true;
     });
+    if (missingLocked) { toast('Fill in a value for every existing attribute (e.g. Color, Size) so this option matches the others', 'warn'); return; }
     if (!Object.keys(options).length) { toast('Enter at least one attribute (e.g. Color, Size, Units)', 'warn'); return; }
     const priceVal = document.getElementById('drawer-variant-price').value;
     await api('POST', '/products/'+p.id+'/variants', {

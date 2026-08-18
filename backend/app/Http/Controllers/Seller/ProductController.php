@@ -128,6 +128,7 @@ class ProductController extends Controller
     {
         $this->authorizeOwnership($request, $product);
         $data = $this->validatedVariant($request);
+        $this->assertConsistentOptionKeys($product, $data['options']);
 
         $product->variants()->create([
             'variant_code' => 'VAR-'.strtoupper(Str::random(8)),
@@ -161,6 +162,28 @@ class ProductController extends Controller
         $variant->delete();
 
         return back()->with('status', 'Variant removed.');
+    }
+
+    /**
+     * See the identical check in Admin\ProductController — a product's
+     * variant picker only works if every variant uses the same attribute
+     * names. Only enforced on create; editing an existing (possibly
+     * already-mismatched) variant stays unrestricted so a mistake here can
+     * still be fixed by hand.
+     */
+    private function assertConsistentOptionKeys(Product $product, array $newOptions): void
+    {
+        $existingKeys = $product->variants->flatMap(fn (ProductVariant $v) => array_keys($v->options ?? []))->unique();
+        if ($existingKeys->isEmpty()) {
+            return;
+        }
+
+        $newKeys = collect(array_keys($newOptions));
+        if ($newKeys->diff($existingKeys)->isEmpty() && $existingKeys->diff($newKeys)->isEmpty()) {
+            return;
+        }
+
+        abort(422, 'This product\'s other options use: '.$existingKeys->implode(', ').'. Use the same attribute names for every option so customers can select between them.');
     }
 
     private function validatedVariant(Request $request, bool $isUpdate = false): array

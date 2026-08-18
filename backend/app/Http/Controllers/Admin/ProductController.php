@@ -92,6 +92,7 @@ class ProductController extends Controller
     public function storeVariant(Request $request, Product $product)
     {
         $data = $this->validatedVariant($request);
+        $this->assertConsistentOptionKeys($product, $data['options']);
 
         $variant = $product->variants()->create([
             'variant_code' => 'VAR-'.strtoupper(Str::random(8)),
@@ -124,6 +125,30 @@ class ProductController extends Controller
         $variant->delete();
 
         return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants'])));
+    }
+
+    /**
+     * A product's variant options only work as a picker if every variant
+     * uses the exact same attribute names (e.g. all "Color"+"Size", never
+     * one variant keyed "Color" and another keyed by a color name itself)
+     * — otherwise the storefront can't match a selection to a variant and
+     * the picker is effectively broken. Only enforced on create; editing an
+     * existing (possibly already-mismatched) variant stays unrestricted so
+     * a mistake here can still be fixed by hand.
+     */
+    private function assertConsistentOptionKeys(Product $product, array $newOptions): void
+    {
+        $existingKeys = $product->variants->flatMap(fn (ProductVariant $v) => array_keys($v->options ?? []))->unique();
+        if ($existingKeys->isEmpty()) {
+            return;
+        }
+
+        $newKeys = collect(array_keys($newOptions));
+        if ($newKeys->diff($existingKeys)->isEmpty() && $existingKeys->diff($newKeys)->isEmpty()) {
+            return;
+        }
+
+        abort(422, 'This product\'s other options use: '.$existingKeys->implode(', ').'. Use the same attribute names for every option so customers can select between them.');
     }
 
     private function validatedVariant(Request $request, bool $isUpdate = false): array
