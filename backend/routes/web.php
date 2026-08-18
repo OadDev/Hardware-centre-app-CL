@@ -81,6 +81,8 @@ Route::prefix('seller')->name('seller.')->group(function () {
         Route::post('products/{product:product_code}/variants', [SellerProductController::class, 'storeVariant'])->name('products.variants.store');
         Route::patch('products/{product:product_code}/variants/{variant}', [SellerProductController::class, 'updateVariant'])->name('products.variants.update');
         Route::delete('products/{product:product_code}/variants/{variant}', [SellerProductController::class, 'destroyVariant'])->name('products.variants.destroy');
+        Route::post('products/{product:product_code}/price-tiers', [SellerProductController::class, 'storePriceTier'])->name('products.price-tiers.store');
+        Route::delete('products/{product:product_code}/price-tiers/{tier}', [SellerProductController::class, 'destroyPriceTier'])->name('products.price-tiers.destroy');
 
         Route::get('orders', [SellerOrderController::class, 'index'])->name('orders');
 

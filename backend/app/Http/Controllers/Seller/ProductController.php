@@ -7,6 +7,7 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\ProductPriceTier;
 use App\Models\ProductVariant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -120,8 +121,34 @@ class ProductController extends Controller
 
         return view('seller.product-variants', [
             'seller' => $request->user()->seller,
-            'product' => $product->load('variants'),
+            'product' => $product->load(['variants', 'priceTiers']),
         ]);
+    }
+
+    public function storePriceTier(Request $request, Product $product)
+    {
+        $this->authorizeOwnership($request, $product);
+
+        $data = $request->validate([
+            'min_qty' => ['required', 'integer', 'min:1'],
+            'price' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $exists = $product->priceTiers()->where('min_qty', $data['min_qty'])->exists();
+        abort_if($exists, 422, 'A price tier for this minimum quantity already exists.');
+
+        $product->priceTiers()->create($data);
+
+        return back()->with('status', 'Price tier added.');
+    }
+
+    public function destroyPriceTier(Request $request, Product $product, ProductPriceTier $tier)
+    {
+        $this->authorizeOwnership($request, $product);
+        abort_unless($tier->product_id === $product->id, 404);
+        $tier->delete();
+
+        return back()->with('status', 'Price tier removed.');
     }
 
     public function storeVariant(Request $request, Product $product)

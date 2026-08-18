@@ -55,6 +55,10 @@ class ProductResource extends JsonResource
                 'price' => $v->effective_price,
                 'stock' => $v->stock,
             ])->all(),
+            'price_tiers' => $this->priceTiers->map(fn ($t) => [
+                'min_qty' => $t->min_qty,
+                'price' => (float) $t->price,
+            ])->all(),
         ];
     }
 }

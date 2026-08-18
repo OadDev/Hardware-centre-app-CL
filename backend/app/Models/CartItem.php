@@ -26,6 +26,10 @@ class CartItem extends Model
 
     public function getUnitPriceAttribute(): float
     {
-        return $this->productVariant ? $this->productVariant->effective_price : (float) $this->product->price;
+        if ($this->productVariant) {
+            return $this->productVariant->effective_price;
+        }
+
+        return $this->product->priceForQuantity($this->quantity);
     }
 }

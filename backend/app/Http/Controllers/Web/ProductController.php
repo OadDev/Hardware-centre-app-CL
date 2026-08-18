@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\AppSetting;
 use App\Models\Product;
 
 class ProductController extends Controller
@@ -23,7 +24,7 @@ class ProductController extends Controller
     {
         abort_unless($product->approval_status === 'Approved', 404);
 
-        $product->load(['brand', 'category', 'seller', 'specs', 'images', 'variants']);
+        $product->load(['brand', 'category', 'seller', 'specs', 'images', 'variants', 'priceTiers']);
 
         $related = Product::query()->approved()
             ->where('category_id', $product->category_id)
@@ -38,6 +39,7 @@ class ProductController extends Controller
             'related' => $related,
             'reviews' => self::SAMPLE_REVIEWS,
             'ratingBreakdown' => self::RATING_BREAKDOWN,
+            'contactNumber' => AppSetting::current()->contact_number,
         ]);
     }
 }

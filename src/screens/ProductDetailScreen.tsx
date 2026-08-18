@@ -177,6 +177,22 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
           </View>
           <Text style={styles.taxNote}>Inclusive of all taxes · per {product.unit}</Text>
 
+          {variants.length === 0 && (product.price_tiers?.length ?? 0) > 0 && (
+            <View style={styles.tierBox}>
+              <Text style={styles.tierTitle}>Buy more, save more</Text>
+              {[{ min_qty: 1, price: product.price }, ...product.price_tiers]
+                .sort((a, b) => a.min_qty - b.min_qty)
+                .map((tier, i, arr) => (
+                  <View key={tier.min_qty} style={[styles.tierRow, i > 0 ? styles.tierRowBorder : null]}>
+                    <Text style={styles.tierRange}>
+                      {arr[i + 1] ? `${tier.min_qty} – ${arr[i + 1].min_qty - 1}` : `${tier.min_qty}+`} {product.unit}
+                    </Text>
+                    <Text style={styles.tierPrice}>{inr(tier.price)} / {product.unit}</Text>
+                  </View>
+                ))}
+            </View>
+          )}
+
           {attributeGroups.map((group) => (
             <View key={group.key} style={styles.optionGroup}>
               <Text style={styles.optionLabel}>{group.key}</Text>
@@ -384,6 +400,12 @@ const styles = StyleSheet.create({
   mrp: { fontSize: 15, color: colors.textFaint, textDecorationLine: 'line-through' },
   offText: { fontSize: 13, color: colors.successDark, fontFamily: fonts.bodyBold },
   taxNote: { fontSize: 12, color: colors.textMuted, marginTop: 3 },
+  tierBox: { marginTop: 14, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, overflow: 'hidden' },
+  tierTitle: { fontSize: 12.5, fontFamily: fonts.bodyBold, color: colors.text, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: colors.bgAlt },
+  tierRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 9 },
+  tierRowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
+  tierRange: { fontSize: 13, color: colors.textMuted },
+  tierPrice: { fontSize: 13, fontFamily: fonts.bodyBold, color: colors.text },
   optionGroup: { marginTop: 16 },
   optionLabel: { fontSize: 12.5, fontFamily: fonts.bodyBold, color: colors.textSub, marginBottom: 8 },
   optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

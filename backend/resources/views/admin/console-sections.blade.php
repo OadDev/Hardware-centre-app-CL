@@ -471,6 +471,21 @@ function openProductProfile(p) {
       </div>
       <button id="drawer-add-variant-btn" class="mt-2 w-full py-2 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700">Add Option</button>
     `)}
+    ${drawerSection('Bulk / Quantity Pricing', `
+      <p class="text-[11px] text-ink-400 mb-3">Offer a lower unit price at higher quantities, e.g. ₹500/pc under 100 pcs, ₹450/pc from 100 pcs onward. Applies to the base product, not individual options.</p>
+      <div class="space-y-2 mb-3">
+        ${(p.priceTiers||[]).slice().sort((a,b)=>a.minQty-b.minQty).map(t => `
+          <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-ink-200 dark:border-ink-700">
+            <div class="text-sm font-medium text-ink-900 dark:text-white">${t.minQty}+ pcs — ${fmtINR(t.price)}</div>
+            <button data-remove-price-tier="${t.id}" class="w-6 h-6 rounded-full bg-rose-600 text-white text-xs leading-none flex items-center justify-center">×</button>
+          </div>`).join('') || `<p class="text-xs text-ink-400">No quantity tiers yet — every order pays the base price.</p>`}
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <input id="drawer-tier-minqty" type="number" min="1" placeholder="Minimum quantity" class="px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
+        <input id="drawer-tier-price" type="number" step="0.01" min="0" placeholder="Price per unit (₹)" class="px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
+      </div>
+      <button id="drawer-add-price-tier-btn" class="mt-2 w-full py-2 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700">Add Tier</button>
+    `)}
     <div class="flex gap-2.5 mt-6 pt-5 border-t border-ink-100 dark:border-ink-800">
       <button id="edit-product-btn" class="flex-1 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-xl">Edit Details</button>
       ${p.approval!=='Approved' ? `<button id="approve-product-btn" class="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl">Approve</button>` : ''}
@@ -616,6 +631,17 @@ function openProductProfile(p) {
   document.querySelectorAll('[data-remove-variant]').forEach(btn => btn.addEventListener('click', withErr(async () => {
     await api('DELETE', '/products/'+p.id+'/variants/'+btn.dataset.removeVariant);
     toast('Option removed'); await refreshProducts(); navigateTo('products');
+  })));
+  document.getElementById('drawer-add-price-tier-btn')?.addEventListener('click', withErr(async () => {
+    const minQty = parseInt(document.getElementById('drawer-tier-minqty').value || 0);
+    const price = document.getElementById('drawer-tier-price').value;
+    if (!minQty || !price) { toast('Enter a minimum quantity and price', 'warn'); return; }
+    await api('POST', '/products/'+p.id+'/price-tiers', { min_qty: minQty, price: parseFloat(price) });
+    toast('Price tier added'); await refreshProducts(); navigateTo('products');
+  }));
+  document.querySelectorAll('[data-remove-price-tier]').forEach(btn => btn.addEventListener('click', withErr(async () => {
+    await api('DELETE', '/products/'+p.id+'/price-tiers/'+btn.dataset.removePriceTier);
+    toast('Price tier removed'); await refreshProducts(); navigateTo('products');
   })));
   document.getElementById('approve-product-btn')?.addEventListener('click', withErr(async () => {
     await api('PATCH', '/products/'+p.id, { approval_status:'Approved' });

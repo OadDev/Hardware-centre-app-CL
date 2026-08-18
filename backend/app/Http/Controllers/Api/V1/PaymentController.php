@@ -19,7 +19,7 @@ class PaymentController extends Controller
         ]);
 
         $customer = $request->user();
-        $items = $customer->cartItems()->with(['product.seller.categoryCommissions', 'product.category', 'productVariant'])->get();
+        $items = $customer->cartItems()->with(['product.seller.categoryCommissions', 'product.category', 'product.priceTiers', 'productVariant'])->get();
 
         if ($items->isEmpty()) {
             return response()->json(['message' => 'Your cart is empty'], 422);

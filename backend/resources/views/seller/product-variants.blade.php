@@ -120,6 +120,42 @@ document.getElementById('add-attr-row')?.addEventListener('click', function () {
   @endif
 </div>
 
+<div class="bg-white rounded-2xl border border-ink-200/70 p-5 mt-6">
+  <div class="font-bold text-ink-900">Bulk / Quantity Pricing</div>
+  <p class="text-xs text-ink-400 mt-1 mb-4">Offer a lower unit price when a customer buys a larger quantity, e.g. ₹500/pc under 100 pcs, ₹450/pc from 100 pcs onward. Applies to the base product (not to individual variant options).</p>
+
+  <form method="POST" action="{{ route('seller.products.price-tiers.store', $product) }}" class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-5">
+    @csrf
+    <div><label class="block text-xs font-medium text-ink-500 mb-1">Minimum quantity</label><input type="number" name="min_qty" min="1" required placeholder="e.g. 100" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
+    <div><label class="block text-xs font-medium text-ink-500 mb-1">Price per unit (₹)</label><input type="number" step="0.01" name="price" min="0" required placeholder="e.g. 450" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
+    <div class="flex items-end"><button type="submit" class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold">Add Tier</button></div>
+  </form>
+
+  @if($product->priceTiers->isEmpty())
+  <p class="text-sm text-ink-400">No quantity tiers yet — every order pays the base price of ₹{{ number_format($product->price, 2) }}.</p>
+  @else
+  <table class="w-full text-sm">
+    <thead><tr class="text-left text-ink-400 border-b border-ink-100">
+      <th class="py-2 font-medium">Minimum quantity</th><th class="font-medium">Price per unit</th><th class="font-medium"></th>
+    </tr></thead>
+    <tbody>
+      @foreach($product->priceTiers->sortBy('min_qty') as $tier)
+      <tr class="border-b border-ink-100 last:border-0">
+        <td class="py-2.5 font-medium text-ink-900">{{ $tier->min_qty }}+ pcs</td>
+        <td>₹{{ number_format($tier->price, 2) }}</td>
+        <td class="text-right">
+          <form method="POST" action="{{ route('seller.products.price-tiers.destroy', [$product, $tier]) }}" class="inline" onsubmit="return confirm('Remove this price tier?');">
+            @csrf @method('DELETE')
+            <button type="submit" class="text-xs font-semibold text-rose-600">Remove</button>
+          </form>
+        </td>
+      </tr>
+      @endforeach
+    </tbody>
+  </table>
+  @endif
+</div>
+
 <script>
 document.querySelectorAll('[data-toggle-edit]').forEach(function (btn) {
   btn.addEventListener('click', function () {

@@ -7,6 +7,7 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\ProductPriceTier;
 use App\Models\ProductVariant;
 use App\Models\Seller;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Product::query()->with(['brand', 'category', 'seller', 'images', 'variants']);
+        $query = Product::query()->with(['brand', 'category', 'seller', 'images', 'variants', 'priceTiers']);
 
         if ($search = $request->query('q')) {
             $query->where('name', 'like', "%{$search}%");
@@ -48,7 +49,7 @@ class ProductController extends Controller
             'slug' => Str::slug($data['name']).'-'.Str::random(4),
         ]);
 
-        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants'])), 201);
+        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants', 'priceTiers'])), 201);
     }
 
     public function update(Request $request, Product $product)
@@ -57,7 +58,7 @@ class ProductController extends Controller
         $data = $this->resolveRelations($data);
         $product->update($data);
 
-        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants'])));
+        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants', 'priceTiers'])));
     }
 
     public function destroy(Product $product)
@@ -76,7 +77,7 @@ class ProductController extends Controller
 
         ProductImage::storeUploads($product, $request->file('images', []));
 
-        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants'])), 201);
+        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants', 'priceTiers'])), 201);
     }
 
     public function destroyImage(Product $product, ProductImage $image)
@@ -103,7 +104,7 @@ class ProductController extends Controller
             'status' => $data['status'] ?? 'Active',
         ]);
 
-        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants'])), 201);
+        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants', 'priceTiers'])), 201);
     }
 
     public function updateVariant(Request $request, Product $product, ProductVariant $variant)
@@ -116,7 +117,7 @@ class ProductController extends Controller
         }
         $variant->update($data);
 
-        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants'])));
+        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants', 'priceTiers'])));
     }
 
     public function destroyVariant(Product $product, ProductVariant $variant)
@@ -124,7 +125,7 @@ class ProductController extends Controller
         abort_unless($variant->product_id === $product->id, 404);
         $variant->delete();
 
-        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants'])));
+        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants', 'priceTiers'])));
     }
 
     /**
@@ -245,6 +246,39 @@ class ProductController extends Controller
                 'stock' => $v->stock,
                 'status' => $v->status,
             ])->all(),
+            'priceTiers' => $p->priceTiers->map(fn (ProductPriceTier $t) => [
+                'id' => $t->id,
+                'minQty' => $t->min_qty,
+                'price' => (float) $t->price,
+            ])->all(),
         ];
+    }
+
+    public function storePriceTier(Request $request, Product $product)
+    {
+        $data = $this->validatedPriceTier($request);
+
+        $exists = $product->priceTiers()->where('min_qty', $data['min_qty'])->exists();
+        abort_if($exists, 422, 'A price tier for this minimum quantity already exists.');
+
+        $product->priceTiers()->create($data);
+
+        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants', 'priceTiers'])), 201);
+    }
+
+    public function destroyPriceTier(Product $product, ProductPriceTier $tier)
+    {
+        abort_unless($tier->product_id === $product->id, 404);
+        $tier->delete();
+
+        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants', 'priceTiers'])));
+    }
+
+    private function validatedPriceTier(Request $request): array
+    {
+        return $request->validate([
+            'min_qty' => ['required', 'integer', 'min:1'],
+            'price' => ['required', 'numeric', 'min:0'],
+        ]);
     }
 }

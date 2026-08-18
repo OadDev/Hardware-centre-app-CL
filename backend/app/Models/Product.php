@@ -66,6 +66,27 @@ class Product extends Model
         return $this->hasMany(ProductVariant::class);
     }
 
+    public function priceTiers(): HasMany
+    {
+        return $this->hasMany(ProductPriceTier::class)->orderBy('min_qty');
+    }
+
+    /**
+     * The per-unit price for buying $quantity of this product — the
+     * highest bulk-pricing tier whose min_qty is met, or the base price if
+     * no tier applies yet (e.g. quantity is below the lowest tier, or the
+     * product has no tiers at all).
+     */
+    public function priceForQuantity(int $quantity): float
+    {
+        $tier = $this->priceTiers
+            ->filter(fn (ProductPriceTier $t) => $t->min_qty <= $quantity)
+            ->sortByDesc('min_qty')
+            ->first();
+
+        return $tier ? (float) $tier->price : (float) $this->price;
+    }
+
     public function specs(): HasMany
     {
         return $this->hasMany(ProductSpec::class)->orderBy('sort_order');

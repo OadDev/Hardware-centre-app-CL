@@ -7,6 +7,11 @@ export type ProductVariant = {
   stock: number;
 };
 
+export type ProductPriceTier = {
+  min_qty: number;
+  price: number;
+};
+
 export type Product = {
   id: string;
   sku: string;
@@ -36,6 +41,7 @@ export type Product = {
   images: string[];
   video_url: string | null;
   variants: ProductVariant[];
+  price_tiers: ProductPriceTier[];
 };
 
 export type Category = {

@@ -36,6 +36,8 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::post('products/{product}/variants', [ProductController::class, 'storeVariant']);
     Route::patch('products/{product}/variants/{variant}', [ProductController::class, 'updateVariant']);
     Route::delete('products/{product}/variants/{variant}', [ProductController::class, 'destroyVariant']);
+    Route::post('products/{product}/price-tiers', [ProductController::class, 'storePriceTier']);
+    Route::delete('products/{product}/price-tiers/{tier}', [ProductController::class, 'destroyPriceTier']);
     Route::apiResource('categories', CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::post('categories/{category}/icon', [CategoryController::class, 'uploadIcon']);
     Route::post('categories/{category}/icon-class', [CategoryController::class, 'setIconClass']);
