@@ -13,7 +13,11 @@ class Seller extends Model
         'city', 'state', 'warehouse_address', 'category_interest', 'gst_number', 'commission_pct',
         'wallet_balance', 'rating', 'approval_status', 'account_status',
         'kyc_status', 'joined_at',
+        'pan_number', 'bank_account_holder', 'bank_account_number', 'bank_ifsc',
+        'razorpay_account_id', 'razorpay_account_status', 'razorpay_account_error',
     ];
+
+    protected $hidden = ['bank_account_number'];
 
     protected function casts(): array
     {
@@ -22,7 +26,32 @@ class Seller extends Model
             'wallet_balance' => 'decimal:2',
             'rating' => 'decimal:1',
             'joined_at' => 'datetime',
+            'bank_account_number' => 'encrypted',
         ];
+    }
+
+    /**
+     * Last 4 digits only — the account number itself is encrypted at rest
+     * and never sent back to any client in full once saved.
+     */
+    public function getMaskedBankAccountNumberAttribute(): ?string
+    {
+        if (! $this->bank_account_number) {
+            return null;
+        }
+
+        return str_repeat('•', max(0, strlen($this->bank_account_number) - 4)).substr($this->bank_account_number, -4);
+    }
+
+    /**
+     * Ready for Route once the seller has entered payout bank details and
+     * their linked Razorpay account has been created (creation happens via
+     * the admin "Link Razorpay Account" action, which then needs Razorpay's
+     * own KYC review before it can actually receive transfers).
+     */
+    public function hasPayoutDetails(): bool
+    {
+        return (bool) ($this->bank_account_holder && $this->bank_account_number && $this->bank_ifsc && $this->pan_number);
     }
 
     public function getRouteKeyName(): string

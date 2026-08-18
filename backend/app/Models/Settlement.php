@@ -8,7 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Settlement extends Model
 {
     protected $fillable = [
-        'settlement_no', 'seller_id', 'amount', 'status', 'mode', 'utr', 'settled_at',
+        'settlement_no', 'seller_id', 'order_id', 'amount', 'status', 'mode', 'utr',
+        'razorpay_transfer_id', 'settled_at',
     ];
 
     protected function casts(): array
@@ -27,5 +28,10 @@ class Settlement extends Model
     public function seller(): BelongsTo
     {
         return $this->belongsTo(Seller::class);
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
     }
 }

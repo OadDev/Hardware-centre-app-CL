@@ -10,12 +10,13 @@
   @else
   <table class="w-full text-sm">
     <thead><tr class="text-left text-ink-400 border-b border-ink-100">
-      <th class="py-2 font-medium">Settlement No.</th><th class="font-medium">Amount</th><th class="font-medium">Mode</th><th class="font-medium">Status</th><th class="font-medium">UTR</th><th class="font-medium">Settled</th>
+      <th class="py-2 font-medium">Settlement No.</th><th class="font-medium">Order</th><th class="font-medium">Amount</th><th class="font-medium">Mode</th><th class="font-medium">Status</th><th class="font-medium">UTR</th><th class="font-medium">Settled</th>
     </tr></thead>
     <tbody>
       @foreach($settlements as $s)
       <tr class="border-b border-ink-100 last:border-0">
         <td class="py-2.5">{{ $s->settlement_no }}</td>
+        <td>{{ $s->order?->order_no ?? '—' }}</td>
         <td>₹{{ number_format($s->amount, 2) }}</td>
         <td>{{ $s->mode }}</td>
         <td>

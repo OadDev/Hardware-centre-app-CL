@@ -11,7 +11,7 @@ class SettlementController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Settlement::query()->with('seller');
+        $query = Settlement::query()->with(['seller', 'order']);
 
         if ($status = $request->query('status')) {
             $query->where('status', $status);
@@ -26,13 +26,24 @@ class SettlementController extends Controller
         return response()->json($settlements);
     }
 
-    public function retry(Settlement $settlement, NotificationService $notifications)
+    /**
+     * Records that the admin has actually transferred this seller's payout
+     * — by NEFT/IMPS for a Manual Bank Transfer settlement, or by manually
+     * confirming a Razorpay Route transfer that Razorpay's side reports as
+     * settled. The UTR/reference number is whatever the admin's own bank
+     * gave them; we don't generate or verify it ourselves.
+     */
+    public function markPaid(Request $request, Settlement $settlement, NotificationService $notifications)
     {
-        abort_unless($settlement->status === 'Failed', 422, 'Only failed settlements can be retried');
+        abort_if($settlement->status === 'Paid', 422, 'This settlement is already marked as paid.');
+
+        $data = $request->validate([
+            'utr' => ['required', 'string', 'max:60'],
+        ]);
 
         $settlement->update([
             'status' => 'Paid',
-            'utr' => 'UTR'.random_int(100000000000, 999999999999),
+            'utr' => $data['utr'],
             'settled_at' => now(),
         ]);
 
@@ -49,10 +60,12 @@ class SettlementController extends Controller
         return [
             'id' => $s->settlement_no,
             'sellerName' => $s->seller->store_name,
+            'orderId' => $s->order?->order_no,
             'amount' => (float) $s->amount,
             'mode' => $s->mode,
             'date' => $s->created_at->toIso8601String(),
             'utr' => $s->utr,
+            'razorpayTransferId' => $s->razorpay_transfer_id,
             'status' => $s->status,
         ];
     }

@@ -11,7 +11,7 @@ class SettlementController extends Controller
     {
         $seller = $request->user()->seller;
 
-        $settlements = $seller->settlements()->orderByDesc('created_at')->paginate(15);
+        $settlements = $seller->settlements()->with('order')->orderByDesc('created_at')->paginate(15);
 
         return view('seller.settlements', ['seller' => $seller, 'settlements' => $settlements]);
     }

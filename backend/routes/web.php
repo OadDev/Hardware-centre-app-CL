@@ -92,5 +92,6 @@ Route::prefix('seller')->name('seller.')->group(function () {
 
         Route::get('profile', [SellerProfileController::class, 'edit'])->name('profile');
         Route::patch('profile', [SellerProfileController::class, 'update'])->name('profile.update');
+        Route::patch('profile/payout', [SellerProfileController::class, 'updatePayout'])->name('profile.payout.update');
     });
 });

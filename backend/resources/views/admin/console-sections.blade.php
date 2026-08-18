@@ -155,6 +155,15 @@ function openSellerProfile(s) {
     <div class="space-y-4">
       ${drawerSection('Store Details', `${drawerRow('Email', s.email)}${drawerRow('Phone', s.phone)}${drawerRow('City', s.city+', '+s.state)}${drawerRow('GSTIN', s.gst||'—')}`)}
       ${drawerSection('KYC Status', `${drawerRow('Status', statusBadge(s.kyc))}`)}
+      ${drawerSection('Payouts (Razorpay Route)', `
+        ${drawerRow('PAN', s.pan||'—')}
+        ${drawerRow('Bank Account', s.bankAccountMasked ? (s.bankAccountHolder+' · '+s.bankAccountMasked+' · '+(s.bankIfsc||'')) : 'Not submitted by seller yet')}
+        ${drawerRow('Razorpay Status', statusBadge(s.razorpayAccountStatus||'Not Linked'))}
+        ${s.razorpayAccountError ? `<p class="text-xs text-amber-600 dark:text-amber-400 mt-1.5">${s.razorpayAccountError}</p>` : ''}
+        <button id="link-razorpay-btn" ${!s.hasPayoutDetails ? 'disabled' : ''} class="mt-3 w-full py-2 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700 disabled:opacity-50 disabled:cursor-not-allowed">
+          ${s.hasPayoutDetails ? ((s.razorpayAccountStatus||'Not Linked') === 'Not Linked' ? 'Link Razorpay Account' : 'Re-submit Razorpay Account') : 'Waiting for seller to submit bank details'}
+        </button>
+      `)}
       ${drawerSection('Wallet', `${drawerRow('Wallet Balance', fmtINR(s.walletBalance))}`)}
       ${drawerSection('Base Commission Rate', `<input id="drawer-commission-input" type="number" step="0.1" value="${s.commissionPct}" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-800 focus-ring outline-none"><p class="text-[11px] text-ink-400 mt-1.5">Applies to every category unless a category override below is set.</p>`)}
       ${drawerSection('Category Commission Overrides', `
@@ -192,6 +201,17 @@ function openSellerProfile(s) {
   document.getElementById('reactivate-seller-btn')?.addEventListener('click', withErr(async () => {
     await api('PATCH', '/sellers/'+s.id, { account_status:'Active' });
     closeModal(); toast(`${s.store} reactivated`); await refreshSellers(); navigateTo('sellers');
+  }));
+  document.getElementById('link-razorpay-btn')?.addEventListener('click', withErr(async () => {
+    const btn = document.getElementById('link-razorpay-btn');
+    btn.disabled = true; btn.textContent = 'Linking…';
+    try {
+      await api('POST', '/sellers/'+s.id+'/link-razorpay');
+      toast('Razorpay account linked — awaiting their KYC review'); await refreshSellers(); navigateTo('sellers');
+    } catch (e) {
+      toast(e.message || 'Could not link Razorpay account', 'warn');
+      await refreshSellers(); navigateTo('sellers');
+    }
   }));
 
   loadCommissionOverrides(s);
@@ -877,21 +897,32 @@ SECTION_RENDERERS.settlements = async function(main) {
   `;
   renderDataTable('settlements-table-inner', {
     title:'Settlement Requests', subtitle:`${DATA.settlements.length} settlement records`, data: DATA.settlements, searchKeys:['sellerName','id'],
-    filters:[{key:'status', label:'Status', options:['Paid','Pending','Failed']}, {key:'mode', label:'Gateway', options:['Razorpay Route','Cashfree Easy Split']}],
+    filters:[{key:'status', label:'Status', options:['Paid','Pending','Failed']}, {key:'mode', label:'Gateway', options:['Razorpay Route','Cashfree Easy Split','Manual Bank Transfer']}],
     columns: [
       { label:'Settlement ID', key:'id' },
       { label:'Seller', render: s => `<span class="truncate max-w-[160px] inline-block">${s.sellerName}</span>` },
+      { label:'Order', render: s => s.orderId || '—' },
       { label:'Amount', render: s => fmtINR(s.amount) }, { label:'Gateway', key:'mode' },
       { label:'Date', render: s => new Date(s.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'}) },
-      { label:'UTR', render: s => `<span class="font-mono text-xs text-ink-400">${s.utr||'—'}</span>` },
+      { label:'UTR / Transfer ID', render: s => `<span class="font-mono text-xs text-ink-400">${s.utr||s.razorpayTransferId||'—'}</span>` },
       { label:'Status', render: s => statusBadge(s.status) },
-      { label:'', render: s => s.status==='Failed' ? `<button data-stop-row-click data-retry="${s.id}" class="text-xs font-medium text-brand-600 hover:underline">Retry</button>` : '' },
+      { label:'', render: s => s.status!=='Paid' ? `<button data-stop-row-click data-mark-paid="${s.id}" class="text-xs font-medium text-brand-600 hover:underline">Mark Paid</button>` : '' },
     ],
     afterRender: (container) => {
-      container.querySelectorAll('[data-retry]').forEach(btn => btn.addEventListener('click', withErr(async () => {
-        await api('POST', '/settlements/'+btn.dataset.retry+'/retry');
-        toast('Settlement retried successfully'); await refreshSettlements(); navigateTo('settlements');
-      })));
+      container.querySelectorAll('[data-mark-paid]').forEach(btn => btn.addEventListener('click', () => {
+        const id = btn.dataset.markPaid;
+        openModal({
+          title: 'Mark Settlement Paid',
+          body: `<p class="text-xs text-ink-400 mb-3">Enter the bank UTR / reference number for the transfer you made to this seller.</p>${formField('UTR / Reference Number','text','e.g. UTR2026081800123','', 'settlement-utr')}`,
+          confirmLabel: 'Mark Paid',
+          onConfirm: withErr(async () => {
+            const utr = document.getElementById('settlement-utr').value.trim();
+            if (!utr) { toast('Enter a UTR / reference number', 'warn'); return; }
+            await api('POST', '/settlements/'+id+'/mark-paid', { utr });
+            closeModal(); toast('Settlement marked as paid'); await refreshSettlements(); navigateTo('settlements');
+          })
+        });
+      }));
     }
   });
 };

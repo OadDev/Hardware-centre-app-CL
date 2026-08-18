@@ -28,6 +28,7 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::get('dashboard', [DashboardController::class, 'stats']);
 
     Route::apiResource('sellers', SellerController::class)->only(['index', 'store', 'show', 'update']);
+    Route::post('sellers/{seller}/link-razorpay', [SellerController::class, 'linkRazorpay']);
     Route::apiResource('customers', CustomerController::class)->only(['index', 'update']);
     Route::apiResource('products', ProductController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::post('products/{product}/images', [ProductController::class, 'storeImages']);
@@ -70,7 +71,7 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::post('warehouses/dispatch-queue/{item}/dispatch', [WarehouseController::class, 'dispatchItem']);
 
     Route::get('settlements', [SettlementController::class, 'index']);
-    Route::post('settlements/{settlement}/retry', [SettlementController::class, 'retry']);
+    Route::post('settlements/{settlement}/mark-paid', [SettlementController::class, 'markPaid']);
 
     Route::get('reports/revenue-vs-commission', [ReportController::class, 'revenueVsCommission']);
     Route::get('reports/top-sellers', [ReportController::class, 'topSellers']);

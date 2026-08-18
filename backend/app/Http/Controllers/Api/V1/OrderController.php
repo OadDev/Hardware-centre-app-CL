@@ -6,13 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
 use App\Models\Coupon;
 use App\Models\Order;
+use App\Models\Settlement;
 use App\Models\WarehouseInventory;
 use App\Models\WarehouseStockMovement;
 use App\Services\NotificationService;
 use App\Services\RazorpayService;
 use App\Support\CartCalculator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Throwable;
 
 class OrderController extends Controller
 {
@@ -163,6 +167,10 @@ class OrderController extends Controller
             $coupon->increment('used_count');
         }
 
+        if ($data['payment_method'] !== 'cod') {
+            $this->settleSellers($order, $razorpay);
+        }
+
         $customer->cartItems()->delete();
 
         $order->load(['items.product.brand']);
@@ -174,6 +182,72 @@ class OrderController extends Controller
         ], $customer->onesignal_player_id);
 
         return new OrderResource($order);
+    }
+
+    /**
+     * Splits the already-captured payment across the sellers in this order
+     * via Razorpay Route where their linked account is active, and falls
+     * back to a "Pending" manual-transfer settlement everywhere else (a
+     * seller not yet linked, or whose Route transfer failed). This must
+     * never throw back into the caller — the customer has already paid and
+     * the order has to succeed regardless of how settlement plumbing goes;
+     * any failure here just means the admin settles that seller by hand.
+     */
+    private function settleSellers(Order $order, RazorpayService $razorpay): void
+    {
+        try {
+            $order->loadMissing('items.seller');
+            $bySeller = $order->items->groupBy('seller_id');
+
+            $routeTransfers = [];
+            $routeSellers = [];
+            foreach ($bySeller as $items) {
+                $seller = $items->first()->seller;
+                $net = round($items->sum(fn ($i) => $i->line_total - $i->commission_amount), 2);
+
+                if ($seller->razorpay_account_id && $seller->razorpay_account_status === 'Activated') {
+                    $routeTransfers[] = ['account' => $seller->razorpay_account_id, 'amount' => $net, 'notes' => ['order' => $order->order_no, 'seller_code' => $seller->seller_code]];
+                    $routeSellers[] = $seller;
+                } else {
+                    $this->recordSettlement($order, $seller, $net, 'Pending', 'Manual Bank Transfer');
+                }
+            }
+
+            if (empty($routeTransfers) || ! $order->gateway_payment_id) {
+                return;
+            }
+
+            $results = $razorpay->transfer($order->gateway_payment_id, $routeTransfers);
+            foreach ($results as $i => $result) {
+                $seller = $routeSellers[$i];
+                $amount = $routeTransfers[$i]['amount'];
+
+                $this->recordSettlement(
+                    $order,
+                    $seller,
+                    $amount,
+                    $result['ok'] ? 'Paid' : 'Pending',
+                    $result['ok'] ? 'Razorpay Route' : 'Manual Bank Transfer',
+                    $result['transfer_id'] ?? null,
+                );
+            }
+        } catch (Throwable $e) {
+            Log::error('Seller settlement failed for order '.$order->order_no.': '.$e->getMessage());
+        }
+    }
+
+    private function recordSettlement(Order $order, $seller, float $amount, string $status, string $mode, ?string $transferId = null): void
+    {
+        Settlement::create([
+            'settlement_no' => 'STL-'.strtoupper(Str::random(10)),
+            'seller_id' => $seller->id,
+            'order_id' => $order->id,
+            'amount' => $amount,
+            'status' => $status,
+            'mode' => $mode,
+            'razorpay_transfer_id' => $transferId,
+            'settled_at' => $status === 'Paid' ? now() : null,
+        ]);
     }
 
     public function reorder(Request $request, Order $order)

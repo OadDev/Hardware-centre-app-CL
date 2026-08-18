@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Seller;
 use App\Models\User;
 use App\Services\NotificationService;
+use App\Services\RazorpayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -104,6 +105,30 @@ class SellerController extends Controller
         return response()->json($this->transform($seller->loadCount('products')));
     }
 
+    /**
+     * Creates (or re-attempts) the seller's Razorpay Route linked account
+     * using whatever PAN/bank details they've saved on their side. Success
+     * here only means the account and stakeholder were accepted by
+     * Razorpay — actual payout readiness ("Activated") depends on
+     * Razorpay's own KYC review, which happens on their side afterward.
+     */
+    public function linkRazorpay(Seller $seller, RazorpayService $razorpay)
+    {
+        $result = $razorpay->createLinkedAccount($seller);
+
+        $seller->update([
+            'razorpay_account_id' => $result['account_id'] ?? $seller->razorpay_account_id,
+            'razorpay_account_status' => $result['ok'] ? ($result['status'] ?? 'Pending') : 'Not Linked',
+            'razorpay_account_error' => $result['error'] ?? null,
+        ]);
+
+        if (! $result['ok']) {
+            return response()->json(['message' => $result['error'] ?? 'Could not link this seller to Razorpay Route.'], 422);
+        }
+
+        return response()->json($this->transform($seller->loadCount('products')));
+    }
+
     private function transform(Seller $s): array
     {
         return [
@@ -115,6 +140,14 @@ class SellerController extends Controller
             'city' => $s->city,
             'state' => $s->state,
             'gst' => $s->gst_number,
+            'pan' => $s->pan_number,
+            'bankAccountHolder' => $s->bank_account_holder,
+            'bankAccountMasked' => $s->masked_bank_account_number,
+            'bankIfsc' => $s->bank_ifsc,
+            'hasPayoutDetails' => $s->hasPayoutDetails(),
+            'razorpayAccountId' => $s->razorpay_account_id,
+            'razorpayAccountStatus' => $s->razorpay_account_status,
+            'razorpayAccountError' => $s->razorpay_account_error,
             'products' => $s->products_count,
             'revenue' => (float) $s->orderItems()->sum('line_total'),
             'commissionPct' => (float) $s->commission_pct,
