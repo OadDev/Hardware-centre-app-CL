@@ -52,13 +52,13 @@
   <div class="container" style="max-width:680px;">
     <div class="section-head"><span class="eyebrow">Milestones</span><h2 class="section-title" style="margin-top:14px;">Our journey so far</h2></div>
     <div class="tracker">
-      <div class="tstep done"><div class="dot-col"><svg width="15" height="15" viewBox="0 0 24 24" fill="#fff" stroke="none" stroke-width="0"><path d="M20 6 9 17l-5-5"/></svg><div class="bar"></div></div>
+      <div class="tstep done"><div class="dot-col"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><div class="bar"></div></div>
         <div class="content"><div class="title">2019 — Founded in New Delhi</div><div class="time">Started as a single-city marketplace connecting local hardware retailers with contractors.</div></div></div>
-      <div class="tstep done"><div class="dot-col"><svg width="15" height="15" viewBox="0 0 24 24" fill="#fff" stroke="none" stroke-width="0"><path d="M20 6 9 17l-5-5"/></svg><div class="bar"></div></div>
+      <div class="tstep done"><div class="dot-col"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><div class="bar"></div></div>
         <div class="content"><div class="title">2021 — Crossed 100 verified suppliers</div><div class="time">Expanded GST verification and quality checks across 8 states.</div></div></div>
-      <div class="tstep done"><div class="dot-col"><svg width="15" height="15" viewBox="0 0 24 24" fill="#fff" stroke="none" stroke-width="0"><path d="M20 6 9 17l-5-5"/></svg><div class="bar"></div></div>
+      <div class="tstep done"><div class="dot-col"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><div class="bar"></div></div>
         <div class="content"><div class="title">2023 — Launched the mobile app</div><div class="time">Brought order tracking, wishlist and bulk ordering to iOS and Android.</div></div></div>
-      <div class="tstep done"><div class="dot-col"><svg width="15" height="15" viewBox="0 0 24 24" fill="#fff" stroke="none" stroke-width="0"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <div class="tstep done"><div class="dot-col"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
         <div class="content"><div class="title">2026 — 500+ cities, 8,000+ products</div><div class="time">Now one of India's largest B2B hardware marketplaces.</div></div></div>
     </div>
   </div>

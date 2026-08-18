@@ -510,7 +510,7 @@
       '<div class="prod-name">' + p.name + '</div>' +
       '<div class="prod-rating"><svg width="12" height="12" viewBox="0 0 24 24" fill="#F59E0B" stroke="none" stroke-width="0"><path d="m12 2 3 6.5 7 .6-5.3 4.6L18.4 21 12 17.3 5.6 21l1.7-7.3L2 9.1l7-.6L12 2Z"/></svg> ' + Number(p.rating).toFixed(1) + ' <span class="rc">(' + Number(p.reviews).toLocaleString('en-IN') + ')</span></div>' +
       '<div class="prod-price-row"><div><span class="prod-price">' + fmtINR(p.price) + '</span>' + mrpHTML + '</div>' +
-      '<button class="prod-add" data-add-to-cart="' + p.id + '" aria-label="Add to cart"' + (p.stock <= 0 ? ' disabled' : '') + '><svg width="15" height="15" viewBox="0 0 24 24" fill="#fff" stroke="none" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button></div>' +
+      '<button class="prod-add" data-add-to-cart="' + p.id + '" aria-label="Add to cart"' + (p.stock <= 0 ? ' disabled' : '') + '><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button></div>' +
       '</div></a>'
     );
   }
@@ -619,7 +619,7 @@
             var cls = "tstep" + (step.state === "done" ? " done" : step.state === "current" ? " current" : "");
             var dotInner = step.state === "pending"
               ? ""
-              : '<svg width="15" height="15" viewBox="0 0 24 24" fill="#fff" stroke="none" stroke-width="0"><path d="M20 6 9 17l-5-5"/></svg>';
+              : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
             return '<div class="' + cls + '"><div class="dot-col"><div class="dot">' + dotInner + '</div><div class="bar"></div></div>' +
               '<div class="content"><div class="title">' + step.title + '</div><div class="time">' + step.time + '</div></div></div>';
           }).join("");

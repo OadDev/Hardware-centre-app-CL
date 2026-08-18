@@ -23,7 +23,7 @@ $tagColor = in_array($p->tag, ['Deal', 'Bestseller']) ? '#EA580C' : '#16A34A';
     <div class="prod-rating"><svg width="12" height="12" viewBox="0 0 24 24" fill="#F59E0B" stroke="none" stroke-width="0" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 3 6.5 7 .6-5.3 4.6L18.4 21 12 17.3 5.6 21l1.7-7.3L2 9.1l7-.6L12 2Z"/></svg> {{ number_format($p->rating, 1) }} <span class="rc">({{ number_format($p->reviews_count) }})</span></div>
     <div class="prod-price-row">
       <div><span class="prod-price">₹{{ number_format($p->price) }}</span>@if($off > 0)<span class="prod-mrp">₹{{ number_format($p->mrp) }}</span>@endif</div>
-      <button class="prod-add" data-add-to-cart="{{ $p->product_code }}" aria-label="Add to cart" @if($p->stock <= 0) disabled @endif><svg width="15" height="15" viewBox="0 0 24 24" fill="#fff" stroke="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="prod-add" data-add-to-cart="{{ $p->product_code }}" aria-label="Add to cart" @if($p->stock <= 0) disabled @endif><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
     </div>
   </div>
 </a>
