@@ -62,6 +62,7 @@ document.getElementById('add-attr-row')?.addEventListener('click', function () {
           <span class="px-2 py-0.5 rounded-full text-xs font-semibold {{ $v->status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-ink-100 text-ink-500' }}">{{ $v->status }}</span>
         </td>
         <td class="text-right whitespace-nowrap">
+          <button type="button" data-toggle-edit="edit-row-{{ $v->id }}" class="text-xs font-semibold text-brand-600 mr-3">Edit</button>
           <form method="POST" action="{{ route('seller.products.variants.update', [$product, $v]) }}" class="inline">
             @csrf @method('PATCH')
             <input type="hidden" name="status" value="{{ $v->status === 'Active' ? 'Inactive' : 'Active' }}">
@@ -73,9 +74,55 @@ document.getElementById('add-attr-row')?.addEventListener('click', function () {
           </form>
         </td>
       </tr>
+      <tr id="edit-row-{{ $v->id }}" class="hidden border-b border-ink-100 last:border-0">
+        <td colspan="6" class="py-3 bg-ink-50/60">
+          <form method="POST" action="{{ route('seller.products.variants.update', [$product, $v]) }}" class="grid grid-cols-2 md:grid-cols-5 gap-3">
+            @csrf @method('PATCH')
+            <div class="col-span-2 md:col-span-5">
+              <label class="block text-xs font-medium text-ink-500 mb-1">Attributes (e.g. Color, Size, Units)</label>
+              <div class="space-y-2 edit-attr-rows-{{ $v->id }}">
+                @forelse(($v->options ?: []) as $optKey => $optVal)
+                <div class="grid grid-cols-2 gap-2 attr-row">
+                  <input name="attr_keys[]" value="{{ $optKey }}" placeholder="Attribute (e.g. Color)" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200">
+                  <input name="attr_values[]" value="{{ $optVal }}" placeholder="Value (e.g. Red)" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200">
+                </div>
+                @empty
+                <div class="grid grid-cols-2 gap-2 attr-row">
+                  <input name="attr_keys[]" placeholder="Attribute (e.g. Color)" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200">
+                  <input name="attr_values[]" placeholder="Value (e.g. Red)" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200">
+                </div>
+                @endforelse
+              </div>
+              <button type="button" data-add-attr-row="{{ $v->id }}" class="mt-2 text-xs font-semibold text-brand-600">+ Add another attribute</button>
+            </div>
+            <div><label class="block text-xs font-medium text-ink-500 mb-1">Price override (₹)</label><input type="number" step="0.01" name="price" value="{{ $v->price }}" placeholder="Same as base price" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
+            <div><label class="block text-xs font-medium text-ink-500 mb-1">Stock</label><input type="number" name="stock" value="{{ $v->stock }}" required class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
+            <div><label class="block text-xs font-medium text-ink-500 mb-1">SKU</label><input name="sku" value="{{ $v->sku }}" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
+            <div class="col-span-2 md:col-span-5"><button type="submit" class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold">Save Changes</button></div>
+          </form>
+        </td>
+      </tr>
       @endforeach
     </tbody>
   </table>
   @endif
 </div>
+
+<script>
+document.querySelectorAll('[data-toggle-edit]').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    document.getElementById(btn.dataset.toggleEdit)?.classList.toggle('hidden');
+  });
+});
+document.querySelectorAll('[data-add-attr-row]').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var wrap = document.querySelector('.edit-attr-rows-' + btn.dataset.addAttrRow);
+    var row = document.createElement('div');
+    row.className = 'grid grid-cols-2 gap-2 attr-row';
+    row.innerHTML = '<input name="attr_keys[]" placeholder="Attribute (e.g. Size)" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200">'
+      + '<input name="attr_values[]" placeholder="Value (e.g. XL)" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200">';
+    wrap.appendChild(row);
+  });
+});
+</script>
 @endsection

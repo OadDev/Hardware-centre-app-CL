@@ -412,6 +412,7 @@ function openProductProfile(p) {
               <div class="text-xs text-ink-400">${v.sku} · ${v.price !== null ? fmtINR(v.price) : 'Base price'} · Stock ${v.stock} · ${v.status}</div>
             </div>
             <div class="flex items-center gap-1.5 flex-shrink-0">
+              <button data-edit-variant="${v.id}" class="px-2 py-1 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700">Edit</button>
               <button data-toggle-variant="${v.id}" data-variant-status="${v.status}" class="px-2 py-1 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700">${v.status==='Active'?'Deactivate':'Activate'}</button>
               <button data-remove-variant="${v.id}" class="w-6 h-6 rounded-full bg-rose-600 text-white text-xs leading-none flex items-center justify-center">×</button>
             </div>
@@ -512,6 +513,57 @@ function openProductProfile(p) {
       stock: parseInt(document.getElementById('drawer-variant-stock').value || 0),
     });
     toast('Option added'); await refreshProducts(); navigateTo('products');
+  }));
+  document.querySelectorAll('[data-edit-variant]').forEach(btn => btn.addEventListener('click', () => {
+    const v = (p.variants||[]).find(x => x.id === btn.dataset.editVariant);
+    if (!v) return;
+    const attrs = Object.entries(v.attributes || {});
+    openModal({
+      title: 'Edit Option',
+      body: `
+        <div id="edit-variant-attrs" class="space-y-2 mb-2">
+          ${(attrs.length ? attrs : [['','']]).map(([k,val]) => `
+            <div class="grid grid-cols-2 gap-2 edit-variant-attr-row">
+              <input placeholder="Attribute (e.g. Color)" value="${k}" class="variant-attr-key w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-800">
+              <input placeholder="Value (e.g. Red)" value="${val}" class="variant-attr-value w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-800">
+            </div>`).join('')}
+        </div>
+        <button type="button" id="edit-variant-add-row-btn" class="mb-3 text-xs font-medium text-brand-600 dark:text-brand-400">+ Add another attribute</button>
+        <div class="grid grid-cols-2 gap-3">
+          ${formField('Price override (₹)','number','Same as base price', v.price !== null ? v.price : '', 'ev-price')}
+          ${formField('Stock','number','e.g. 25', v.stock, 'ev-stock')}
+        </div>
+        <div class="mt-3">${formField('SKU','text','SKU', v.sku, 'ev-sku')}</div>
+      `,
+      confirmLabel: 'Save Option',
+      onConfirm: withErr(async () => {
+        const options = {};
+        document.querySelectorAll('.edit-variant-attr-row').forEach(row => {
+          const key = row.querySelector('.variant-attr-key').value.trim();
+          const value = row.querySelector('.variant-attr-value').value.trim();
+          if (key && value) options[key] = value;
+        });
+        if (!Object.keys(options).length) { toast('Enter at least one attribute (e.g. Color, Size, Units)', 'warn'); return; }
+        const priceVal = document.getElementById('ev-price').value;
+        await api('PATCH', '/products/'+p.id+'/variants/'+v.id, {
+          options,
+          price: priceVal ? parseFloat(priceVal) : null,
+          stock: parseInt(document.getElementById('ev-stock').value || 0),
+          sku: document.getElementById('ev-sku').value || undefined,
+        });
+        closeModal(); toast('Option updated'); await refreshProducts(); navigateTo('products');
+      })
+    });
+    document.getElementById('edit-variant-add-row-btn')?.addEventListener('click', () => {
+      const wrap = document.getElementById('edit-variant-attrs');
+      const row = document.createElement('div');
+      row.className = 'grid grid-cols-2 gap-2 edit-variant-attr-row';
+      row.innerHTML = `
+        <input placeholder="Attribute (e.g. Size)" class="variant-attr-key w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-800">
+        <input placeholder="Value (e.g. XL)" class="variant-attr-value w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-800">
+      `;
+      wrap.appendChild(row);
+    });
   }));
   document.querySelectorAll('[data-toggle-variant]').forEach(btn => btn.addEventListener('click', withErr(async () => {
     const nextStatus = btn.dataset.variantStatus === 'Active' ? 'Inactive' : 'Active';
@@ -695,6 +747,7 @@ function openOrderProfile(o) {
   openDrawer(o.id, `
     <div class="grid grid-cols-2 gap-3 mb-5">${miniStat('Amount', fmtINR(o.amount))}${miniStat('Items', o.items)}</div>
     ${drawerSection('Details', `${drawerRow('Customer', o.customerName)}${drawerRow('Payment', statusBadge(o.payment))}${drawerRow('Placed', new Date(o.date).toLocaleDateString('en-IN'))}`)}
+    ${drawerSection('Products & Sellers', `<div id="order-items-loading" class="text-xs text-ink-400">Loading order items…</div><div id="order-items-list" class="space-y-2"></div>`)}
     <div class="mt-4">${formSelect('Update Status', ORDER_STATUSES, ORDER_STATUSES.indexOf(o.status), 'order-status-select')}</div>
     <div class="flex gap-2.5 mt-6 pt-5 border-t border-ink-100 dark:border-ink-800">
       <button id="save-order-status-btn" class="flex-1 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-xl">Save Status</button>
@@ -705,6 +758,24 @@ function openOrderProfile(o) {
     await api('PATCH', '/orders/'+o.id, { status });
     closeModal(); toast('Order status updated'); await refreshOrders(); navigateTo('orders');
   }));
+  (async () => {
+    try {
+      const full = await api('GET', '/orders/'+o.id);
+      const list = document.getElementById('order-items-list');
+      const loading = document.getElementById('order-items-loading');
+      if (loading) loading.remove();
+      if (list) {
+        list.innerHTML = (full.items || []).map(it => `
+          <div class="px-3 py-2 rounded-lg border border-ink-200 dark:border-ink-700">
+            <div class="text-sm font-medium text-ink-900 dark:text-white">${it.product}</div>
+            <div class="text-xs text-ink-400">Sold by ${it.seller} · Qty ${it.quantity} · ${fmtINR(it.unit_price)} each · ${fmtINR(it.line_total)} total</div>
+          </div>`).join('') || `<p class="text-xs text-ink-400">No items found.</p>`;
+      }
+    } catch (e) {
+      const loading = document.getElementById('order-items-loading');
+      if (loading) loading.textContent = 'Could not load order items.';
+    }
+  })();
 }
 
 /* ===== RETURNS & REFUNDS ===== */

@@ -10,13 +10,20 @@
   @else
   <table class="w-full text-sm">
     <thead><tr class="text-left text-ink-400 border-b border-ink-100">
-      <th class="py-2 font-medium">Order</th><th class="font-medium">Product</th><th class="font-medium">Qty</th><th class="font-medium">Line Total</th><th class="font-medium">Commission</th><th class="font-medium">Status</th><th class="font-medium">Placed</th>
+      <th class="py-2 font-medium">Order</th><th class="font-medium">Customer</th><th class="font-medium">Product</th><th class="font-medium">Qty</th><th class="font-medium">Line Total</th><th class="font-medium">Commission</th><th class="font-medium">Status</th><th class="font-medium">Placed</th>
     </tr></thead>
     <tbody>
       @foreach($items as $item)
       <tr class="border-b border-ink-100 last:border-0">
         <td class="py-2.5">{{ $item->order->order_no }}</td>
-        <td>{{ $item->product->name }}</td>
+        <td>
+          <div class="font-medium text-ink-900">{{ $item->order->customer->name ?? 'Guest' }}</div>
+          <div class="text-xs text-ink-400">{{ $item->order->customer->phone ?? $item->order->customer->email ?? '' }}</div>
+        </td>
+        <td>
+          <div class="font-medium text-ink-900">{{ $item->product->name }}</div>
+          @if($item->variant_label)<div class="text-xs text-ink-400">{{ $item->variant_label }}</div>@endif
+        </td>
         <td>{{ $item->quantity }}</td>
         <td>₹{{ number_format($item->line_total, 2) }}</td>
         <td>₹{{ number_format($item->commission_amount, 2) }}</td>
