@@ -15,7 +15,7 @@ class CategoriesController extends Controller
             ->with([
                 'children' => fn ($q) => $q->where('status', 'Active')->withCount('products'),
                 'products' => function ($q) {
-                    $q->approved()->with(['brand', 'category'])->orderByDesc('reviews_count')->limit(4);
+                    $q->approved()->with(['brand', 'category', 'images'])->orderByDesc('reviews_count')->limit(4);
                 },
             ])
             ->get();

@@ -497,10 +497,13 @@
       ? '<div class="prod-tag" style="background:#FFF7ED;color:#EA580C;">' + p.tag + '</div>'
       : '';
     var mrpHTML = off > 0 ? '<span class="prod-mrp">' + fmtINR(p.mrp) + '</span>' : '';
+    var thumbHTML = (p.images && p.images.length)
+      ? '<img src="' + p.images[0] + '" alt="' + p.name + '" loading="lazy">'
+      : '<span>' + p.brand + '<br>' + p.name + '</span>';
     return (
       '<a class="prod-card" href="/product/' + p.id + '" style="width:100%;" data-brand="' + p.brand + '">' +
       '<div class="prod-thumb" style="background:linear-gradient(135deg,#F8FAFC,#EEF1F4);">' +
-      '<span>' + p.brand + '<br>' + p.name + '</span>' + tagHTML +
+      thumbHTML + tagHTML +
       '<button class="prod-wish" data-wish-id="' + p.id + '" aria-label="Save"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><path d="M12 21s-7.5-4.6-10-9.1C.4 8.8 1.6 5.5 4.7 5c2-.3 3.6.8 4.3 2 .7-1.2 2.3-2.3 4.3-2 3.1.5 4.3 3.8 2.7 6.9C19.5 16.4 12 21 12 21Z"/></svg></button>' +
       '</div><div class="prod-body">' +
       '<div class="prod-brand">' + p.brand + '</div>' +
@@ -519,6 +522,12 @@
   if (searchResults && searchInput) {
     var searchDebounce = null;
     var urlCategory = new URLSearchParams(window.location.search).get("category");
+    var urlBrand = new URLSearchParams(window.location.search).get("brand");
+    if (urlBrand) {
+      Array.prototype.forEach.call(brandChecks, function (c) {
+        if (c.getAttribute("data-brand-filter") === urlBrand) c.checked = true;
+      });
+    }
     var runSearch = function () {
       var q = searchInput.value.trim();
       var brands = Array.prototype.filter.call(brandChecks, function (c) { return c.checked; })
@@ -537,7 +546,7 @@
           var countEl = document.querySelector("[data-result-count]");
           var titleEl = document.getElementById("search-results-title");
           if (countEl) countEl.textContent = items.length + " products found";
-          if (titleEl) titleEl.textContent = q ? ('Results for "' + q + '"') : (urlCategory ? "Category Results" : "Trending Products");
+          if (titleEl) titleEl.textContent = q ? ('Results for "' + q + '"') : (brands.length ? brands.join(", ") + " Products" : (urlCategory ? "Category Results" : "Trending Products"));
           searchResults.innerHTML = items.length
             ? items.map(productCardHTML).join("")
             : '<p style="color:var(--muted);grid-column:1/-1;">No products matched your search.</p>';
@@ -548,7 +557,7 @@
         });
     };
 
-    if (urlCategory) runSearch();
+    if (urlCategory || urlBrand) runSearch();
     searchInput.addEventListener("input", function () {
       clearTimeout(searchDebounce);
       searchDebounce = setTimeout(runSearch, 300);

@@ -7,7 +7,11 @@ $tagColor = in_array($p->tag, ['Deal', 'Bestseller']) ? '#EA580C' : '#16A34A';
 @endphp
 <a class="prod-card" href="{{ route('web.product', $p->product_code) }}" style="{{ $width ? 'width:'.$width.';flex-shrink:0;' : 'width:100%;' }}" data-brand="{{ $p->brand->name }}" data-search-target="{{ $p->name }} {{ $p->brand->name }}">
   <div class="prod-thumb" style="background:linear-gradient(135deg,#F8FAFC,#EEF1F4);">
+    @if($p->images->first())
+    <img src="{{ $p->images->first()->url }}" alt="{{ $p->name }}" loading="lazy">
+    @else
     <span>{{ $p->brand->name }}<br>{{ $p->name }}</span>
+    @endif
     @if($p->tag)
     <div class="prod-tag" style="background:{{ $tagBg }};color:{{ $tagColor }};">{{ $p->tag }}</div>
     @endif

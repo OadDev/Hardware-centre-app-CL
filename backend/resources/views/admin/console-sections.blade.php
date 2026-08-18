@@ -365,6 +365,7 @@ SECTION_RENDERERS.products = async function(main) {
         ${formField('MRP (₹)','number','e.g. 2999','','np-mrp')}
         ${formField('Stock','number','e.g. 100','0','np-stock')}
         ${formSelect('Unit', ['piece','box','pair','coil','bag','litre','tub'], 0, 'np-unit')}
+        <div class="sm:col-span-2">${formTextarea('Description', 'What makes this product worth buying', 3, 'np-description')}</div>
         <div class="sm:col-span-2">
           <label class="block text-xs font-medium text-ink-500 dark:text-ink-400 mb-1.5">Product Photos (up to 8)</label>
           <input type="file" id="np-images" multiple accept="image/*" class="w-full text-sm text-ink-600 dark:text-ink-300 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-ink-100 dark:file:bg-ink-700 file:text-ink-700 dark:file:text-ink-200 file:text-xs file:font-medium">
@@ -385,6 +386,7 @@ SECTION_RENDERERS.products = async function(main) {
           mrp: parseFloat(document.getElementById('np-mrp').value||0),
           stock: parseInt(document.getElementById('np-stock').value||0),
           unit: document.getElementById('np-unit').value,
+          description: document.getElementById('np-description').value || undefined,
           video_url: document.getElementById('np-video').value || undefined,
         });
         const files = document.getElementById('np-images').files;
@@ -735,11 +737,20 @@ SECTION_RENDERERS.brands = async function(main) {
     title: 'All Brands', subtitle: `${DATA.brands.length} brands`, data: DATA.brands, searchKeys:['name'],
     filters:[{key:'status', label:'Status', options:['Active','Inactive']}],
     columns: [
-      { label:'Brand', render: b => `<div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-ink-100 dark:bg-ink-800 flex items-center justify-center">${icon('tag','w-4 h-4 text-ink-400')}</div><span class="font-medium text-ink-800 dark:text-ink-100">${b.name}</span></div>` },
+      { label:'Brand', render: b => `<div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-ink-100 dark:bg-ink-800 flex items-center justify-center overflow-hidden flex-shrink-0">
+            ${b.logoUrl ? `<img src="${b.logoUrl}" class="w-full h-full object-contain" alt="">` : icon('tag','w-4 h-4 text-ink-400')}
+          </div>
+          <span class="font-medium text-ink-800 dark:text-ink-100">${b.name}</span>
+        </div>` },
       { label:'Products', render: b => fmtNum(b.products) },
       { label:'Featured', render: b => b.featured ? `<span class="text-amber-500">${icon('star','w-4 h-4 inline fill-current')}</span>` : '—' },
       { label:'Status', render: b => statusBadge(b.status) },
-      { label:'', render: b => `<button data-stop-row-click data-toggle-brand="${b.id}" class="text-xs font-medium text-brand-600 hover:underline">${b.status==='Active'?'Deactivate':'Activate'}</button>` },
+      { label:'', render: b => `
+          <input type="file" accept="image/*" data-brand-logo-input="${b.id}" class="hidden">
+          <button data-stop-row-click data-upload-brand-logo="${b.id}" class="text-xs font-medium text-brand-600 hover:underline mr-3">${b.logoUrl ? 'Change Logo' : 'Add Logo'}</button>
+          <button data-stop-row-click data-toggle-brand="${b.id}" class="text-xs font-medium text-brand-600 hover:underline">${b.status==='Active'?'Deactivate':'Activate'}</button>
+        ` },
     ],
     afterRender: (container) => {
       container.querySelectorAll('[data-toggle-brand]').forEach(btn => btn.addEventListener('click', withErr(async () => {
@@ -747,12 +758,36 @@ SECTION_RENDERERS.brands = async function(main) {
         await api('PATCH', '/brands/'+b.id, { status: b.status==='Active'?'Inactive':'Active' });
         toast('Brand updated'); await refreshBrands(); navigateTo('brands');
       })));
+      container.querySelectorAll('[data-upload-brand-logo]').forEach(btn => btn.addEventListener('click', () => {
+        container.querySelector(`[data-brand-logo-input="${btn.dataset.uploadBrandLogo}"]`).click();
+      }));
+      container.querySelectorAll('[data-brand-logo-input]').forEach(input => input.addEventListener('change', withErr(async () => {
+        const file = input.files[0];
+        if (!file) return;
+        const fd = new FormData();
+        fd.append('logo', file);
+        const res = await fetch('/admin/api/brands/'+input.dataset.brandLogoInput+'/logo', { method:'POST', headers:{'X-CSRF-TOKEN':csrfToken()}, body: fd });
+        if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.message || 'Logo upload failed'); }
+        toast('Brand logo updated'); await refreshBrands(); navigateTo('brands');
+      })));
     }
   });
   document.getElementById('add-brand-btn').addEventListener('click', () => {
-    openModal({ title:'Add New Brand', body:`<div class="space-y-4">${formField('Brand Name','text','e.g. ToughEdge','','nb-name')}</div>`,
+    openModal({ title:'Add New Brand', body:`<div class="space-y-4">
+        ${formField('Brand Name','text','e.g. ToughEdge','','nb-name')}
+        <div><label class="block text-xs font-medium text-ink-500 dark:text-ink-400 mb-1.5">Logo (optional)</label>
+          <input type="file" id="nb-logo" accept="image/*" class="w-full text-sm text-ink-600 dark:text-ink-300 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-ink-100 dark:file:bg-ink-700 file:text-ink-700 dark:file:text-ink-200 file:text-xs file:font-medium">
+        </div>
+      </div>`,
       confirmLabel:'Create Brand', onConfirm: withErr(async () => {
-        await api('POST', '/brands', { name: document.getElementById('nb-name').value });
+        const created = await api('POST', '/brands', { name: document.getElementById('nb-name').value });
+        const file = document.getElementById('nb-logo').files[0];
+        if (file) {
+          const fd = new FormData();
+          fd.append('logo', file);
+          const res = await fetch('/admin/api/brands/'+created.id+'/logo', { method:'POST', headers:{'X-CSRF-TOKEN':csrfToken()}, body: fd });
+          if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.message || 'Logo upload failed'); }
+        }
         closeModal(); toast('Brand created'); await refreshBrands(); navigateTo('brands');
       }) });
   });

@@ -273,6 +273,7 @@ p{ margin:0; }
   display:flex; align-items:center; justify-content:center; padding:14px; text-align:center;
 }
 .prod-thumb span{ font-size:11.5px; font-weight:700; color:var(--muted-2); line-height:1.4; }
+.prod-thumb img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 .prod-wish{ position:absolute; top:8px; right:8px; width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,.94); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.12); }
 .prod-tag{ position:absolute; top:8px; left:8px; padding:3px 8px; border-radius:7px; font-size:9.5px; font-weight:700; letter-spacing:.3px; text-transform:uppercase; }
 .prod-body{ padding:12px 13px 14px; }
@@ -306,10 +307,11 @@ p{ margin:0; }
 /* ---------- Brand grid ---------- */
 .brand-row{ display:flex; gap:12px; overflow-x:auto; padding:4px 2px 10px; scrollbar-width:none; }
 .brand-row::-webkit-scrollbar{ display:none; }
-.brand-tile{ flex-shrink:0; width:104px; height:92px; border:1px solid var(--border-soft); border-radius:var(--radius-md); background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:9px; cursor:pointer; box-shadow:var(--shadow-card); transition:all .15s ease; }
+.brand-tile{ flex-shrink:0; width:104px; height:92px; border:1px solid var(--border-soft); border-radius:var(--radius-md); background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:9px; cursor:pointer; box-shadow:var(--shadow-card); transition:all .15s ease; text-decoration:none; }
 .brand-tile:hover{ border-color:var(--orange-light-border); transform:translateY(-2px); }
-.brand-tile .ic{ width:40px; height:40px; border-radius:11px; background:var(--navy); display:flex; align-items:center; justify-content:center; }
+.brand-tile .ic{ width:40px; height:40px; border-radius:11px; background:var(--navy); display:flex; align-items:center; justify-content:center; overflow:hidden; }
 .brand-tile .ic span{ font-family:var(--font-head); font-weight:800; font-size:13px; color:#fff; }
+.brand-tile .ic img{ width:100%; height:100%; object-fit:contain; }
 .brand-tile .lbl{ font-size:11px; font-weight:600; color:var(--muted); }
 
 .search-layout{ display:grid; grid-template-columns:260px 1fr; gap:32px; align-items:start; }

@@ -93,10 +93,16 @@
     <h2 class="section-title" style="font-size:24px;margin-bottom:20px;">Featured Brands</h2>
     <div class="brand-row">
       @foreach($brands as $b)
-      <div class="brand-tile">
-        <div class="ic"><span>{{ collect(explode(' ', $b->name))->map(fn($w) => $w[0])->join('') }}</span></div>
+      <a class="brand-tile" href="{{ route('web.search') }}?brand={{ urlencode($b->name) }}">
+        <div class="ic">
+          @if($b->logo_url)
+          <img src="{{ $b->logo_url }}" alt="{{ $b->name }}">
+          @else
+          <span>{{ collect(explode(' ', $b->name))->map(fn($w) => $w[0])->join('') }}</span>
+          @endif
+        </div>
         <span class="lbl">{{ $b->name }}</span>
-      </div>
+      </a>
       @endforeach
     </div>
   </div>

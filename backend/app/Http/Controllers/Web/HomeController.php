@@ -12,7 +12,7 @@ class HomeController extends Controller
 {
     public function index()
     {
-        $base = Product::query()->approved()->with(['brand', 'category']);
+        $base = Product::query()->approved()->with(['brand', 'category', 'images']);
 
         return view('web.home', [
             'banners' => Banner::where('status', 'Active')->orderBy('sort_order')->get(),

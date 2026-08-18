@@ -28,7 +28,7 @@ class ProductController extends Controller
         $related = Product::query()->approved()
             ->where('category_id', $product->category_id)
             ->where('id', '!=', $product->id)
-            ->with(['brand', 'category'])
+            ->with(['brand', 'category', 'images'])
             ->orderByDesc('reviews_count')
             ->limit(4)
             ->get();
