@@ -7,6 +7,7 @@
 <title>Hardware Centers — Admin Console</title>
 
 <link rel="stylesheet" href="{{ asset('vendor/admin.css') }}">
+<link rel="stylesheet" href="{{ asset('vendor/admin-brand-orange.css') }}?v={{ @filemtime(public_path('vendor/admin-brand-orange.css')) ?: '1' }}">
 <link rel="stylesheet" href="{{ asset('vendor/fontawesome/css/all.min.css') }}">
 <script src="{{ asset('vendor/chart.umd.min.js') }}"></script>
 <script src="{{ asset('vendor/lucide.min.js') }}"></script>
@@ -20,7 +21,7 @@
 <div id="app" class="min-h-screen flex"></div>
 <div id="boot-loading" class="fixed inset-0 z-[200] bg-ink-50 flex items-center justify-center">
   <div class="text-center">
-    <div class="w-10 h-10 rounded-2xl bg-brand-600 text-white flex items-center justify-center mx-auto font-bold animate-pulse">HC</div>
+    <img src="{{ asset('img/brand-icon.png') }}" alt="Hardware Centers" class="w-10 h-10 rounded-2xl mx-auto shadow-sm animate-pulse object-cover">
     <p class="text-sm text-ink-400 mt-3">Loading marketplace data…</p>
   </div>
 </div>
@@ -318,7 +319,7 @@ function buildSidebar() {
   wrap.id = 'sidebar';
   wrap.innerHTML = `
     <div class="flex items-center gap-2.5 h-16 px-4 border-b border-ink-200/70 dark:border-ink-800 flex-shrink-0">
-      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center flex-shrink-0 shadow-sm">${icon('boxes', 'w-4.5 h-4.5 text-white')}</div>
+      <img src="{{ asset('img/brand-icon.png') }}" alt="Hardware Centers" class="w-8 h-8 rounded-lg flex-shrink-0 shadow-sm object-cover">
       <div class="sidebar-label leading-tight overflow-hidden whitespace-nowrap">
         <p class="text-sm font-bold text-ink-900 dark:text-white">Hardware Centers</p>
         <p class="text-[11px] text-ink-400 -mt-0.5">Admin Console</p>

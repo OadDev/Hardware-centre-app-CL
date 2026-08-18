@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Seller Sign In — Hardware Centers</title>
 <link rel="stylesheet" href="{{ asset('vendor/admin.css') }}">
+<link rel="stylesheet" href="{{ asset('vendor/admin-brand-orange.css') }}?v={{ @filemtime(public_path('vendor/admin-brand-orange.css')) ?: '1' }}">
 </head>
 <body class="min-h-screen bg-ink-50 font-sans flex items-center justify-center p-6">
   <div class="w-full max-w-sm">
     <div class="text-center mb-8">
-      <div class="w-12 h-12 rounded-2xl bg-brand-600 text-white flex items-center justify-center mx-auto font-bold text-lg">HC</div>
+      <img src="{{ asset('img/brand-icon.png') }}" alt="Hardware Centers" class="w-12 h-12 rounded-2xl mx-auto shadow-sm object-cover">
       <h1 class="mt-4 text-xl font-bold text-ink-900">Hardware Centers Seller Center</h1>
       <p class="text-sm text-ink-500 mt-1">Sign in to manage your store</p>
     </div>

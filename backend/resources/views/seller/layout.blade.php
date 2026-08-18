@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>@yield('title', 'Seller Center') · Hardware Centers</title>
 <link rel="stylesheet" href="{{ asset('vendor/admin.css') }}">
+<link rel="stylesheet" href="{{ asset('vendor/admin-brand-orange.css') }}?v={{ @filemtime(public_path('vendor/admin-brand-orange.css')) ?: '1' }}">
 </head>
 <body class="bg-ink-50 text-ink-800 antialiased min-h-screen flex">
   <aside class="w-60 shrink-0 bg-white border-r border-ink-200/70 flex flex-col">
     <div class="px-5 py-5 flex items-center gap-2.5 border-b border-ink-200/70">
-      <div class="w-9 h-9 rounded-xl bg-brand-600 text-white flex items-center justify-center font-bold text-sm">HC</div>
+      <img src="{{ asset('img/brand-icon.png') }}" alt="Hardware Centers" class="w-9 h-9 rounded-xl object-cover">
       <div>
         <div class="font-bold text-sm text-ink-900 leading-tight">Seller Center</div>
         <div class="text-xs text-ink-400">Hardware Centers</div>
