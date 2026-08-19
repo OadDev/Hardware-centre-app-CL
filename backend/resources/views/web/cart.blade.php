@@ -42,6 +42,7 @@
           <div class="cart-summary-row" data-cart-disc-row style="display:none;color:var(--green-dark);"><span>Discount</span><span data-cart-disc>-₹0</span></div>
           <div class="cart-summary-row"><span>GST</span><span data-cart-gst>₹0</span></div>
           <div class="cart-summary-row"><span>Delivery</span><span data-cart-deliv>Free</span></div>
+          <div class="cart-summary-row" data-cart-packaging-row style="display:none;"><span>Packaging</span><span data-cart-packaging>₹0</span></div>
           <div class="cart-summary-row total"><span>Total</span><span data-cart-total>₹0</span></div>
           <a href="{{ route('web.checkout') }}" class="btn btn-primary btn-block" style="margin-top:16px;">Proceed to Checkout</a>
         </div>

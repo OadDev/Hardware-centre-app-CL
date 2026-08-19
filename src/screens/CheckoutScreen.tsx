@@ -162,12 +162,24 @@ export default function CheckoutScreen({ navigation }: Props) {
               <Text style={styles.summaryLabel}>GST</Text>
               <Text style={styles.summaryVal}>{inr(totals.gst)}</Text>
             </View>
-            <View style={[styles.summaryRow, { marginBottom: 12 }]}>
+            <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Delivery</Text>
               <Text style={[styles.summaryVal, { color: totals.deliv === 0 ? colors.successDark : colors.text }]}>
                 {totals.deliv === 0 ? 'Free' : inr(totals.deliv)}
               </Text>
             </View>
+            {totals.packaging > 0 && (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Packaging</Text>
+                <Text style={styles.summaryVal}>{inr(totals.packaging)}</Text>
+              </View>
+            )}
+            {totals.codFee > 0 && (
+              <View style={[styles.summaryRow, { marginBottom: 12 }]}>
+                <Text style={styles.summaryLabel}>COD Charges</Text>
+                <Text style={styles.summaryVal}>{inr(totals.codFee)}</Text>
+              </View>
+            )}
             <View style={styles.summaryTotalRow}>
               <Text style={styles.summaryTotalLabel}>Total Payable</Text>
               <Text style={styles.summaryTotalVal}>{inr(totals.total)}</Text>

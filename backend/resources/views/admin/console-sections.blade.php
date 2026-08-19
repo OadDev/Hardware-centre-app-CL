@@ -1376,10 +1376,10 @@ SECTION_RENDERERS.shipping = async function(main) {
       </div></div>`)}
     </div>
     <div class="flex justify-end mb-6">${btnPrimary('Save Shipping Config','check','save-shipping-btn')}</div>
-    ${card(`<div class="p-5 pb-3 flex items-center justify-between"><div><h3 class="font-semibold text-ink-900 dark:text-white">Shipping Zones & Weight Rules</h3><p class="text-xs text-ink-400 mt-0.5">Charges vary by delivery zone</p></div></div>
+    ${card(`<div class="p-5 pb-3 flex items-center justify-between"><div><h3 class="font-semibold text-ink-900 dark:text-white">Shipping Zones & Weight Rules</h3><p class="text-xs text-ink-400 mt-0.5">Charges vary by delivery zone</p></div>${btnPrimary('Add Zone','plus','add-zone-btn')}</div>
       <div class="overflow-x-auto"><table class="w-full text-sm">
-        <thead><tr class="text-left text-xs text-ink-400 border-t border-ink-100 dark:border-ink-800"><th class="font-medium py-2.5 px-5">Zone</th><th class="font-medium py-2.5 px-3">Weight Slab</th><th class="font-medium py-2.5 px-3">Charge</th><th class="font-medium py-2.5 px-3">Free Above</th></tr></thead>
-        <tbody>${s.zones.map(z => `<tr class="border-t border-ink-100 dark:border-ink-800"><td class="py-3 px-5 font-medium text-ink-800 dark:text-ink-100">${z.zone}</td><td class="py-3 px-3 text-ink-500">${z.weight_slab}</td><td class="py-3 px-3 tnum">${fmtINR(z.charge)}</td><td class="py-3 px-3 tnum">${fmtINR(z.free_above)}</td></tr>`).join('')}</tbody>
+        <thead><tr class="text-left text-xs text-ink-400 border-t border-ink-100 dark:border-ink-800"><th class="font-medium py-2.5 px-5">Zone</th><th class="font-medium py-2.5 px-3">Weight Slab</th><th class="font-medium py-2.5 px-3">Charge</th><th class="font-medium py-2.5 px-3">Free Above</th><th class="font-medium py-2.5 px-3"></th></tr></thead>
+        <tbody>${s.zones.map(z => `<tr class="border-t border-ink-100 dark:border-ink-800"><td class="py-3 px-5 font-medium text-ink-800 dark:text-ink-100">${z.zone}</td><td class="py-3 px-3 text-ink-500">${z.weight_slab}</td><td class="py-3 px-3 tnum">${fmtINR(z.charge)}</td><td class="py-3 px-3 tnum">${fmtINR(z.free_above)}</td><td class="py-3 px-3 text-right"><button data-edit-zone="${z.id}" class="text-xs font-medium text-brand-600 dark:text-brand-400">Edit</button></td></tr>`).join('') || `<tr><td colspan="5" class="py-6 px-5 text-center text-ink-400">No zones yet — add one to charge by delivery area.</td></tr>`}</tbody>
       </table></div>`)}
   `;
   document.getElementById('save-shipping-btn').addEventListener('click', withErr(async () => {
@@ -1392,6 +1392,38 @@ SECTION_RENDERERS.shipping = async function(main) {
       free_shipping_min: parseFloat(document.getElementById('free-ship-min').value||0),
     });
     toast('Shipping configuration saved'); await refreshShipping(); navigateTo('shipping');
+  }));
+
+  const openZoneModal = (zone) => {
+    openModal({
+      title: zone ? 'Edit Zone' : 'Add Zone',
+      body: `<div class="grid grid-cols-1 gap-4">
+        ${formField('Zone Name','text','e.g. Zone A — Metro Cities', zone?.zone||'', 'zone-name')}
+        ${formField('Weight Slab','text','e.g. Up to 5kg', zone?.weight_slab||'', 'zone-weight')}
+        ${formField('Charge (₹)','number','', zone?.charge??'', 'zone-charge')}
+        ${formField('Free Above (₹)','number','', zone?.free_above??'', 'zone-free-above')}
+      </div>`,
+      confirmLabel: zone ? 'Save Zone' : 'Add Zone',
+      onConfirm: withErr(async () => {
+        const payload = {
+          zone: document.getElementById('zone-name').value,
+          weight_slab: document.getElementById('zone-weight').value,
+          charge: parseFloat(document.getElementById('zone-charge').value||0),
+          free_above: parseFloat(document.getElementById('zone-free-above').value||0),
+        };
+        if (zone) {
+          await api('PATCH', '/shipping/zones/'+zone.id, payload);
+        } else {
+          await api('POST', '/shipping/zones', payload);
+        }
+        closeModal(); toast(zone ? 'Zone updated' : 'Zone added'); await refreshShipping(); navigateTo('shipping');
+      }),
+    });
+  };
+  document.getElementById('add-zone-btn')?.addEventListener('click', () => openZoneModal(null));
+  document.querySelectorAll('[data-edit-zone]').forEach(btn => btn.addEventListener('click', () => {
+    const zone = s.zones.find(z => String(z.id) === btn.dataset.editZone);
+    if (zone) openZoneModal(zone);
   }));
 };
 

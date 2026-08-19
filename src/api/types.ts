@@ -132,6 +132,8 @@ export type Totals = {
   disc: number;
   gst: number;
   deliv: number;
+  packaging: number;
+  codFee: number;
   total: number;
   count: number;
 };

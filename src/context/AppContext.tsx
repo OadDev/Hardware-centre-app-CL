@@ -22,7 +22,7 @@ import { initPush } from '../push/onesignal';
 const ONBOARD_KEY = 'hc_onboarded_v1';
 const DELIVERY_LABEL_KEY = 'hc_delivery_label_v1';
 
-const EMPTY_CART: CartResponse = { items: [], totals: { sub: 0, disc: 0, gst: 0, deliv: 0, total: 0, count: 0 } };
+const EMPTY_CART: CartResponse = { items: [], totals: { sub: 0, disc: 0, gst: 0, deliv: 0, packaging: 0, codFee: 0, total: 0, count: 0 } };
 
 type ShippingMethod = 'standard' | 'express';
 type PaymentMethod = 'upi' | 'card' | 'netbanking' | 'cod';
@@ -401,7 +401,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     try {
-      const res = await CouponApi.apply(code);
+      const res = await CouponApi.apply(code, pay);
       setCouponApplied(true);
       setCouponTotals(res.totals);
       setCouponErr('');
@@ -411,7 +411,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setCouponTotals(null);
       setCouponErr(err instanceof ApiError ? err.message : 'Invalid coupon code');
     }
-  }, [couponCode, showToast]);
+  }, [couponCode, pay, showToast]);
+
+  // Packaging/COD charges depend on the selected payment method, so the
+  // displayed totals need to be recomputed whenever it changes — reapplying
+  // the coupon (if any) so its discount isn't dropped from the refreshed total.
+  useEffect(() => {
+    if (cart.items.length === 0) return;
+    if (couponApplied && couponCode) {
+      CouponApi.apply(couponCode.trim().toUpperCase(), pay)
+        .then((res) => setCouponTotals(res.totals))
+        .catch(() => {});
+    } else {
+      CartApi.get(pay)
+        .then((res) => setCart(res))
+        .catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pay]);
 
   const addAddress = useCallback(async (payload: {
     label?: string;

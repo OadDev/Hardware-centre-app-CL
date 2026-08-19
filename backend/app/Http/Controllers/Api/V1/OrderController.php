@@ -82,7 +82,7 @@ class OrderController extends Controller
             $coupon = Coupon::where('code', strtoupper($data['coupon_code']))->where('status', 'Active')->first();
         }
 
-        $totals = CartCalculator::totals($items, $coupon);
+        $totals = CartCalculator::totals($items, $coupon, $data['payment_method']);
 
         $order = Order::create([
             'order_no' => 'HC-'.now()->format('Y').'-'.str_pad((string) (Order::count() + 501), 5, '0', STR_PAD_LEFT),
@@ -92,7 +92,7 @@ class OrderController extends Controller
             'subtotal' => $totals['sub'],
             'discount' => $totals['disc'],
             'gst_amount' => $totals['gst'],
-            'delivery_charge' => $totals['deliv'],
+            'delivery_charge' => $totals['deliv'] + $totals['packaging'] + $totals['codFee'],
             'total' => $totals['total'],
             'shipping_method' => $data['shipping_method'],
             'payment_method' => $data['payment_method'],

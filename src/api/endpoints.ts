@@ -78,7 +78,8 @@ export const SupplierApi = {
 };
 
 export const CartApi = {
-  get: () => http.get<CartResponse>('/cart'),
+  get: (paymentMethod?: string) =>
+    http.get<CartResponse>(`/cart${paymentMethod ? `?payment_method=${paymentMethod}` : ''}`),
   add: (productCode: string, quantity: number = 1, variantCode?: string) =>
     http.post<CartResponse>('/cart/items', { product_code: productCode, variant_code: variantCode, quantity }),
   update: (productCode: string, quantity: number, variantCode?: string) =>
@@ -112,7 +113,8 @@ export const AddressApi = {
 };
 
 export const CouponApi = {
-  apply: (code: string) => http.post<{ message: string; code: string; totals: Totals }>('/coupons/apply', { code }),
+  apply: (code: string, paymentMethod?: string) =>
+    http.post<{ message: string; code: string; totals: Totals }>('/coupons/apply', { code, payment_method: paymentMethod }),
 };
 
 export const OrderApi = {

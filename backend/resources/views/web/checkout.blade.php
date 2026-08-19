@@ -108,6 +108,8 @@
         <div class="cart-summary-row" data-co-disc-row style="display:none;color:var(--green-dark);"><span>Discount</span><span data-co-disc>-₹0</span></div>
         <div class="cart-summary-row"><span>GST</span><span data-co-gst>₹0</span></div>
         <div class="cart-summary-row"><span>Delivery</span><span data-co-deliv>Free</span></div>
+        <div class="cart-summary-row" data-co-packaging-row style="display:none;"><span>Packaging</span><span data-co-packaging>₹0</span></div>
+        <div class="cart-summary-row" data-co-cod-row style="display:none;"><span>COD Charges</span><span data-co-cod>₹0</span></div>
         <div class="cart-summary-row total"><span>Total Payable</span><span data-co-total>₹0</span></div>
         <button type="button" class="btn btn-primary btn-block" style="margin-top:16px;" data-place-order>Place Order</button>
       </div>

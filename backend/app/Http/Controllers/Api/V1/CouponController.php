@@ -13,6 +13,7 @@ class CouponController extends Controller
     {
         $data = $request->validate([
             'code' => ['required', 'string'],
+            'payment_method' => ['sometimes', 'nullable', 'string'],
         ]);
 
         $code = strtoupper(trim($data['code']));
@@ -29,7 +30,7 @@ class CouponController extends Controller
             return response()->json(['message' => 'Minimum order value not met for this coupon'], 422);
         }
 
-        $totals = CartCalculator::totals($items, $coupon);
+        $totals = CartCalculator::totals($items, $coupon, $data['payment_method'] ?? null);
 
         return response()->json([
             'message' => 'Coupon applied',

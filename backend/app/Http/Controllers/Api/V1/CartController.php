@@ -93,7 +93,7 @@ class CartController extends Controller
         $items = $request->user()->cartItems()
             ->with(['product.brand', 'product.category', 'product.seller', 'product.specs', 'product.priceTiers', 'productVariant'])
             ->get();
-        $totals = CartCalculator::totals($items);
+        $totals = CartCalculator::totals($items, null, $request->query('payment_method'));
 
         return response()->json([
             'items' => $items->map(fn ($item) => [
