@@ -17,7 +17,7 @@
       <tr class="border-b border-ink-100 last:border-0">
         <td class="py-2.5">{{ $item->order->order_no }}</td>
         <td>
-          <div class="font-medium text-ink-900">{{ $item->order->customer->name ?? 'Guest' }}</div>
+          <div class="font-medium text-ink-900">{{ $item->order->address->contact_name ?? $item->order->customer->name ?? 'Guest' }}</div>
           <div class="text-xs text-ink-400">{{ $item->order->customer->phone ?? $item->order->customer->email ?? '' }}</div>
         </td>
         <td class="max-w-[180px]">

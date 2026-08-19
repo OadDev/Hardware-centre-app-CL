@@ -22,7 +22,7 @@ class OrderController extends Controller
 
     public function index(Request $request)
     {
-        $query = Order::query()->with(['customer']);
+        $query = Order::query()->with(['customer', 'address']);
 
         if ($status = $request->query('status')) {
             $query->where('status', $status);
@@ -134,10 +134,15 @@ class OrderController extends Controller
 
     private function transform(Order $o): array
     {
+        $o->loadMissing(['customer', 'address']);
+
         return [
             'id' => $o->order_no,
             'date' => $o->placed_at->toIso8601String(),
-            'customerName' => $o->customer->name,
+            // The account name is often just an auto-generated "Customer 1234"
+            // placeholder from OTP signup — the name typed on the delivery
+            // address at checkout is the real one, so prefer that.
+            'customerName' => $o->address?->contact_name ?: $o->customer->name,
             'items' => $o->items()->sum('quantity'),
             'amount' => (float) $o->total,
             'status' => $o->status,
