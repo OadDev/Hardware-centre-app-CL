@@ -832,6 +832,35 @@
     else openLoginModal(run);
   });
 
+  // ---------------- Buy Now (add to cart, then go straight to cart) ----------------
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-buy-now]");
+    if (!btn || btn.disabled) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    var code = btn.getAttribute("data-buy-now");
+    if (!code) return;
+    var variant = btn.getAttribute("data-variant") || null;
+
+    var run = function () {
+      var payload = { product_code: code, quantity: 1 };
+      if (variant) payload.variant_code = variant;
+      btn.disabled = true;
+      apiFetch("/cart/items", { method: "POST", body: JSON.stringify(payload) })
+        .then(function () {
+          window.location.href = "/cart";
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          showToast(err.message);
+        });
+    };
+
+    if (isLoggedIn()) run();
+    else openLoginModal(run);
+  });
+
   // ---------------- Product detail page ----------------
   var pdpWishBtn = document.querySelector("[data-pdp-wish]");
   if (pdpWishBtn) {
@@ -853,6 +882,7 @@
 
   var variantDataEl = document.getElementById("pdp-variants-data");
   var pdpAddBtn = document.querySelector('[data-add-to-cart][data-pdp]');
+  var pdpBuyBtn = document.querySelector('[data-buy-now][data-pdp]');
   var pdpData = null;
   if (variantDataEl) {
     try { pdpData = JSON.parse(variantDataEl.textContent) || null; } catch (e) { pdpData = null; }
@@ -889,6 +919,7 @@
       if (!variant) {
         pdpAddBtn.removeAttribute("data-variant");
         pdpAddBtn.disabled = true;
+        if (pdpBuyBtn) { pdpBuyBtn.removeAttribute("data-variant"); pdpBuyBtn.disabled = true; }
         if (stockTitleEl) stockTitleEl.textContent = "Select an option";
         if (stockSubEl) stockSubEl.textContent = "";
         if (tierBoxEl) tierBoxEl.innerHTML = "";
@@ -900,6 +931,7 @@
       if (priceEl) priceEl.textContent = "₹" + Math.round(variant.price).toLocaleString("en-IN");
       var inStock = variant.stock > 0;
       pdpAddBtn.disabled = !inStock;
+      if (pdpBuyBtn) { pdpBuyBtn.setAttribute("data-variant", variant.id); pdpBuyBtn.disabled = !inStock; }
       if (stockTitleEl) stockTitleEl.textContent = inStock ? variant.stock + " in stock" : "Out of Stock";
       if (stockSubEl) stockSubEl.textContent = inStock ? "Ready to ship" : "Currently unavailable";
       if (stockCardEl) stockCardEl.style.background = inStock ? "var(--green-bg)" : "var(--red-bg)";
