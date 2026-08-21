@@ -13,7 +13,7 @@ class Product extends Model
         'product_code', 'sku', 'name', 'slug', 'category_id', 'brand_id',
         'seller_id', 'hsn_code_id', 'description', 'video_url', 'price', 'mrp',
         'unit', 'stock', 'approval_status', 'featured', 'rating', 'reviews_count',
-        'sold_count', 'eta_days', 'tag', 'apply_bulk_pricing_to_all_variants',
+        'sold_count', 'eta_days', 'tag', 'apply_bulk_pricing_to_all_variants', 'weight_kg',
     ];
 
     protected function casts(): array
@@ -24,6 +24,7 @@ class Product extends Model
             'rating' => 'decimal:1',
             'featured' => 'boolean',
             'apply_bulk_pricing_to_all_variants' => 'boolean',
+            'weight_kg' => 'decimal:3',
         ];
     }
 

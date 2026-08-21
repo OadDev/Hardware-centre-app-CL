@@ -13,7 +13,7 @@ class CartCalculator
     /**
      * @param  Collection<int, CartItem>  $items
      */
-    public static function totals(Collection $items, ?Coupon $coupon = null, ?string $paymentMethod = null): array
+    public static function totals(Collection $items, ?Coupon $coupon = null, ?string $paymentMethod = null, ?string $shippingMethod = 'standard', ?string $state = null): array
     {
         $subtotal = $items->sum(fn ($item) => $item->unit_price * $item->quantity);
         $count = $items->sum('quantity');
@@ -28,8 +28,15 @@ class CartCalculator
         $gst = round($taxable * ($gstRate / 100), 2);
 
         $shippingConfig = ShippingConfig::current();
-        $freeShippingMin = (float) $shippingConfig->free_shipping_min;
-        $delivery = ($subtotal >= $freeShippingMin || $subtotal <= 0) ? 0.0 : 99.0;
+        $shippingMethod = $shippingMethod ?: 'standard';
+        $weightKg = ShippingCalculator::weightFor($items);
+
+        if ($subtotal <= 0) {
+            $shipping = ['charge' => 0.0, 'etaDays' => 0, 'available' => true];
+        } else {
+            $shipping = ShippingCalculator::resolve($shippingMethod, $state, $subtotal, $weightKg, $count, $shippingConfig);
+        }
+        $delivery = $shipping['charge'];
 
         $packaging = ($subtotal > 0 && $shippingConfig->packaging_apply_all) ? (float) $shippingConfig->packaging_fee : 0.0;
         $codFee = ($subtotal > 0 && $paymentMethod === 'cod' && $shippingConfig->cod_enabled) ? (float) $shippingConfig->cod_fee : 0.0;
@@ -41,6 +48,8 @@ class CartCalculator
             'disc' => round($discount, 2),
             'gst' => $gst,
             'deliv' => $delivery,
+            'etaDays' => $shipping['etaDays'],
+            'shippingAvailable' => $shipping['available'],
             'packaging' => round($packaging, 2),
             'codFee' => round($codFee, 2),
             'total' => round($total, 2),

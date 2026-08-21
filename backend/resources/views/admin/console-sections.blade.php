@@ -537,6 +537,7 @@ function openProductProfile(p) {
         ${formField('MRP (₹)','number','e.g. 2999',p.mrp,'ep-mrp')}
         ${formField('Stock','number','e.g. 100',p.stock,'ep-stock')}
         ${formSelect('Unit', ['piece','box','pair','coil','bag','litre','tub'], Math.max(0, ['piece','box','pair','coil','bag','litre','tub'].indexOf(p.unit)), 'ep-unit')}
+        ${formField('Weight per unit (kg)','number','e.g. 0.5',p.weightKg,'ep-weight')}
         <div class="sm:col-span-2">${formTextarea('Description', 'What makes this product worth buying', 3, 'ep-description')}</div>
         ${formField('Video Link (optional)','url','https://youtube.com/watch?v=...',p.videoUrl||'','ep-video')}
       </div>`,
@@ -554,6 +555,7 @@ function openProductProfile(p) {
           mrp: parseFloat(document.getElementById('ep-mrp').value||0),
           stock: parseInt(document.getElementById('ep-stock').value||0),
           unit: document.getElementById('ep-unit').value,
+          weight_kg: parseFloat(document.getElementById('ep-weight').value||0.5),
           description: document.getElementById('ep-description').value || null,
           video_url: document.getElementById('ep-video').value || null,
         });
@@ -1324,8 +1326,21 @@ SECTION_RENDERERS.gst = async function(main) {
 /* ===== SHIPPING CONFIGURATION ===== */
 SECTION_RENDERERS.shipping = async function(main) {
   const s = DATA.shipping;
+  const states = s.states || [];
   main.innerHTML = `
-    ${pageHeader('Shipping Configuration', 'Set up shipping zones, charges and weight rules')}
+    ${pageHeader('Shipping Configuration', 'Set up delivery methods, zones and weight rules')}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+      ${card(`<div class="p-5"><p class="font-semibold text-ink-900 dark:text-white mb-4">Standard Delivery</p><div class="space-y-3">
+        ${formField('Default Charge (₹)','number','', s.config.standard_charge, 'standard-charge')}
+        ${formField('ETA (days)','number','', s.config.standard_eta_days, 'standard-eta')}
+        <p class="text-[11px] text-ink-400">Used when no state/weight/quantity rule below overrides it, and before the free-shipping threshold is met.</p>
+      </div></div>`)}
+      ${card(`<div class="p-5"><p class="font-semibold text-ink-900 dark:text-white mb-4">Express Delivery</p><div class="space-y-3">
+        ${formField('Default Charge (₹)','number','', s.config.express_charge, 'express-charge')}
+        ${formField('ETA (days)','number','', s.config.express_eta_days, 'express-eta')}
+        <div class="flex items-center justify-between"><span class="text-sm">Offer Express Delivery</span>${toggleSwitch(s.config.express_enabled, 'express-enabled-toggle')}</div>
+      </div></div>`)}
+    </div>
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
       ${card(`<div class="p-5"><p class="font-semibold text-ink-900 dark:text-white mb-4">COD Charges</p><div class="space-y-3">
         ${formField('COD Handling Fee (₹)','number', '', s.config.cod_fee, 'cod-fee')}
@@ -1338,13 +1353,14 @@ SECTION_RENDERERS.shipping = async function(main) {
       ${card(`<div class="p-5"><p class="font-semibold text-ink-900 dark:text-white mb-4">Free Shipping Rule</p><div class="space-y-3">
         ${formField('Minimum Order Value (₹)','number','', s.config.free_shipping_min, 'free-ship-min')}
         <div class="flex items-center justify-between"><span class="text-sm">Enable Free Shipping</span>${toggleSwitch(s.config.free_shipping_enabled, 'free-ship-toggle')}</div>
+        <p class="text-[11px] text-ink-400">Applies to Standard delivery only.</p>
       </div></div>`)}
     </div>
     <div class="flex justify-end mb-6">${btnPrimary('Save Shipping Config','check','save-shipping-btn')}</div>
-    ${card(`<div class="p-5 pb-3 flex items-center justify-between"><div><h3 class="font-semibold text-ink-900 dark:text-white">Shipping Zones & Weight Rules</h3><p class="text-xs text-ink-400 mt-0.5">Charges vary by delivery zone</p></div>${btnPrimary('Add Zone','plus','add-zone-btn')}</div>
-      <div class="overflow-x-auto"><table class="w-full text-sm">
-        <thead><tr class="text-left text-xs text-ink-400 border-t border-ink-100 dark:border-ink-800"><th class="font-medium py-2.5 px-5">Zone</th><th class="font-medium py-2.5 px-3">Weight Slab</th><th class="font-medium py-2.5 px-3">Charge</th><th class="font-medium py-2.5 px-3">Free Above</th><th class="font-medium py-2.5 px-3"></th></tr></thead>
-        <tbody>${s.zones.map(z => `<tr class="border-t border-ink-100 dark:border-ink-800"><td class="py-3 px-5 font-medium text-ink-800 dark:text-ink-100">${z.zone}</td><td class="py-3 px-3 text-ink-500">${z.weight_slab}</td><td class="py-3 px-3 tnum">${fmtINR(z.charge)}</td><td class="py-3 px-3 tnum">${fmtINR(z.free_above)}</td><td class="py-3 px-3 text-right"><button data-edit-zone="${z.id}" class="text-xs font-medium text-brand-600 dark:text-brand-400">Edit</button></td></tr>`).join('') || `<tr><td colspan="5" class="py-6 px-5 text-center text-ink-400">No zones yet — add one to charge by delivery area.</td></tr>`}</tbody>
+    ${card(`<div class="p-5 pb-3 flex items-center justify-between"><div><h3 class="font-semibold text-ink-900 dark:text-white">State &amp; Weight/Quantity Rules</h3><p class="text-xs text-ink-400 mt-0.5">Override the default charge above for a specific state, method, weight or order-value range — leave State/Method blank to apply broadly. Turn a rule off while scoping it to one state + method to block that delivery method there entirely.</p></div>${btnPrimary('Add Rule','plus','add-zone-btn')}</div>
+      <div class="overflow-x-auto"><table class="w-full text-sm seller-table-wide">
+        <thead><tr class="text-left text-xs text-ink-400 border-t border-ink-100 dark:border-ink-800"><th class="font-medium py-2.5 px-5">Rule</th><th class="font-medium py-2.5 px-3">State</th><th class="font-medium py-2.5 px-3">Method</th><th class="font-medium py-2.5 px-3">Charge</th><th class="font-medium py-2.5 px-3">Free Above</th><th class="font-medium py-2.5 px-3">Min Order</th><th class="font-medium py-2.5 px-3">Max Weight</th><th class="font-medium py-2.5 px-3">ETA</th><th class="font-medium py-2.5 px-3">Status</th><th class="font-medium py-2.5 px-3"></th></tr></thead>
+        <tbody>${s.zones.map(z => `<tr class="border-t border-ink-100 dark:border-ink-800"><td class="py-3 px-5 font-medium text-ink-800 dark:text-ink-100">${z.zone}</td><td class="py-3 px-3 text-ink-500">${z.state || 'All States'}</td><td class="py-3 px-3 text-ink-500">${z.method ? (z.method === 'express' ? 'Express' : 'Standard') : 'Both'}</td><td class="py-3 px-3 tnum">${fmtINR(z.charge)}</td><td class="py-3 px-3 tnum">${z.free_above > 0 ? fmtINR(z.free_above) : '—'}</td><td class="py-3 px-3 tnum">${z.min_order_value > 0 ? fmtINR(z.min_order_value) : '—'}</td><td class="py-3 px-3 tnum">${z.max_weight_kg ? z.max_weight_kg+'kg' : '—'}</td><td class="py-3 px-3 tnum">${z.eta_days || '—'}</td><td class="py-3 px-3">${statusBadge(z.is_active ? 'Active' : 'Inactive')}</td><td class="py-3 px-3 text-right"><button data-edit-zone="${z.id}" class="text-xs font-medium text-brand-600 dark:text-brand-400">Edit</button></td></tr>`).join('') || `<tr><td colspan="10" class="py-6 px-5 text-center text-ink-400">No rules yet — Standard/Express defaults above apply everywhere.</td></tr>`}</tbody>
       </table></div>`)}
   `;
   document.getElementById('save-shipping-btn').addEventListener('click', withErr(async () => {
@@ -1355,33 +1371,68 @@ SECTION_RENDERERS.shipping = async function(main) {
       packaging_apply_all: document.getElementById('packaging-apply-toggle').dataset.checked === 'true',
       free_shipping_enabled: document.getElementById('free-ship-toggle').dataset.checked === 'true',
       free_shipping_min: parseFloat(document.getElementById('free-ship-min').value||0),
+      standard_charge: parseFloat(document.getElementById('standard-charge').value||0),
+      standard_eta_days: parseInt(document.getElementById('standard-eta').value||1),
+      express_enabled: document.getElementById('express-enabled-toggle').dataset.checked === 'true',
+      express_charge: parseFloat(document.getElementById('express-charge').value||0),
+      express_eta_days: parseInt(document.getElementById('express-eta').value||1),
     });
     toast('Shipping configuration saved'); await refreshShipping(); navigateTo('shipping');
   }));
 
   const openZoneModal = (zone) => {
     openModal({
-      title: zone ? 'Edit Zone' : 'Add Zone',
+      title: zone ? 'Edit Rule' : 'Add Rule',
       body: `<div class="grid grid-cols-1 gap-4">
-        ${formField('Zone Name','text','e.g. Zone A — Metro Cities', zone?.zone||'', 'zone-name')}
-        ${formField('Weight Slab','text','e.g. Up to 5kg', zone?.weight_slab||'', 'zone-weight')}
-        ${formField('Charge (₹)','number','', zone?.charge??'', 'zone-charge')}
-        ${formField('Free Above (₹)','number','', zone?.free_above??'', 'zone-free-above')}
+        ${formField('Rule Name','text','e.g. Kerala Express Surcharge', zone?.zone||'', 'zone-name')}
+        <div class="grid grid-cols-2 gap-3">
+          ${formSelect('State (blank = all)', ['All States', ...states], zone?.state ? states.indexOf(zone.state)+1 : 0, 'zone-state')}
+          ${formSelect('Method (blank = both)', ['Both','Standard','Express'], zone?.method === 'express' ? 2 : zone?.method === 'standard' ? 1 : 0, 'zone-method')}
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          ${formField('Charge (₹)','number','', zone?.charge??'', 'zone-charge')}
+          ${formField('Free Above (₹)','number','Optional', zone?.free_above??'', 'zone-free-above')}
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          ${formField('Applies from Order Value (₹)','number','0 = always', zone?.min_order_value??'0', 'zone-min-order')}
+          ${formField('ETA (days)','number','Optional', zone?.eta_days??'', 'zone-eta')}
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          ${formField('Max Weight (kg)','number','Optional — leave blank for no limit', zone?.max_weight_kg??'', 'zone-max-weight')}
+          ${formField('Weight Slab Label','text','e.g. Up to 5kg', zone?.weight_slab||'', 'zone-weight-label')}
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          ${formField('Min Quantity','number','Optional', zone?.min_qty??'', 'zone-min-qty')}
+          ${formField('Max Quantity','number','Optional', zone?.max_qty??'', 'zone-max-qty')}
+        </div>
+        <div class="flex items-center justify-between"><span class="text-sm">Active <span class="text-ink-400 font-normal">(turn off + scope to one state+method to block that method there)</span></span>${toggleSwitch(zone ? zone.is_active : true, 'zone-active-toggle')}</div>
       </div>`,
-      confirmLabel: zone ? 'Save Zone' : 'Add Zone',
+      confirmLabel: zone ? 'Save Rule' : 'Add Rule',
       onConfirm: withErr(async () => {
+        const stateVal = document.getElementById('zone-state').value;
+        const methodVal = document.getElementById('zone-method').value;
+        const num = (id) => { const v = document.getElementById(id).value; return v === '' ? null : parseFloat(v); };
         const payload = {
           zone: document.getElementById('zone-name').value,
-          weight_slab: document.getElementById('zone-weight').value,
-          charge: parseFloat(document.getElementById('zone-charge').value||0),
-          free_above: parseFloat(document.getElementById('zone-free-above').value||0),
+          state: stateVal === 'All States' ? null : stateVal,
+          method: methodVal === 'Both' ? null : methodVal.toLowerCase(),
+          weight_slab: document.getElementById('zone-weight-label').value,
+          charge: num('zone-charge') || 0,
+          free_above: num('zone-free-above') || 0,
+          min_order_value: num('zone-min-order') || 0,
+          max_weight_kg: num('zone-max-weight'),
+          min_qty: num('zone-min-qty'),
+          max_qty: num('zone-max-qty'),
+          eta_days: num('zone-eta'),
+          is_active: document.getElementById('zone-active-toggle').dataset.checked === 'true',
         };
+        if (!payload.zone) { toast('Enter a rule name', 'warn'); return; }
         if (zone) {
           await api('PATCH', '/shipping/zones/'+zone.id, payload);
         } else {
           await api('POST', '/shipping/zones', payload);
         }
-        closeModal(); toast(zone ? 'Zone updated' : 'Zone added'); await refreshShipping(); navigateTo('shipping');
+        closeModal(); toast(zone ? 'Rule updated' : 'Rule added'); await refreshShipping(); navigateTo('shipping');
       }),
     });
   };

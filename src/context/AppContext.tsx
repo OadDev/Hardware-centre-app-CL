@@ -77,6 +77,8 @@ type AppContextValue = {
     city: string;
     state: string;
     pincode: string;
+    gst_number?: string;
+    email?: string;
     is_default?: boolean;
   }) => Promise<Address>;
   setShip: (id: ShippingMethod) => void;
@@ -401,7 +403,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     try {
-      const res = await CouponApi.apply(code, pay);
+      const res = await CouponApi.apply(code, pay, ship, selectedAddressId);
       setCouponApplied(true);
       setCouponTotals(res.totals);
       setCouponErr('');
@@ -411,24 +413,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setCouponTotals(null);
       setCouponErr(err instanceof ApiError ? err.message : 'Invalid coupon code');
     }
-  }, [couponCode, pay, showToast]);
+  }, [couponCode, pay, ship, selectedAddressId, showToast]);
 
-  // Packaging/COD charges depend on the selected payment method, so the
-  // displayed totals need to be recomputed whenever it changes — reapplying
-  // the coupon (if any) so its discount isn't dropped from the refreshed total.
+  // Packaging/COD charges depend on the selected payment method and delivery
+  // charges depend on the shipping method + destination state, so the
+  // displayed totals need to be recomputed whenever any of those change —
+  // reapplying the coupon (if any) so its discount isn't dropped from the
+  // refreshed total.
   useEffect(() => {
     if (cart.items.length === 0) return;
-    if (couponApplied && couponCode) {
-      CouponApi.apply(couponCode.trim().toUpperCase(), pay)
-        .then((res) => setCouponTotals(res.totals))
-        .catch(() => {});
-    } else {
-      CartApi.get(pay)
-        .then((res) => setCart(res))
-        .catch(() => {});
-    }
+    CartApi.get({ paymentMethod: pay, shippingMethod: ship, addressId: selectedAddressId })
+      .then((res) => {
+        setCart(res);
+        if (couponApplied && couponCode) {
+          return CouponApi.apply(couponCode.trim().toUpperCase(), pay, ship, selectedAddressId).then((r) => setCouponTotals(r.totals));
+        }
+      })
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pay]);
+  }, [pay, ship, selectedAddressId]);
 
   const addAddress = useCallback(async (payload: {
     label?: string;
@@ -437,6 +440,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     city: string;
     state: string;
     pincode: string;
+    gst_number?: string;
+    email?: string;
     is_default?: boolean;
   }): Promise<Address> => {
     const address = await AddressApi.create(payload);
@@ -489,8 +494,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const beginOnlinePayment = useCallback(async () => {
     return PaymentApi.createGatewayOrder({
       coupon_code: couponApplied ? couponCode.trim().toUpperCase() : undefined,
+      address_id: selectedAddressId,
+      shipping_method: ship,
     });
-  }, [couponApplied, couponCode]);
+  }, [couponApplied, couponCode, selectedAddressId, ship]);
 
   const placeOrder = useCallback(async (gatewayFields?: {
     gateway_order_id: string;

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
+use App\Models\Address;
 use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Settlement;
@@ -12,6 +13,7 @@ use App\Models\WarehouseStockMovement;
 use App\Services\NotificationService;
 use App\Services\RazorpayService;
 use App\Support\CartCalculator;
+use App\Support\ShippingCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -51,6 +53,8 @@ class OrderController extends Controller
             'gateway_signature' => ['required_unless:payment_method,cod', 'string'],
         ]);
 
+        $address = Address::find($data['address_id']);
+
         $customer = $request->user();
 
         // A payment can only ever pay for one order — if this payment id has
@@ -82,7 +86,12 @@ class OrderController extends Controller
             $coupon = Coupon::where('code', strtoupper($data['coupon_code']))->where('status', 'Active')->first();
         }
 
-        $totals = CartCalculator::totals($items, $coupon, $data['payment_method']);
+        $subtotalPreview = $items->sum(fn ($item) => $item->unit_price * $item->quantity);
+        $weightKg = ShippingCalculator::weightFor($items);
+        $shipping = ShippingCalculator::resolve($data['shipping_method'], $address?->state, $subtotalPreview, $weightKg, $items->sum('quantity'));
+        abort_unless($shipping['available'], 422, ucfirst($data['shipping_method']).' delivery is not available for this address.');
+
+        $totals = CartCalculator::totals($items, $coupon, $data['payment_method'], $data['shipping_method'], $address?->state);
 
         $order = Order::create([
             'order_no' => 'HC-'.now()->format('Y').'-'.str_pad((string) (Order::count() + 501), 5, '0', STR_PAD_LEFT),
@@ -95,6 +104,9 @@ class OrderController extends Controller
             'delivery_charge' => $totals['deliv'] + $totals['packaging'] + $totals['codFee'],
             'total' => $totals['total'],
             'shipping_method' => $data['shipping_method'],
+            'eta_days' => $totals['etaDays'],
+            'gst_number' => $address?->gst_number,
+            'customer_email' => $address?->email ?: $customer->email,
             'payment_method' => $data['payment_method'],
             'payment_status' => $data['payment_method'] === 'cod' ? 'Pending' : 'Paid',
             'gateway_provider' => $data['payment_method'] === 'cod' ? null : 'razorpay',

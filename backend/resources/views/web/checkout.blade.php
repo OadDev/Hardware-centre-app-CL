@@ -48,6 +48,8 @@
                 </select>
               </div>
               <div class="field"><label>Pincode</label><input type="text" name="pincode" /></div>
+              <div class="field"><label>GST Number <span style="font-weight:400;color:var(--muted);">(optional)</span></label><input type="text" name="gst_number" placeholder="15-character GSTIN" style="text-transform:uppercase;" /></div>
+              <div class="field"><label>Email <span style="font-weight:400;color:var(--muted);">(optional)</span></label><input type="email" name="email" placeholder="you@example.com" /></div>
             </div>
             <div style="display:flex;gap:10px;margin-top:16px;">
               <button type="button" class="btn btn-outline" data-checkout-cancel-add-form>Cancel</button>
@@ -58,19 +60,19 @@
 
         <div class="card" style="padding:22px;margin-top:20px;">
           <div style="font-size:15px;font-weight:800;margin-bottom:14px;">Shipping Method</div>
-          <div style="display:flex;flex-direction:column;gap:11px;">
+          <div style="display:flex;flex-direction:column;gap:11px;" data-ship-options>
             <div class="addr-card active" data-ship-option="standard">
               <div class="addr-radio active"></div>
               <div style="flex:1;display:flex;justify-content:space-between;align-items:center;">
-                <div><div style="font-weight:700;font-size:14px;">Standard Delivery</div><div class="addr-line" style="margin-top:2px;">3–5 business days</div></div>
-                <div style="font-weight:800;color:var(--green-dark);font-size:13.5px;">Free</div>
+                <div><div style="font-weight:700;font-size:14px;">Standard Delivery</div><div class="addr-line" style="margin-top:2px;" data-ship-eta="standard">3–5 business days</div></div>
+                <div style="font-weight:800;font-size:13.5px;" data-ship-price="standard">—</div>
               </div>
             </div>
             <div class="addr-card" data-ship-option="express">
               <div class="addr-radio"></div>
               <div style="flex:1;display:flex;justify-content:space-between;align-items:center;">
-                <div><div style="font-weight:700;font-size:14px;">Express Delivery</div><div class="addr-line" style="margin-top:2px;">1–2 business days</div></div>
-                <div style="font-weight:800;font-size:13.5px;">₹149</div>
+                <div><div style="font-weight:700;font-size:14px;">Express Delivery</div><div class="addr-line" style="margin-top:2px;" data-ship-eta="express">1–2 business days</div></div>
+                <div style="font-weight:800;font-size:13.5px;" data-ship-price="express">—</div>
               </div>
             </div>
           </div>

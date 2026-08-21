@@ -191,14 +191,11 @@
       apiFetch("/auth/otp/verify", { method: "POST", body: JSON.stringify(payload) })
         .then(function (data) {
           btn.disabled = false;
+          var cb = loginOnSuccess;
           setSession(data.token, data.customer);
           closeModal();
           showToast("Welcome, " + (data.customer.name || "there").split(" ")[0] + "!");
-          if (loginOnSuccess) {
-            var cb = loginOnSuccess;
-            loginOnSuccess = null;
-            cb();
-          }
+          if (cb) cb();
         })
         .catch(function (err) {
           btn.disabled = false;
@@ -1053,7 +1050,7 @@
     var coLoggedIn = checkoutPage.querySelector("[data-checkout-logged-in]");
     var coAddresses = checkoutPage.querySelector("[data-checkout-addresses]");
     var coAddForm = checkoutPage.querySelector("[data-checkout-add-address-form]");
-    var coState = { addresses: [], selectedAddressId: null, shipping: "standard", payment: "upi", totals: null };
+    var coState = { addresses: [], selectedAddressId: null, shipping: "standard", payment: "upi", totals: null, shippingOptions: null };
 
     var addressCardHTML = function (a) {
       var active = a.id === coState.selectedAddressId;
@@ -1103,34 +1100,72 @@
       }
     };
 
-    var loadCheckout = function () {
-      Promise.all([apiFetch("/cart?payment_method=" + coState.payment), apiFetch("/addresses")])
-        .then(function (results) {
-          var cart = results[0];
-          var addresses = results[1].data || results[1];
+    var etaLabel = function (days) {
+      if (!days) return "";
+      return days <= 1 ? "Next-day delivery" : days + "–" + (days + 1) + " business days";
+    };
 
-          if (!cart.items || !cart.items.length) {
-            window.location.href = "/cart";
-            return;
+    var renderShipOptions = function () {
+      var opts = coState.shippingOptions;
+      if (!opts) return false;
+      var forcedSwitch = false;
+      ["standard", "express"].forEach(function (method) {
+        var o = opts[method];
+        var card = checkoutPage.querySelector('[data-ship-option="' + method + '"]');
+        var priceEl = checkoutPage.querySelector('[data-ship-price="' + method + '"]');
+        var etaEl = checkoutPage.querySelector('[data-ship-eta="' + method + '"]');
+        if (!o || !o.available) {
+          if (card) { card.style.display = "none"; }
+          if (coState.shipping === method) {
+            coState.shipping = "standard";
+            forcedSwitch = true;
+            var standardCard = checkoutPage.querySelector('[data-ship-option="standard"]');
+            if (standardCard) {
+              checkoutPage.querySelectorAll("[data-ship-option]").forEach(function (r) { r.querySelector(".addr-radio").classList.toggle("active", r === standardCard); });
+            }
           }
+          return;
+        }
+        if (card) card.style.display = "";
+        if (priceEl) priceEl.textContent = o.charge === 0 ? "Free" : fmtINR(o.charge);
+        if (priceEl) priceEl.style.color = o.charge === 0 ? "var(--green-dark)" : "";
+        if (etaEl) etaEl.textContent = etaLabel(o.etaDays);
+      });
+      return forcedSwitch;
+    };
 
-          coState.totals = cart.totals;
-          coState.addresses = addresses;
-          if (addresses.length) coState.selectedAddressId = addresses.find(function (a) { return a.is_default; }) ? addresses.find(function (a) { return a.is_default; }).id : addresses[0].id;
+    var loadCheckout = function () {
+      apiFetch("/addresses").then(function (res) {
+        var addresses = res.data || res;
+        coState.addresses = addresses;
+        if (addresses.length) coState.selectedAddressId = addresses.find(function (a) { return a.is_default; }) ? addresses.find(function (a) { return a.is_default; }).id : addresses[0].id;
+        renderAddresses();
+        return fetchCartTotals();
+      }).catch(function (err) { showToast(err.message); });
+    };
 
-          renderAddresses();
-          renderSummary();
-        })
-        .catch(function (err) { showToast(err.message); });
+    var cartQuery = function () {
+      var params = "?payment_method=" + coState.payment + "&shipping_method=" + coState.shipping;
+      if (coState.selectedAddressId) params += "&address_id=" + coState.selectedAddressId;
+      return params;
+    };
+
+    var fetchCartTotals = function () {
+      return apiFetch("/cart" + cartQuery()).then(function (cart) {
+        if (!cart.items || !cart.items.length) {
+          window.location.href = "/cart";
+          return;
+        }
+        coState.totals = cart.totals;
+        coState.shippingOptions = cart.shippingOptions || null;
+        var forcedSwitch = renderShipOptions();
+        renderSummary();
+        if (forcedSwitch) return fetchCartTotals();
+      });
     };
 
     var refreshTotals = function () {
-      apiFetch("/cart?payment_method=" + coState.payment)
-        .then(function (cart) {
-          coState.totals = cart.totals;
-          renderSummary();
-        })
-        .catch(function () {});
+      fetchCartTotals().catch(function () {});
     };
 
     if (!isLoggedIn()) {
@@ -1152,6 +1187,7 @@
       if (card) {
         coState.selectedAddressId = parseInt(card.getAttribute("data-address-id"), 10);
         renderAddresses();
+        refreshTotals();
       }
     });
 
@@ -1234,6 +1270,8 @@
         city: coAddForm.querySelector("[name=city]").value.trim(),
         state: coAddForm.querySelector("[name=state]").value.trim(),
         pincode: coAddForm.querySelector("[name=pincode]").value.trim(),
+        gst_number: coAddForm.querySelector("[name=gst_number]").value.trim().toUpperCase() || undefined,
+        email: coAddForm.querySelector("[name=email]").value.trim() || undefined,
         is_default: coState.addresses.length === 0,
       };
       if (!payload.name || !payload.line || !payload.city || !payload.state || !payload.pincode) {
@@ -1251,6 +1289,7 @@
           Array.prototype.forEach.call(coAddForm.querySelectorAll("input"), function (i) { i.value = ""; });
           coAddForm.querySelector("[name=state]").value = "";
           renderAddresses();
+          refreshTotals();
         })
         .catch(function (err) {
           btn.disabled = false;
@@ -1260,8 +1299,11 @@
 
     document.querySelectorAll("[data-ship-option]").forEach(function (row) {
       row.addEventListener("click", function () {
-        coState.shipping = row.getAttribute("data-ship-option");
+        var next = row.getAttribute("data-ship-option");
+        if (next === coState.shipping) return;
+        coState.shipping = next;
         document.querySelectorAll("[data-ship-option]").forEach(function (r) { r.querySelector(".addr-radio").classList.toggle("active", r === row); });
+        refreshTotals();
       });
     });
 
@@ -1314,7 +1356,7 @@
           return;
         }
 
-        var gatewayPayload = {};
+        var gatewayPayload = { address_id: coState.selectedAddressId, shipping_method: coState.shipping };
         if (couponCode) gatewayPayload.coupon_code = couponCode;
 
         apiFetch("/checkout/gateway-order", { method: "POST", body: JSON.stringify(gatewayPayload) })

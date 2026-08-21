@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Address;
 use App\Models\Coupon;
 use App\Support\CartCalculator;
 use App\Services\RazorpayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use RuntimeException;
 
 class PaymentController extends Controller
@@ -16,6 +18,8 @@ class PaymentController extends Controller
     {
         $data = $request->validate([
             'coupon_code' => ['nullable', 'string'],
+            'address_id' => ['nullable', 'integer', Rule::exists('addresses', 'id')->where('customer_id', $request->user()->id)],
+            'shipping_method' => ['nullable', Rule::in(['standard', 'express'])],
         ]);
 
         $customer = $request->user();
@@ -30,7 +34,8 @@ class PaymentController extends Controller
             $coupon = Coupon::where('code', strtoupper($data['coupon_code']))->where('status', 'Active')->first();
         }
 
-        $totals = CartCalculator::totals($items, $coupon);
+        $address = isset($data['address_id']) ? Address::find($data['address_id']) : null;
+        $totals = CartCalculator::totals($items, $coupon, null, $data['shipping_method'] ?? 'standard', $address?->state);
 
         try {
             $orderId = $razorpay->createOrder($totals['total'], 'cart_'.$customer->id.'_'.Str::random(8));

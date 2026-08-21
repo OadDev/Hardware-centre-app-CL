@@ -8,8 +8,8 @@ import { PrimaryButton } from './UI';
 import StatePicker from './StatePicker';
 import { IconLocation } from './Icons';
 
-type FormState = { label: string; name: string; line: string; city: string; state: string; pincode: string };
-const BLANK: FormState = { label: 'Home', name: '', line: '', city: '', state: '', pincode: '' };
+type FormState = { label: string; name: string; line: string; city: string; state: string; pincode: string; gstNumber: string; email: string };
+const BLANK: FormState = { label: 'Home', name: '', line: '', city: '', state: '', pincode: '', gstNumber: '', email: '' };
 
 export default function AddressFormModal({
   visible,
@@ -80,6 +80,8 @@ export default function AddressFormModal({
         city: form.city.trim(),
         state: form.state.trim(),
         pincode: form.pincode.trim(),
+        gst_number: form.gstNumber.trim().toUpperCase() || undefined,
+        email: form.email.trim() || undefined,
         is_default: addresses.length === 0,
       });
       onSaved?.(address);
@@ -120,6 +122,8 @@ export default function AddressFormModal({
                 <TextInput style={styles.input} placeholder="City" value={form.city} onChangeText={(v) => setForm((f) => ({ ...f, city: v }))} placeholderTextColor={colors.textFaint} />
                 <StatePicker value={form.state} onChange={(v) => setForm((f) => ({ ...f, state: v }))} />
                 <TextInput style={styles.input} placeholder="Pincode" value={form.pincode} onChangeText={(v) => setForm((f) => ({ ...f, pincode: v }))} keyboardType="number-pad" placeholderTextColor={colors.textFaint} />
+                <TextInput style={styles.input} placeholder="GST Number (optional)" value={form.gstNumber} onChangeText={(v) => setForm((f) => ({ ...f, gstNumber: v }))} autoCapitalize="characters" placeholderTextColor={colors.textFaint} />
+                <TextInput style={styles.input} placeholder="Email (optional)" value={form.email} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} autoCapitalize="none" keyboardType="email-address" placeholderTextColor={colors.textFaint} />
               </ScrollView>
               <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
                 <Pressable style={styles.modalCancelBtn} onPress={close}>

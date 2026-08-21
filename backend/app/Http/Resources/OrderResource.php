@@ -44,6 +44,9 @@ class OrderResource extends JsonResource
             'payment_method' => $this->payment_method,
             'payment_status' => $this->payment_status,
             'shipping_method' => $this->shipping_method,
+            'eta_days' => $this->eta_days,
+            'gst_number' => $this->gst_number,
+            'customer_email' => $this->customer_email,
             'timeline' => OrderTimeline::build($this->resource),
         ];
     }
@@ -54,7 +57,7 @@ class OrderResource extends JsonResource
             'Delivered' => 'Rate your order',
             'Cancelled' => 'Refund of ₹'.number_format((float) $this->total, 0).' completed',
             'Returned' => 'Refund of ₹'.number_format((float) $this->total, 0).' processed',
-            default => 'Arrives by '.$this->placed_at->addDays(5)->format('d M'),
+            default => 'Arrives by '.$this->placed_at->addDays($this->eta_days ?: 5)->format('d M'),
         };
     }
 }

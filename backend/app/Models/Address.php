@@ -8,7 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Address extends Model
 {
     protected $fillable = [
-        'customer_id', 'label', 'contact_name', 'line', 'city', 'state', 'pincode', 'is_default',
+        'customer_id', 'label', 'contact_name', 'line', 'city', 'state', 'pincode',
+        'gst_number', 'email', 'is_default',
     ];
 
     protected function casts(): array

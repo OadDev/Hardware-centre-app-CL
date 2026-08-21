@@ -86,6 +86,8 @@ export type Address = {
   city: string;
   state: string;
   pincode: string;
+  gst_number: string | null;
+  email: string | null;
   is_default: boolean;
 };
 
@@ -126,6 +128,9 @@ export type Order = {
   payment_method: 'upi' | 'card' | 'netbanking' | 'cod';
   payment_status: string;
   shipping_method: 'standard' | 'express';
+  eta_days?: number | null;
+  gst_number?: string | null;
+  customer_email?: string | null;
   timeline: TimelineStep[];
 };
 
@@ -134,10 +139,23 @@ export type Totals = {
   disc: number;
   gst: number;
   deliv: number;
+  etaDays?: number;
+  shippingAvailable?: boolean;
   packaging: number;
   codFee: number;
   total: number;
   count: number;
+};
+
+export type ShippingOption = {
+  charge: number;
+  etaDays: number;
+  available: boolean;
+};
+
+export type ShippingOptions = {
+  standard: ShippingOption;
+  express: ShippingOption;
 };
 
 export type CartItemVariant = {
@@ -157,6 +175,7 @@ export type CartItem = {
 export type CartResponse = {
   items: CartItem[];
   totals: Totals;
+  shippingOptions?: ShippingOptions;
 };
 
 export type Review = {

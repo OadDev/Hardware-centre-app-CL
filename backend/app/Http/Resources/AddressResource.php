@@ -18,6 +18,8 @@ class AddressResource extends JsonResource
             'city' => $this->city,
             'state' => $this->state,
             'pincode' => $this->pincode,
+            'gst_number' => $this->gst_number,
+            'email' => $this->email,
             'is_default' => (bool) $this->is_default,
         ];
     }

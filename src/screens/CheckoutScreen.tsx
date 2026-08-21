@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,10 +12,15 @@ import AddressFormModal from '../components/AddressFormModal';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Checkout'>;
 
-const SHIPPING = [
-  { id: 'standard' as const, title: 'Standard Delivery', sub: '3–5 business days', price: 'Free' },
-  { id: 'express' as const, title: 'Express Delivery', sub: '1–2 business days', price: '₹149' },
-];
+const SHIPPING_META: Record<'standard' | 'express', { title: string }> = {
+  standard: { title: 'Standard Delivery' },
+  express: { title: 'Express Delivery' },
+};
+
+function etaLabel(days?: number): string {
+  if (!days) return '';
+  return days <= 1 ? 'Next-day delivery' : `${days}–${days + 1} business days`;
+}
 
 const PAYMENTS = [
   { id: 'upi' as const, title: 'UPI', sub: 'GPay, PhonePe, Paytm' },
@@ -33,9 +38,17 @@ function RadioDot({ active }: { active: boolean }) {
 }
 
 export default function CheckoutScreen({ navigation }: Props) {
-  const { addresses, selectedAddressId, setSelectedAddressId, ship, setShip, pay, setPay, totals, beginOnlinePayment, placeOrder, showToast } = useApp();
+  const { addresses, selectedAddressId, setSelectedAddressId, ship, setShip, pay, setPay, totals, cart, beginOnlinePayment, placeOrder, showToast } = useApp();
   const [placing, setPlacing] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+
+  const shippingOptions = cart.shippingOptions;
+
+  useEffect(() => {
+    if (shippingOptions && !shippingOptions[ship]?.available && shippingOptions.standard.available) {
+      setShip('standard');
+    }
+  }, [shippingOptions, ship, setShip]);
 
   const onPlaceOrder = async () => {
     if (!selectedAddressId) {
@@ -107,16 +120,21 @@ export default function CheckoutScreen({ navigation }: Props) {
         <View style={styles.section}>
           <Text style={styles.h2}>Shipping Method</Text>
           <View style={{ gap: 11 }}>
-            {SHIPPING.map((x) => {
-              const active = x.id === ship;
+            {(['standard', 'express'] as const).map((id) => {
+              const opt = shippingOptions?.[id];
+              if (opt && !opt.available) return null;
+              const active = id === ship;
+              const free = opt ? opt.charge === 0 : id === 'standard';
               return (
-                <Pressable key={x.id} onPress={() => setShip(x.id)} style={[styles.shipCard, { borderColor: active ? colors.accent : colors.borderStrong }]}>
+                <Pressable key={id} onPress={() => setShip(id)} style={[styles.shipCard, { borderColor: active ? colors.accent : colors.borderStrong }]}>
                   <RadioDot active={active} />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.shipTitle}>{x.title}</Text>
-                    <Text style={styles.shipSub}>{x.sub}</Text>
+                    <Text style={styles.shipTitle}>{SHIPPING_META[id].title}</Text>
+                    <Text style={styles.shipSub}>{opt ? etaLabel(opt.etaDays) : ' '}</Text>
                   </View>
-                  <Text style={styles.shipPrice}>{x.price}</Text>
+                  <Text style={[styles.shipPrice, { color: free ? colors.successDark : colors.text }]}>
+                    {opt ? (free ? 'Free' : inr(opt.charge)) : '—'}
+                  </Text>
                 </Pressable>
               );
             })}

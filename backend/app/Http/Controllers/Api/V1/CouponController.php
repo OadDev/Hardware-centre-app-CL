@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Address;
 use App\Models\Coupon;
 use App\Support\CartCalculator;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CouponController extends Controller
 {
@@ -14,6 +16,8 @@ class CouponController extends Controller
         $data = $request->validate([
             'code' => ['required', 'string'],
             'payment_method' => ['sometimes', 'nullable', 'string'],
+            'address_id' => ['sometimes', 'nullable', 'integer', Rule::exists('addresses', 'id')->where('customer_id', $request->user()->id)],
+            'shipping_method' => ['sometimes', 'nullable', Rule::in(['standard', 'express'])],
         ]);
 
         $code = strtoupper(trim($data['code']));
@@ -30,7 +34,8 @@ class CouponController extends Controller
             return response()->json(['message' => 'Minimum order value not met for this coupon'], 422);
         }
 
-        $totals = CartCalculator::totals($items, $coupon, $data['payment_method'] ?? null);
+        $address = ! empty($data['address_id']) ? Address::find($data['address_id']) : null;
+        $totals = CartCalculator::totals($items, $coupon, $data['payment_method'] ?? null, $data['shipping_method'] ?? 'standard', $address?->state);
 
         return response()->json([
             'message' => 'Coupon applied',

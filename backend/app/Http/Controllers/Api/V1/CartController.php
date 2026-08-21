@@ -7,6 +7,7 @@ use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Support\CartCalculator;
+use App\Support\ShippingCalculator;
 use Illuminate\Http\Request;
 
 class CartController extends Controller
@@ -93,7 +94,12 @@ class CartController extends Controller
         $items = $request->user()->cartItems()
             ->with(['product.brand', 'product.category', 'product.seller', 'product.specs', 'product.priceTiers', 'productVariant.priceTiers'])
             ->get();
-        $totals = CartCalculator::totals($items, null, $request->query('payment_method'));
+        $state = $this->resolveState($request);
+        $shippingMethod = $request->query('shipping_method', 'standard');
+        $totals = CartCalculator::totals($items, null, $request->query('payment_method'), $shippingMethod, $state);
+        $subtotal = $items->sum(fn ($item) => $item->unit_price * $item->quantity);
+        $weightKg = ShippingCalculator::weightFor($items);
+        $shippingOptions = $subtotal > 0 ? ShippingCalculator::resolveAll($state, $subtotal, $weightKg, $totals['count']) : [];
 
         return response()->json([
             'items' => $items->map(fn ($item) => [
@@ -109,6 +115,29 @@ class CartController extends Controller
                 'line_total' => $item->unit_price * $item->quantity,
             ]),
             'totals' => $totals,
+            'shippingOptions' => $shippingOptions,
         ]);
+    }
+
+    /**
+     * Resolves the destination state for shipping calculations from an
+     * explicit address_id query param, falling back to the customer's
+     * default saved address so the cart page (which has no address step)
+     * still quotes a realistic delivery charge.
+     */
+    private function resolveState(Request $request): ?string
+    {
+        $addressId = $request->query('address_id');
+        $customer = $request->user();
+
+        if ($addressId) {
+            $address = $customer->addresses()->find($addressId);
+            if ($address) {
+                return $address->state;
+            }
+        }
+
+        return $customer->addresses()->where('is_default', true)->value('state')
+            ?? $customer->addresses()->value('state');
     }
 }

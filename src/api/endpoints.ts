@@ -78,8 +78,14 @@ export const SupplierApi = {
 };
 
 export const CartApi = {
-  get: (paymentMethod?: string) =>
-    http.get<CartResponse>(`/cart${paymentMethod ? `?payment_method=${paymentMethod}` : ''}`),
+  get: (params: { paymentMethod?: string; shippingMethod?: string; addressId?: number | null } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.paymentMethod) qs.set('payment_method', params.paymentMethod);
+    if (params.shippingMethod) qs.set('shipping_method', params.shippingMethod);
+    if (params.addressId) qs.set('address_id', String(params.addressId));
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return http.get<CartResponse>(`/cart${suffix}`);
+  },
   add: (productCode: string, quantity: number = 1, variantCode?: string) =>
     http.post<CartResponse>('/cart/items', { product_code: productCode, variant_code: variantCode, quantity }),
   update: (productCode: string, quantity: number, variantCode?: string) =>
@@ -108,13 +114,20 @@ export const AddressApi = {
     city: string;
     state: string;
     pincode: string;
+    gst_number?: string;
+    email?: string;
     is_default?: boolean;
   }) => (await http.post<{ data: Address }>('/addresses', payload)).data,
 };
 
 export const CouponApi = {
-  apply: (code: string, paymentMethod?: string) =>
-    http.post<{ message: string; code: string; totals: Totals }>('/coupons/apply', { code, payment_method: paymentMethod }),
+  apply: (code: string, paymentMethod?: string, shippingMethod?: string, addressId?: number | null) =>
+    http.post<{ message: string; code: string; totals: Totals }>('/coupons/apply', {
+      code,
+      payment_method: paymentMethod,
+      shipping_method: shippingMethod,
+      address_id: addressId || undefined,
+    }),
 };
 
 export const OrderApi = {
@@ -133,7 +146,7 @@ export const OrderApi = {
 };
 
 export const PaymentApi = {
-  createGatewayOrder: (payload: { coupon_code?: string }) =>
+  createGatewayOrder: (payload: { coupon_code?: string; address_id?: number | null; shipping_method?: string }) =>
     http.post<{ key_id: string; gateway_order_id: string; amount: number; currency: string }>(
       '/checkout/gateway-order',
       payload
