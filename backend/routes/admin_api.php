@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AbandonedCartController;
 use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CategoryController;
@@ -84,6 +85,8 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::post('gst/hsn', [GstController::class, 'store']);
     Route::patch('gst/hsn/{hsnCode}', [GstController::class, 'update']);
     Route::patch('gst/settings', [GstController::class, 'updateSettings']);
+
+    Route::get('abandoned-carts', [AbandonedCartController::class, 'index']);
 
     Route::get('shipping', [ShippingController::class, 'index']);
     Route::patch('shipping/config', [ShippingController::class, 'updateConfig']);

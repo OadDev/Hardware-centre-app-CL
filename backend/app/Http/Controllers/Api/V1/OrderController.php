@@ -12,6 +12,7 @@ use App\Models\WarehouseInventory;
 use App\Models\WarehouseStockMovement;
 use App\Services\NotificationService;
 use App\Services\RazorpayService;
+use App\Support\AbandonedCartTracker;
 use App\Support\CartCalculator;
 use App\Support\ShippingCalculator;
 use Illuminate\Http\Request;
@@ -148,6 +149,8 @@ class OrderController extends Controller
                 'warehouse_id' => $warehouseInventory?->warehouse_id,
                 'dispatch_status' => $warehouseInventory ? 'Pending' : null,
             ]);
+
+            AbandonedCartTracker::markPurchased($customer->id, $product->id, $variant?->id);
 
             if ($warehouseInventory) {
                 $warehouseInventory->decrement('quantity_available', $item->quantity);

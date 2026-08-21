@@ -866,6 +866,41 @@ function openOrderProfile(o) {
   })();
 }
 
+/* ===== ABANDONED CARTS ===== */
+SECTION_RENDERERS['abandoned-carts'] = async function(main) {
+  const carts = DATA.abandonedCarts;
+  const abandoned = carts.filter(c => c.status === 'Abandoned');
+  const purchased = carts.filter(c => c.status === 'Purchased');
+  const abandonedValue = abandoned.reduce((a, c) => a + c.cartValue, 0);
+  const recoveryRate = carts.length ? Math.round((purchased.length / carts.length) * 100) : 0;
+
+  main.innerHTML = `
+    ${pageHeader('Abandoned Carts', "Customers who added a product but didn't check out")}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      ${kpiCard({label:'Currently Abandoned', value: fmtNum(abandoned.length), icon:'shopping-basket', accent:'amber'})}
+      ${kpiCard({label:'Abandoned Value', value: fmtINR(abandonedValue,{compact:true}), icon:'indian-rupee', accent:'rose'})}
+      ${kpiCard({label:'Recovered / Purchased', value: fmtNum(purchased.length), icon:'check-circle', accent:'emerald'})}
+      ${kpiCard({label:'Recovery Rate', value: recoveryRate+'%', icon:'trending-up', accent:'brand'})}
+    </div>
+    ${tableCard('abandoned-carts-table-inner')}
+  `;
+  renderDataTable('abandoned-carts-table-inner', {
+    title:'Abandoned Carts', subtitle:`${carts.length} tracked cart${carts.length===1?'':'s'} · marked abandoned after {{ config('cart.abandoned_after_minutes', 30) }} minutes of inactivity`,
+    data: carts, searchKeys:['customerName','phone','email','product'],
+    filters: [{key:'status', label:'Status', options:['Abandoned','Purchased']}],
+    columns: [
+      { label:'Customer', render: c => `<div class="font-medium text-ink-900 dark:text-white">${c.customerName}</div>` },
+      { label:'Phone', render: c => c.phone || '—' },
+      { label:'Email', render: c => c.email || '—' },
+      { label:'Product', render: c => `<div>${c.product}</div>${c.variant ? `<div class="text-xs text-ink-400">${c.variant}</div>` : ''}` },
+      { label:'Qty', key:'quantity' },
+      { label:'Cart Value', render: c => fmtINR(c.cartValue) },
+      { label:'Date/Time', render: c => new Date(c.status==='Purchased' && c.purchasedAt ? c.purchasedAt : c.abandonedAt).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) },
+      { label:'Status', render: c => statusBadge(c.status) },
+    ],
+  });
+};
+
 /* ===== RETURNS & REFUNDS ===== */
 SECTION_RENDERERS.returns = async function(main) {
   const pending = DATA.returns.filter(r=>r.status==='Pending').length;

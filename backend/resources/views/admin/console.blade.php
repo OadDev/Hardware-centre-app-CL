@@ -92,6 +92,8 @@ function statusBadge(status) {
     'Low Stock': 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20',
     'Out of Stock': 'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-500/20',
     'Expired': 'bg-ink-100 text-ink-600 ring-ink-200 dark:bg-ink-800 dark:text-ink-400 dark:ring-ink-700',
+    'Abandoned': 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20',
+    'Purchased': 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20',
   };
   const cls = map[status] || 'bg-ink-100 text-ink-600 ring-ink-200 dark:bg-ink-800 dark:text-ink-300 dark:ring-ink-700';
   return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ring-1 ring-inset ${cls}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-70"></span>${status}</span>`;
@@ -183,6 +185,7 @@ async function refreshCommission() { DATA.commission = await api('GET', '/commis
 async function refreshDashboard() { DATA.dashboard = await api('GET', '/dashboard'); DATA.monthlyRevenue = DATA.dashboard.monthly_revenue; DATA.activities = DATA.dashboard.activities; }
 async function refreshGst() { DATA.gst = await api('GET', '/gst'); }
 async function refreshShipping() { DATA.shipping = await api('GET', '/shipping'); }
+async function refreshAbandonedCarts() { DATA.abandonedCarts = unwrap(await api('GET', '/abandoned-carts?per_page=250')); }
 async function refreshPayments() { DATA.payments = await api('GET', '/payments'); }
 async function refreshShiprocket() { DATA.shiprocket = await api('GET', '/shiprocket'); }
 async function refreshNotifications() { DATA.notifications = await api('GET', '/notifications'); }
@@ -220,6 +223,7 @@ const LOAD_TASKS = [
   ['Orders', refreshOrders], ['Returns', refreshReturns], ['Coupons', refreshCoupons],
   ['Banners', refreshBanners], ['Onboarding Slides', refreshOnboardingSlides], ['Settlements', refreshSettlements], ['Commission', refreshCommission],
   ['GST', refreshGst], ['Shipping', refreshShipping], ['Payments', refreshPayments],
+  ['Abandoned Carts', refreshAbandonedCarts],
   ['Shiprocket', refreshShiprocket], ['Notifications', refreshNotifications], ['Roles', refreshRoles],
   ['Settings', refreshSettings], ['Warehouse Overview', refreshWarehouseOverview],
   ['Warehouse Inventory', refreshWarehouseInventory], ['Warehouse Shipments', refreshWarehouseShipments],
@@ -234,6 +238,7 @@ async function loadAll() {
     dashboard: {}, sellers: [], customers: [], products: [], categories: [], brands: [],
     orders: [], returns: [], coupons: [], banners: [], onboardingSlides: [], settlements: [],
     commission: { sellers: [], tiers: [] }, gst: {}, shipping: {}, payments: {}, shiprocket: {},
+    abandonedCarts: [],
     notifications: {}, rolesData: {}, settings: {},
     warehouseOverview: { warehouses: [], dispatch_pending: 0 },
     warehouseInventory: [], warehouseShipments: [], dispatchQueue: [],
@@ -284,6 +289,7 @@ const NAV_GROUPS = [
   ]},
   { title:'Sales', items: [
     { key:'orders', label:'Orders', icon:'shopping-cart' },
+    { key:'abandoned-carts', label:'Abandoned Carts', icon:'shopping-basket' },
     { key:'returns', label:'Returns & Refunds', icon:'undo-2' },
     { key:'commission', label:'Commission Management', icon:'percent' },
     { key:'settlements', label:'Settlement Management', icon:'banknote' },
@@ -316,6 +322,7 @@ const SECTION_TITLES = {
   categories: ['Categories', 'Organize products into categories'],
   brands: ['Brands', 'Manage brand listings shown on the storefront'],
   orders: ['Orders', 'Track and fulfil orders across all sellers'],
+  'abandoned-carts': ['Abandoned Carts', 'Customers who added a product but didn\'t check out'],
   returns: ['Returns & Refunds', 'Review and action return and refund requests'],
   commission: ['Commission Management', 'Configure marketplace commission and view earnings'],
   settlements: ['Settlement Management', 'Track payouts to sellers'],
