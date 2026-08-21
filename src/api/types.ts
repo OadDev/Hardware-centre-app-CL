@@ -1,15 +1,16 @@
-export type ProductVariant = {
-  id: string;
-  sku: string;
-  attributes: Record<string, string>;
-  label: string;
-  price: number;
-  stock: number;
-};
-
 export type ProductPriceTier = {
   min_qty: number;
   price: number;
+};
+
+export type ProductVariant = {
+  id: string;
+  sku: string;
+  label: string;
+  image: string | null;
+  price: number;
+  stock: number;
+  price_tiers: ProductPriceTier[];
 };
 
 export type Product = {
@@ -42,6 +43,7 @@ export type Product = {
   video_url: string | null;
   variants: ProductVariant[];
   price_tiers: ProductPriceTier[];
+  apply_bulk_pricing_to_all_variants: boolean;
 };
 
 export type Category = {

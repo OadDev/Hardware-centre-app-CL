@@ -405,6 +405,59 @@ SECTION_RENDERERS.products = async function(main) {
   });
 };
 
+function renderTierGroup(label, tiers, variantId) {
+  if (!tiers || !tiers.length) return '';
+  return `
+    <div>
+      <div class="text-xs font-semibold text-ink-500 dark:text-ink-400 mb-1.5">${label}</div>
+      ${tiers.slice().sort((a,b)=>a.minQty-b.minQty).map(t => `
+        <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-ink-200 dark:border-ink-700 mb-1.5">
+          <div class="text-sm font-medium text-ink-900 dark:text-white">${t.minQty}+ pcs — ${fmtINR(t.price)}</div>
+          <button data-remove-price-tier="${t.id}" class="w-6 h-6 rounded-full bg-rose-600 text-white text-xs leading-none flex items-center justify-center">×</button>
+        </div>`).join('')}
+    </div>`;
+}
+
+function openVariantModal(p, v) {
+  openModal({
+    title: v ? 'Edit Variant' : 'Add Variant',
+    body: `
+      <div class="grid grid-cols-1 gap-4">
+        ${formField('Variant Name','text','e.g. Black, Red, 3mm', v ? v.name : '', 'var-name')}
+        <div class="grid grid-cols-2 gap-3">
+          ${formField('Price override (₹)','number','Same as base price', v && v.price !== null ? v.price : '', 'var-price')}
+          ${formField('Stock','number','e.g. 25', v ? v.stock : '', 'var-stock')}
+        </div>
+        ${formField('SKU (optional)','text','Auto-generated if left blank', v ? v.sku : '', 'var-sku')}
+        <div>
+          <label class="block text-xs font-medium text-ink-500 dark:text-ink-400 mb-1.5">Variant image (optional)</label>
+          ${v && v.imageUrl ? `<img src="${v.imageUrl}" class="w-14 h-14 rounded-lg object-cover mb-2 border border-ink-200 dark:border-ink-700">` : ''}
+          <input type="file" id="var-image" accept="image/*" class="w-full text-sm text-ink-600 dark:text-ink-300 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-ink-100 dark:file:bg-ink-700 file:text-ink-700 dark:file:text-ink-200 file:text-xs file:font-medium">
+          ${v && v.imageUrl ? `<label class="flex items-center gap-2 mt-2 text-xs text-ink-500 dark:text-ink-400"><input type="checkbox" id="var-remove-image"> Remove current image</label>` : ''}
+        </div>
+      </div>`,
+    confirmLabel: v ? 'Save Variant' : 'Add Variant',
+    onConfirm: withErr(async () => {
+      const name = document.getElementById('var-name').value.trim();
+      if (!name) { toast('Enter a variant name', 'warn'); return; }
+      const fd = new FormData();
+      fd.append('name', name);
+      const priceVal = document.getElementById('var-price').value;
+      if (priceVal) fd.append('price', priceVal);
+      fd.append('stock', document.getElementById('var-stock').value || 0);
+      const skuVal = document.getElementById('var-sku').value.trim();
+      if (skuVal) fd.append('sku', skuVal);
+      const imageFile = document.getElementById('var-image').files[0];
+      if (imageFile) fd.append('image', imageFile);
+      if (document.getElementById('var-remove-image')?.checked) fd.append('remove_image', '1');
+
+      if (v) await apiForm('PATCH', '/products/'+p.id+'/variants/'+v.id, fd);
+      else await apiForm('POST', '/products/'+p.id+'/variants', fd);
+      closeModal(); toast(v ? 'Variant updated' : 'Variant added'); await refreshProducts(); navigateTo('products');
+    })
+  });
+}
+
 function openProductProfile(p) {
   openDrawer(p.name, `
     <div class="grid grid-cols-2 gap-3 mb-5">
@@ -426,12 +479,13 @@ function openProductProfile(p) {
       <button id="drawer-upload-images-btn" class="mt-2 w-full py-2 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700">Upload Photos</button>
       ${p.videoUrl ? `<a href="${p.videoUrl}" target="_blank" class="block mt-3 text-sm text-brand-600 font-medium">▶ Watch product video</a>` : ''}
     `)}
-    ${drawerSection('Options (Color, Size, Units, etc.)', `
+    ${drawerSection('Variants', `
       <div class="space-y-2 mb-3">
         ${(p.variants||[]).map(v => `
-          <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-ink-200 dark:border-ink-700">
-            <div class="min-w-0">
-              <div class="text-sm font-medium text-ink-900 dark:text-white truncate">${v.label || v.sku}</div>
+          <div class="flex items-center gap-3 px-3 py-2 rounded-lg border border-ink-200 dark:border-ink-700">
+            ${v.imageUrl ? `<img src="${v.imageUrl}" class="w-9 h-9 rounded-lg object-cover flex-shrink-0">` : ''}
+            <div class="min-w-0 flex-1">
+              <div class="text-sm font-medium text-ink-900 dark:text-white truncate">${v.name}</div>
               <div class="text-xs text-ink-400">${v.sku} · ${v.price !== null ? fmtINR(v.price) : 'Base price'} · Stock ${v.stock} · ${v.status}</div>
             </div>
             <div class="flex items-center gap-1.5 flex-shrink-0">
@@ -439,49 +493,27 @@ function openProductProfile(p) {
               <button data-toggle-variant="${v.id}" data-variant-status="${v.status}" class="px-2 py-1 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700">${v.status==='Active'?'Deactivate':'Activate'}</button>
               <button data-remove-variant="${v.id}" class="w-6 h-6 rounded-full bg-rose-600 text-white text-xs leading-none flex items-center justify-center">×</button>
             </div>
-          </div>`).join('') || `<p class="text-xs text-ink-400">No options yet — customers buy the base product.</p>`}
+          </div>`).join('') || `<p class="text-xs text-ink-400">No variants yet — customers buy the base product.</p>`}
       </div>
-      ${(() => {
-        const existingKeys = Array.from(new Set((p.variants||[]).flatMap(v => Object.keys(v.attributes||{}))));
-        if (existingKeys.length) {
-          return `
-            <p class="text-[11px] text-ink-400 mb-2">This product's options already use: <b>${existingKeys.join(', ')}</b>. Fill in a value for each below — every option on the same product needs the same attribute types, or customers won't be able to pick a combination.</p>
-            <div id="drawer-variant-attrs" class="space-y-2 mb-2">
-              ${existingKeys.map(k => `
-                <div class="grid grid-cols-2 gap-2 drawer-variant-attr-row" data-locked-key="${k}">
-                  <div class="px-2.5 py-1.5 text-sm rounded-lg bg-ink-50 dark:bg-ink-800/60 text-ink-500 dark:text-ink-400 border border-ink-200 dark:border-ink-700">${k}</div>
-                  <input placeholder="Value for ${k}" class="variant-attr-value px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
-                </div>`).join('')}
-            </div>
-            <button id="drawer-add-attr-row-btn" type="button" class="mb-2 text-xs font-medium text-brand-600 dark:text-brand-400">+ Add a new attribute type</button>
-          `;
-        }
-        return `
-          <div id="drawer-variant-attrs" class="space-y-2 mb-2">
-            <div class="grid grid-cols-2 gap-2 drawer-variant-attr-row">
-              <input placeholder="Attribute (e.g. Color, Size, Units)" class="variant-attr-key px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
-              <input placeholder="Value (e.g. Red, XL, 12mm)" class="variant-attr-value px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
-            </div>
-          </div>
-          <button id="drawer-add-attr-row-btn" type="button" class="mb-2 text-xs font-medium text-brand-600 dark:text-brand-400">+ Add another attribute</button>
-        `;
-      })()}
-      <div class="grid grid-cols-2 gap-2">
-        <input id="drawer-variant-price" type="number" step="0.01" placeholder="Price override (₹)" class="px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
-        <input id="drawer-variant-stock" type="number" placeholder="Stock" class="px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
-      </div>
-      <button id="drawer-add-variant-btn" class="mt-2 w-full py-2 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700">Add Option</button>
+      <button id="drawer-add-variant-btn" class="w-full py-2 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700">+ Add Variant</button>
     `)}
     ${drawerSection('Bulk / Quantity Pricing', `
-      <p class="text-[11px] text-ink-400 mb-3">Offer a lower unit price at higher quantities, e.g. ₹500/pc under 100 pcs, ₹450/pc from 100 pcs onward. Applies to the base product, not individual options.</p>
-      <div class="space-y-2 mb-3">
-        ${(p.priceTiers||[]).slice().sort((a,b)=>a.minQty-b.minQty).map(t => `
-          <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-ink-200 dark:border-ink-700">
-            <div class="text-sm font-medium text-ink-900 dark:text-white">${t.minQty}+ pcs — ${fmtINR(t.price)}</div>
-            <button data-remove-price-tier="${t.id}" class="w-6 h-6 rounded-full bg-rose-600 text-white text-xs leading-none flex items-center justify-center">×</button>
-          </div>`).join('') || `<p class="text-xs text-ink-400">No quantity tiers yet — every order pays the base price.</p>`}
+      <p class="text-[11px] text-ink-400 mb-3">Offer a lower unit price at higher quantities, e.g. ₹500/pc under 100 pcs, ₹450/pc from 100 pcs onward. Pick which variant (or the base product) each tier applies to.</p>
+      ${(p.variants||[]).length ? `
+      <div class="flex items-center justify-between px-3 py-2 rounded-lg border border-ink-200 dark:border-ink-700 mb-3">
+        <span class="text-xs font-medium text-ink-600 dark:text-ink-300 pr-3">Also apply base-product tiers to every variant that has no tiers of its own</span>
+        ${toggleSwitch(p.applyBulkPricingToAllVariants, 'drawer-apply-all-variants-toggle')}
+      </div>` : ''}
+      <div class="space-y-3 mb-3">
+        ${renderTierGroup('Base product', p.priceTiers)}
+        ${(p.variants||[]).map(v => renderTierGroup(v.name, v.priceTiers)).join('')}
+        ${(!p.priceTiers || !p.priceTiers.length) && !(p.variants||[]).some(v => v.priceTiers && v.priceTiers.length) ? `<p class="text-xs text-ink-400">No quantity tiers yet — every order pays the base/variant price.</p>` : ''}
       </div>
       <div class="grid grid-cols-2 gap-2">
+        ${(p.variants||[]).length ? `<select id="drawer-tier-scope" class="col-span-2 px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
+          <option value="">Base product</option>
+          ${p.variants.map(v => `<option value="${v.id}">${v.name}</option>`).join('')}
+        </select>` : ''}
         <input id="drawer-tier-minqty" type="number" min="1" placeholder="Minimum quantity" class="px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
         <input id="drawer-tier-price" type="number" step="0.01" min="0" placeholder="Price per unit (₹)" class="px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
       </div>
@@ -544,100 +576,33 @@ function openProductProfile(p) {
     await api('DELETE', '/products/'+p.id+'/images/'+btn.dataset.removeImage);
     toast('Photo removed'); await refreshProducts(); navigateTo('products');
   })));
-  document.getElementById('drawer-add-attr-row-btn')?.addEventListener('click', () => {
-    const wrap = document.getElementById('drawer-variant-attrs');
-    const row = document.createElement('div');
-    row.className = 'grid grid-cols-2 gap-2 drawer-variant-attr-row';
-    row.innerHTML = `
-      <input placeholder="Attribute (e.g. Color, Size, Units)" class="variant-attr-key px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
-      <input placeholder="Value (e.g. Red, XL, 12mm)" class="variant-attr-value px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
-    `;
-    wrap.appendChild(row);
-  });
-  document.getElementById('drawer-add-variant-btn')?.addEventListener('click', withErr(async () => {
-    const options = {};
-    let missingLocked = false;
-    document.querySelectorAll('.drawer-variant-attr-row').forEach(row => {
-      const key = row.dataset.lockedKey || (row.querySelector('.variant-attr-key')?.value.trim() || '');
-      const value = row.querySelector('.variant-attr-value').value.trim();
-      if (key && value) options[key] = value;
-      else if (row.dataset.lockedKey) missingLocked = true;
-    });
-    if (missingLocked) { toast('Fill in a value for every existing attribute (e.g. Color, Size) so this option matches the others', 'warn'); return; }
-    if (!Object.keys(options).length) { toast('Enter at least one attribute (e.g. Color, Size, Units)', 'warn'); return; }
-    const priceVal = document.getElementById('drawer-variant-price').value;
-    await api('POST', '/products/'+p.id+'/variants', {
-      options,
-      price: priceVal ? parseFloat(priceVal) : undefined,
-      stock: parseInt(document.getElementById('drawer-variant-stock').value || 0),
-    });
-    toast('Option added'); await refreshProducts(); navigateTo('products');
-  }));
+  document.getElementById('drawer-add-variant-btn')?.addEventListener('click', () => openVariantModal(p, null));
   document.querySelectorAll('[data-edit-variant]').forEach(btn => btn.addEventListener('click', () => {
     const v = (p.variants||[]).find(x => x.id === btn.dataset.editVariant);
-    if (!v) return;
-    const attrs = Object.entries(v.attributes || {});
-    openModal({
-      title: 'Edit Option',
-      body: `
-        <div id="edit-variant-attrs" class="space-y-2 mb-2">
-          ${(attrs.length ? attrs : [['','']]).map(([k,val]) => `
-            <div class="grid grid-cols-2 gap-2 edit-variant-attr-row">
-              <input placeholder="Attribute (e.g. Color)" value="${k}" class="variant-attr-key w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-800">
-              <input placeholder="Value (e.g. Red)" value="${val}" class="variant-attr-value w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-800">
-            </div>`).join('')}
-        </div>
-        <button type="button" id="edit-variant-add-row-btn" class="mb-3 text-xs font-medium text-brand-600 dark:text-brand-400">+ Add another attribute</button>
-        <div class="grid grid-cols-2 gap-3">
-          ${formField('Price override (₹)','number','Same as base price', v.price !== null ? v.price : '', 'ev-price')}
-          ${formField('Stock','number','e.g. 25', v.stock, 'ev-stock')}
-        </div>
-        <div class="mt-3">${formField('SKU','text','SKU', v.sku, 'ev-sku')}</div>
-      `,
-      confirmLabel: 'Save Option',
-      onConfirm: withErr(async () => {
-        const options = {};
-        document.querySelectorAll('.edit-variant-attr-row').forEach(row => {
-          const key = row.querySelector('.variant-attr-key').value.trim();
-          const value = row.querySelector('.variant-attr-value').value.trim();
-          if (key && value) options[key] = value;
-        });
-        if (!Object.keys(options).length) { toast('Enter at least one attribute (e.g. Color, Size, Units)', 'warn'); return; }
-        const priceVal = document.getElementById('ev-price').value;
-        await api('PATCH', '/products/'+p.id+'/variants/'+v.id, {
-          options,
-          price: priceVal ? parseFloat(priceVal) : null,
-          stock: parseInt(document.getElementById('ev-stock').value || 0),
-          sku: document.getElementById('ev-sku').value || undefined,
-        });
-        closeModal(); toast('Option updated'); await refreshProducts(); navigateTo('products');
-      })
-    });
-    document.getElementById('edit-variant-add-row-btn')?.addEventListener('click', () => {
-      const wrap = document.getElementById('edit-variant-attrs');
-      const row = document.createElement('div');
-      row.className = 'grid grid-cols-2 gap-2 edit-variant-attr-row';
-      row.innerHTML = `
-        <input placeholder="Attribute (e.g. Size)" class="variant-attr-key w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-800">
-        <input placeholder="Value (e.g. XL)" class="variant-attr-value w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-800">
-      `;
-      wrap.appendChild(row);
-    });
+    if (v) openVariantModal(p, v);
   }));
   document.querySelectorAll('[data-toggle-variant]').forEach(btn => btn.addEventListener('click', withErr(async () => {
     const nextStatus = btn.dataset.variantStatus === 'Active' ? 'Inactive' : 'Active';
     await api('PATCH', '/products/'+p.id+'/variants/'+btn.dataset.toggleVariant, { status: nextStatus });
-    toast('Option updated'); await refreshProducts(); navigateTo('products');
+    toast('Variant updated'); await refreshProducts(); navigateTo('products');
   })));
   document.querySelectorAll('[data-remove-variant]').forEach(btn => btn.addEventListener('click', withErr(async () => {
     await api('DELETE', '/products/'+p.id+'/variants/'+btn.dataset.removeVariant);
-    toast('Option removed'); await refreshProducts(); navigateTo('products');
+    toast('Variant removed'); await refreshProducts(); navigateTo('products');
   })));
+  document.getElementById('drawer-apply-all-variants-toggle')?.addEventListener('click', withErr(async (e) => {
+    // __flipToggle (wired via the button's own onclick) has already flipped
+    // dataset.checked to the new value by the time this listener runs.
+    const nowChecked = e.currentTarget.dataset.checked === 'true';
+    await api('PATCH', '/products/'+p.id, { apply_bulk_pricing_to_all_variants: nowChecked });
+    toast('Setting saved'); await refreshProducts(); navigateTo('products');
+  }));
   document.getElementById('drawer-add-price-tier-btn')?.addEventListener('click', withErr(async () => {
     const minQty = parseInt(document.getElementById('drawer-tier-minqty').value || 0);
     const price = document.getElementById('drawer-tier-price').value;
     if (!minQty || !price) { toast('Enter a minimum quantity and price', 'warn'); return; }
-    await api('POST', '/products/'+p.id+'/price-tiers', { min_qty: minQty, price: parseFloat(price) });
+    const variantId = document.getElementById('drawer-tier-scope')?.value || undefined;
+    await api('POST', '/products/'+p.id+'/price-tiers', { min_qty: minQty, price: parseFloat(price), variant_id: variantId });
     toast('Price tier added'); await refreshProducts(); navigateTo('products');
   }));
   document.querySelectorAll('[data-remove-price-tier]').forEach(btn => btn.addEventListener('click', withErr(async () => {

@@ -17,9 +17,11 @@ use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
+    private const WITH = ['brand', 'category', 'seller', 'images', 'variants.priceTiers', 'priceTiers'];
+
     public function index(Request $request)
     {
-        $query = Product::query()->with(['brand', 'category', 'seller', 'images', 'variants', 'priceTiers']);
+        $query = Product::query()->with(self::WITH);
 
         if ($search = $request->query('q')) {
             $query->where('name', 'like', "%{$search}%");
@@ -49,7 +51,7 @@ class ProductController extends Controller
             'slug' => Str::slug($data['name']).'-'.Str::random(4),
         ]);
 
-        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants', 'priceTiers'])), 201);
+        return response()->json($this->transform($product->load(self::WITH)), 201);
     }
 
     public function update(Request $request, Product $product)
@@ -58,7 +60,7 @@ class ProductController extends Controller
         $data = $this->resolveRelations($data);
         $product->update($data);
 
-        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants', 'priceTiers'])));
+        return response()->json($this->transform($product->load(self::WITH)));
     }
 
     public function destroy(Product $product)
@@ -77,7 +79,7 @@ class ProductController extends Controller
 
         ProductImage::storeUploads($product, $request->file('images', []));
 
-        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants', 'priceTiers'])), 201);
+        return response()->json($this->transform($product->load(self::WITH)), 201);
     }
 
     public function destroyImage(Product $product, ProductImage $image)
@@ -93,18 +95,19 @@ class ProductController extends Controller
     public function storeVariant(Request $request, Product $product)
     {
         $data = $this->validatedVariant($request);
-        $this->assertConsistentOptionKeys($product, $data['options']);
 
         $variant = $product->variants()->create([
+            'name' => $data['name'],
             'variant_code' => 'VAR-'.strtoupper(Str::random(8)),
             'sku' => ($data['sku'] ?? null) ?: 'SKU'.strtoupper(Str::random(6)),
-            'options' => $data['options'],
+            'options' => [],
             'price' => $data['price'] ?? null,
             'stock' => $data['stock'],
             'status' => $data['status'] ?? 'Active',
+            'image_path' => $request->hasFile('image') ? $request->file('image')->store('variants', 'uploads') : null,
         ]);
 
-        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants', 'priceTiers'])), 201);
+        return response()->json($this->transform($product->load(self::WITH)), 201);
     }
 
     public function updateVariant(Request $request, Product $product, ProductVariant $variant)
@@ -115,65 +118,48 @@ class ProductController extends Controller
         if (array_key_exists('sku', $data) && $data['sku'] === '') {
             unset($data['sku']);
         }
+
+        if ($request->hasFile('image')) {
+            if ($variant->image_path) {
+                Storage::disk('uploads')->delete($variant->image_path);
+            }
+            $data['image_path'] = $request->file('image')->store('variants', 'uploads');
+        } elseif ($request->boolean('remove_image')) {
+            if ($variant->image_path) {
+                Storage::disk('uploads')->delete($variant->image_path);
+            }
+            $data['image_path'] = null;
+        }
+
         $variant->update($data);
 
-        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants', 'priceTiers'])));
+        return response()->json($this->transform($product->load(self::WITH)));
     }
 
     public function destroyVariant(Product $product, ProductVariant $variant)
     {
         abort_unless($variant->product_id === $product->id, 404);
+        if ($variant->image_path) {
+            Storage::disk('uploads')->delete($variant->image_path);
+        }
         $variant->delete();
 
-        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants', 'priceTiers'])));
-    }
-
-    /**
-     * A product's variant options only work as a picker if every variant
-     * uses the exact same attribute names (e.g. all "Color"+"Size", never
-     * one variant keyed "Color" and another keyed by a color name itself)
-     * — otherwise the storefront can't match a selection to a variant and
-     * the picker is effectively broken. Only enforced on create; editing an
-     * existing (possibly already-mismatched) variant stays unrestricted so
-     * a mistake here can still be fixed by hand.
-     */
-    private function assertConsistentOptionKeys(Product $product, array $newOptions): void
-    {
-        $existingKeys = $product->variants->flatMap(fn (ProductVariant $v) => array_keys($v->options ?? []))->unique();
-        if ($existingKeys->isEmpty()) {
-            return;
-        }
-
-        $newKeys = collect(array_keys($newOptions));
-        if ($newKeys->diff($existingKeys)->isEmpty() && $existingKeys->diff($newKeys)->isEmpty()) {
-            return;
-        }
-
-        abort(422, 'This product\'s other options use: '.$existingKeys->implode(', ').'. Use the same attribute names for every option so customers can select between them.');
+        return response()->json($this->transform($product->load(self::WITH)));
     }
 
     private function validatedVariant(Request $request, bool $isUpdate = false): array
     {
         $required = $isUpdate ? 'sometimes' : 'required';
 
-        $data = $request->validate([
-            'options' => [$required, 'array'],
-            'options.*' => ['nullable', 'string', 'max:60'],
+        return $request->validate([
+            'name' => [$required, 'string', 'max:120'],
             'sku' => ['nullable', 'string', 'max:60'],
             'price' => ['nullable', 'numeric', 'min:0'],
             'stock' => [$required, 'integer', 'min:0'],
             'status' => ['sometimes', Rule::in(['Active', 'Inactive'])],
+            'image' => ['sometimes', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'remove_image' => ['sometimes', 'boolean'],
         ]);
-
-        if (array_key_exists('options', $data)) {
-            $data['options'] = array_filter($data['options'], fn ($v) => $v !== null && $v !== '');
-
-            if (! $isUpdate) {
-                abort_if(empty($data['options']), 422, 'Enter at least one attribute (e.g. Color, Size, Units).');
-            }
-        }
-
-        return $data;
     }
 
     private function validated(Request $request, bool $isUpdate = false): array
@@ -193,6 +179,7 @@ class ProductController extends Controller
             'featured' => ['sometimes', 'boolean'],
             'description' => ['sometimes', 'nullable', 'string'],
             'video_url' => ['sometimes', 'nullable', 'url', 'max:255'],
+            'apply_bulk_pricing_to_all_variants' => ['sometimes', 'boolean'],
         ]);
     }
 
@@ -237,14 +224,20 @@ class ProductController extends Controller
             'sold' => $p->sold_count,
             'images' => $p->images->map(fn (ProductImage $img) => ['id' => $img->id, 'url' => $img->url])->all(),
             'videoUrl' => $p->video_url,
+            'applyBulkPricingToAllVariants' => (bool) $p->apply_bulk_pricing_to_all_variants,
             'variants' => $p->variants->map(fn (ProductVariant $v) => [
                 'id' => $v->variant_code,
+                'name' => $v->label,
                 'sku' => $v->sku,
-                'attributes' => $v->options,
-                'label' => $v->label,
+                'imageUrl' => $v->image_url,
                 'price' => $v->price !== null ? (float) $v->price : null,
                 'stock' => $v->stock,
                 'status' => $v->status,
+                'priceTiers' => $v->priceTiers->map(fn (ProductPriceTier $t) => [
+                    'id' => $t->id,
+                    'minQty' => $t->min_qty,
+                    'price' => (float) $t->price,
+                ])->all(),
             ])->all(),
             'priceTiers' => $p->priceTiers->map(fn (ProductPriceTier $t) => [
                 'id' => $t->id,
@@ -257,13 +250,21 @@ class ProductController extends Controller
     public function storePriceTier(Request $request, Product $product)
     {
         $data = $this->validatedPriceTier($request);
+        $variant = $this->resolveTierVariant($product, $data['variant_id'] ?? null);
 
-        $exists = $product->priceTiers()->where('min_qty', $data['min_qty'])->exists();
+        $exists = ProductPriceTier::where('product_id', $product->id)
+            ->where('product_variant_id', $variant?->id)
+            ->where('min_qty', $data['min_qty'])
+            ->exists();
         abort_if($exists, 422, 'A price tier for this minimum quantity already exists.');
 
-        $product->priceTiers()->create($data);
+        $product->allPriceTiers()->create([
+            'product_variant_id' => $variant?->id,
+            'min_qty' => $data['min_qty'],
+            'price' => $data['price'],
+        ]);
 
-        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants', 'priceTiers'])), 201);
+        return response()->json($this->transform($product->load(self::WITH)), 201);
     }
 
     public function destroyPriceTier(Product $product, ProductPriceTier $tier)
@@ -271,7 +272,19 @@ class ProductController extends Controller
         abort_unless($tier->product_id === $product->id, 404);
         $tier->delete();
 
-        return response()->json($this->transform($product->load(['brand', 'category', 'seller', 'images', 'variants', 'priceTiers'])));
+        return response()->json($this->transform($product->load(self::WITH)));
+    }
+
+    private function resolveTierVariant(Product $product, ?string $variantCode): ?ProductVariant
+    {
+        if (! $variantCode) {
+            return null;
+        }
+
+        $variant = $product->variants->firstWhere('variant_code', $variantCode);
+        abort_unless($variant, 404, 'Variant not found on this product.');
+
+        return $variant;
     }
 
     private function validatedPriceTier(Request $request): array
@@ -279,6 +292,7 @@ class ProductController extends Controller
         return $request->validate([
             'min_qty' => ['required', 'integer', 'min:1'],
             'price' => ['required', 'numeric', 'min:0'],
+            'variant_id' => ['sometimes', 'nullable', 'string'],
         ]);
     }
 }

@@ -13,7 +13,7 @@ class Product extends Model
         'product_code', 'sku', 'name', 'slug', 'category_id', 'brand_id',
         'seller_id', 'hsn_code_id', 'description', 'video_url', 'price', 'mrp',
         'unit', 'stock', 'approval_status', 'featured', 'rating', 'reviews_count',
-        'sold_count', 'eta_days', 'tag',
+        'sold_count', 'eta_days', 'tag', 'apply_bulk_pricing_to_all_variants',
     ];
 
     protected function casts(): array
@@ -23,6 +23,7 @@ class Product extends Model
             'mrp' => 'decimal:2',
             'rating' => 'decimal:1',
             'featured' => 'boolean',
+            'apply_bulk_pricing_to_all_variants' => 'boolean',
         ];
     }
 
@@ -66,7 +67,21 @@ class Product extends Model
         return $this->hasMany(ProductVariant::class);
     }
 
+    /**
+     * This product's own bulk-pricing tiers (product_variant_id null) —
+     * what applies when buying the base product, or every variant when
+     * apply_bulk_pricing_to_all_variants is on.
+     */
     public function priceTiers(): HasMany
+    {
+        return $this->hasMany(ProductPriceTier::class)->whereNull('product_variant_id')->orderBy('min_qty');
+    }
+
+    /**
+     * Every tier on this product, including ones scoped to a specific
+     * variant — used when the admin/seller UI needs the full picture.
+     */
+    public function allPriceTiers(): HasMany
     {
         return $this->hasMany(ProductPriceTier::class)->orderBy('min_qty');
     }

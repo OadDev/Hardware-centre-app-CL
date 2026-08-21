@@ -856,65 +856,72 @@
 
   var variantDataEl = document.getElementById("pdp-variants-data");
   var pdpAddBtn = document.querySelector('[data-add-to-cart][data-pdp]');
-  var pdpVariants = [];
+  var pdpData = null;
   if (variantDataEl) {
-    try { pdpVariants = JSON.parse(variantDataEl.textContent) || []; } catch (e) { pdpVariants = []; }
+    try { pdpData = JSON.parse(variantDataEl.textContent) || null; } catch (e) { pdpData = null; }
   }
-  if (pdpAddBtn && pdpVariants.length) {
-    var selectedOptions = {};
-    document.querySelectorAll(".pdp-variant-group").forEach(function (group) {
-      var active = group.querySelector("[data-variant-option].active");
-      if (active) selectedOptions[active.getAttribute("data-variant-option").split(":")[0]] = active.getAttribute("data-variant-option").split(":")[1];
-    });
-
+  if (pdpAddBtn && pdpData && pdpData.variants && pdpData.variants.length) {
     var priceEl = document.querySelector(".pdp-price");
     var stockTitleEl = document.querySelector("[data-pdp-stock-title]");
     var stockSubEl = document.querySelector("[data-pdp-stock-sub]");
     var stockCardEl = document.querySelector("[data-pdp-stock-card]");
+    var heroImg = document.getElementById("pdp-hero-img");
+    var tierBoxEl = document.getElementById("pdp-tier-box-dynamic");
+    var defaultHeroSrc = heroImg ? heroImg.src : null;
+    var unit = pdpData.unit || "unit";
 
-    var applySelection = function () {
-      var groups = Array.from(document.querySelectorAll(".pdp-variant-group")).map(function (g) {
-        return g.querySelector("[data-variant-option]").getAttribute("data-variant-option").split(":")[0];
-      });
-      var match = pdpVariants.find(function (v) {
-        return groups.every(function (key) { return v.attributes[key] === selectedOptions[key]; });
-      });
+    var renderTierBox = function (variant) {
+      if (!tierBoxEl) return;
+      var tiers = (variant.price_tiers && variant.price_tiers.length)
+        ? variant.price_tiers
+        : (pdpData.apply_bulk_pricing_to_all_variants ? pdpData.product_price_tiers : []);
 
-      if (match) {
-        pdpAddBtn.setAttribute("data-variant", match.id);
-        if (priceEl) priceEl.textContent = "₹" + Math.round(match.price).toLocaleString("en-IN");
-        var inStock = match.stock > 0;
-        pdpAddBtn.disabled = !inStock;
-        if (stockTitleEl) stockTitleEl.textContent = inStock ? match.stock + " in stock" : "Out of Stock";
-        if (stockSubEl) stockSubEl.textContent = inStock ? "Ready to ship" : "Currently unavailable";
-        if (stockCardEl) stockCardEl.style.background = inStock ? "var(--green-bg)" : "var(--red-bg)";
-      } else {
+      if (!tiers || !tiers.length) { tierBoxEl.innerHTML = ""; return; }
+
+      var sorted = tiers.slice().sort(function (a, b) { return a.min_qty - b.min_qty; });
+      var rows = '<tr><td>1 – ' + (sorted[0].min_qty - 1) + ' ' + unit + '</td><td>₹' + Math.round(variant.price).toLocaleString("en-IN") + ' / ' + unit + '</td></tr>';
+      sorted.forEach(function (tier, i) {
+        var next = sorted[i + 1];
+        var range = next ? (tier.min_qty + ' – ' + (next.min_qty - 1)) : (tier.min_qty + '+');
+        rows += '<tr><td>' + range + ' ' + unit + '</td><td>₹' + Math.round(tier.price).toLocaleString("en-IN") + ' / ' + unit + '</td></tr>';
+      });
+      tierBoxEl.innerHTML = '<div class="pdp-tier-box"><div class="pdp-tier-title">Buy more, save more</div><table class="pdp-tier-table"><tbody>' + rows + '</tbody></table></div>';
+    };
+
+    var applySelection = function (variant) {
+      if (!variant) {
         pdpAddBtn.removeAttribute("data-variant");
         pdpAddBtn.disabled = true;
         if (stockTitleEl) stockTitleEl.textContent = "Select an option";
         if (stockSubEl) stockSubEl.textContent = "";
+        if (tierBoxEl) tierBoxEl.innerHTML = "";
+        if (heroImg && defaultHeroSrc) heroImg.src = defaultHeroSrc;
+        return;
       }
+
+      pdpAddBtn.setAttribute("data-variant", variant.id);
+      if (priceEl) priceEl.textContent = "₹" + Math.round(variant.price).toLocaleString("en-IN");
+      var inStock = variant.stock > 0;
+      pdpAddBtn.disabled = !inStock;
+      if (stockTitleEl) stockTitleEl.textContent = inStock ? variant.stock + " in stock" : "Out of Stock";
+      if (stockSubEl) stockSubEl.textContent = inStock ? "Ready to ship" : "Currently unavailable";
+      if (stockCardEl) stockCardEl.style.background = inStock ? "var(--green-bg)" : "var(--red-bg)";
+      if (heroImg && variant.image) heroImg.src = variant.image;
+      else if (heroImg && defaultHeroSrc) heroImg.src = defaultHeroSrc;
+      renderTierBox(variant);
     };
 
     document.querySelectorAll("[data-variant-option]").forEach(function (chip) {
       chip.addEventListener("click", function () {
-        var parts = chip.getAttribute("data-variant-option").split(":");
-        selectedOptions[parts[0]] = parts[1];
-        document.querySelectorAll('[data-variant-option^="' + parts[0] + ':"]').forEach(function (c) { c.classList.remove("active"); });
+        var id = chip.getAttribute("data-variant-option");
+        var variant = pdpData.variants.find(function (v) { return v.id === id; });
+        document.querySelectorAll("[data-variant-option]").forEach(function (c) { c.classList.remove("active"); });
         chip.classList.add("active");
-        applySelection();
+        applySelection(variant);
       });
     });
 
-    applySelection();
-  } else {
-    document.querySelectorAll("[data-variant-option]").forEach(function (chip) {
-      chip.addEventListener("click", function () {
-        var key = chip.getAttribute("data-variant-option").split(":")[0];
-        document.querySelectorAll('[data-variant-option^="' + key + ':"]').forEach(function (c) { c.classList.remove("active"); });
-        chip.classList.add("active");
-      });
-    });
+    applySelection(null);
   }
 
   // ---------------- Cart page ----------------

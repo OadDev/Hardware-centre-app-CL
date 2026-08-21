@@ -24,7 +24,7 @@ class CategoryController extends Controller
         $sort = $request->query('sort', 'pop');
 
         $query = Product::query()->approved()
-            ->with(['brand', 'category', 'seller', 'specs', 'images', 'variants'])
+            ->with(['brand', 'category', 'seller', 'specs', 'images', 'variants.priceTiers'])
             ->where('category_id', $category->id);
 
         match ($sort) {

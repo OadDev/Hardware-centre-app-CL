@@ -71,7 +71,7 @@ class OrderController extends Controller
             abort_unless($verified, 422, 'Payment verification failed. Please try again.');
         }
 
-        $items = $customer->cartItems()->with(['product.seller.categoryCommissions', 'product.category', 'product.priceTiers', 'productVariant'])->get();
+        $items = $customer->cartItems()->with(['product.seller.categoryCommissions', 'product.category', 'product.priceTiers', 'productVariant.priceTiers'])->get();
 
         if ($items->isEmpty()) {
             return response()->json(['message' => 'Your cart is empty'], 422);

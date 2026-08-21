@@ -50,11 +50,16 @@ class ProductResource extends JsonResource
             'variants' => $this->variants->where('status', 'Active')->values()->map(fn ($v) => [
                 'id' => $v->variant_code,
                 'sku' => $v->sku,
-                'attributes' => $v->options,
                 'label' => $v->label,
+                'image' => $v->image_url,
                 'price' => $v->effective_price,
                 'stock' => $v->stock,
+                'price_tiers' => $v->priceTiers->map(fn ($t) => [
+                    'min_qty' => $t->min_qty,
+                    'price' => (float) $t->price,
+                ])->all(),
             ])->all(),
+            'apply_bulk_pricing_to_all_variants' => (bool) $this->apply_bulk_pricing_to_all_variants,
             'price_tiers' => $this->priceTiers->map(fn ($t) => [
                 'min_qty' => $t->min_qty,
                 'price' => (float) $t->price,

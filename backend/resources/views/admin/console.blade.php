@@ -145,6 +145,25 @@ async function api(method, path, body) {
 }
 const unwrap = (resp) => (resp && resp.data !== undefined) ? resp.data : resp;
 
+/**
+ * Multipart requests (file uploads) can't be JSON, and PHP never
+ * populates $_FILES for a real PUT/PATCH body — so a "PATCH with a file"
+ * has to be sent as POST with Laravel's `_method` override field instead.
+ */
+async function apiForm(method, path, formData) {
+  if (method !== 'POST') formData.append('_method', method);
+  const res = await fetch('/admin/api' + path, {
+    method: 'POST',
+    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken() },
+    body: formData,
+  });
+  if (res.status === 401 || res.status === 419) { window.location.href = '/admin/login'; return; }
+  let data = {};
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) { throw new Error(data.message || ('Request failed (' + res.status + ')')); }
+  return data;
+}
+
 async function refreshSellers() { DATA.sellers = unwrap(await api('GET', '/sellers?per_page=250')); }
 async function refreshCustomers() { DATA.customers = unwrap(await api('GET', '/customers?per_page=250')); }
 async function refreshProducts() { DATA.products = unwrap(await api('GET', '/products?per_page=250')); }

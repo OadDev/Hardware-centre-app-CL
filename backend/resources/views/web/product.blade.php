@@ -53,9 +53,10 @@ $images = $product->images->pluck('url')->filter()->values();
       <div class="pdp-tax-note">Inclusive of all taxes · per {{ $product->unit }}</div>
 
       @php
+        $variants = $product->variants->where('status', 'Active')->values();
         $priceTiers = $product->priceTiers->sortBy('min_qty')->values();
       @endphp
-      @if($priceTiers->isNotEmpty())
+      @if($variants->isEmpty() && $priceTiers->isNotEmpty())
       <div class="pdp-tier-box">
         <div class="pdp-tier-title">Buy more, save more</div>
         <table class="pdp-tier-table">
@@ -68,28 +69,18 @@ $images = $product->images->pluck('url')->filter()->values();
         </table>
       </div>
       @endif
+      <div id="pdp-tier-box-dynamic"></div>
 
-      @php
-        $variants = $product->variants->where('status', 'Active')->values();
-        $preferredOrder = ['Color', 'Size'];
-        $allKeys = $variants->flatMap(fn ($v) => array_keys($v->options ?? []))->unique()->values();
-        $attributeOrder = collect($preferredOrder)->filter(fn ($k) => $allKeys->contains($k))
-          ->concat($allKeys->diff($preferredOrder));
-        $attributeGroups = $attributeOrder->map(fn ($key) => [
-          'key' => $key,
-          'values' => $variants->pluck('options.'.$key)->filter()->unique()->values(),
-        ])->filter(fn ($g) => $g['values']->count() > 0);
-      @endphp
-      @foreach($attributeGroups as $group)
+      @if($variants->isNotEmpty())
       <div class="pdp-variant-group">
-        <div class="pdp-variant-label">{{ $group['key'] }}</div>
+        <div class="pdp-variant-label">Options</div>
         <div class="pdp-variant-row">
-          @foreach($group['values'] as $value)
-          <div class="tab-btn {{ $loop->first ? 'active' : '' }}" data-variant-option="{{ $group['key'] }}:{{ $value }}">{{ $value }}</div>
+          @foreach($variants as $v)
+          <div class="tab-btn" data-variant-option="{{ $v->variant_code }}">{{ $v->label }}</div>
           @endforeach
         </div>
       </div>
-      @endforeach
+      @endif
 
       <div class="pdp-info-cards">
         <div class="pdp-info-card" data-pdp-stock-card style="background:{{ $product->stock > 0 ? 'var(--green-bg)' : 'var(--red-bg)' }};">
@@ -126,12 +117,19 @@ $images = $product->images->pluck('url')->filter()->values();
       @endif
 
       @if($variants->isNotEmpty())
-      <script type="application/json" id="pdp-variants-data">{!! json_encode($variants->map(fn ($v) => [
-        'id' => $v->variant_code,
-        'attributes' => $v->options,
-        'price' => (float) $v->effective_price,
-        'stock' => $v->stock,
-      ])->values(), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) !!}</script>
+      <script type="application/json" id="pdp-variants-data">{!! json_encode([
+        'unit' => $product->unit,
+        'apply_bulk_pricing_to_all_variants' => (bool) $product->apply_bulk_pricing_to_all_variants,
+        'product_price_tiers' => $priceTiers->map(fn ($t) => ['min_qty' => $t->min_qty, 'price' => (float) $t->price])->values(),
+        'variants' => $variants->map(fn ($v) => [
+          'id' => $v->variant_code,
+          'label' => $v->label,
+          'image' => $v->image_url,
+          'price' => (float) $v->effective_price,
+          'stock' => $v->stock,
+          'price_tiers' => $v->priceTiers->map(fn ($t) => ['min_qty' => $t->min_qty, 'price' => (float) $t->price])->values(),
+        ])->values(),
+      ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) !!}</script>
       @endif
     </div>
   </div>

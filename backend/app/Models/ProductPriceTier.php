@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProductPriceTier extends Model
 {
-    protected $fillable = ['product_id', 'min_qty', 'price'];
+    protected $fillable = ['product_id', 'product_variant_id', 'min_qty', 'price'];
 
     protected function casts(): array
     {
@@ -19,5 +19,10 @@ class ProductPriceTier extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function variant(): BelongsTo
+    {
+        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
     }
 }

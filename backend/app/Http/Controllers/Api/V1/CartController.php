@@ -91,7 +91,7 @@ class CartController extends Controller
     private function cartResponse(Request $request)
     {
         $items = $request->user()->cartItems()
-            ->with(['product.brand', 'product.category', 'product.seller', 'product.specs', 'product.priceTiers', 'productVariant'])
+            ->with(['product.brand', 'product.category', 'product.seller', 'product.specs', 'product.priceTiers', 'productVariant.priceTiers'])
             ->get();
         $totals = CartCalculator::totals($items, null, $request->query('payment_method'));
 
@@ -105,6 +105,7 @@ class CartController extends Controller
                     'stock' => $item->productVariant->stock,
                 ] : null,
                 'quantity' => $item->quantity,
+                'unit_price' => $item->unit_price,
                 'line_total' => $item->unit_price * $item->quantity,
             ]),
             'totals' => $totals,

@@ -6,7 +6,7 @@ import { RootStackParamList } from '../navigation/types';
 import { useApp } from '../context/AppContext';
 import { colors, fonts, radii, shadow } from '../theme/theme';
 import { ProductApi } from '../api/endpoints';
-import { ProductDetail } from '../api/types';
+import { ProductDetail, ProductPriceTier } from '../api/types';
 import { discountPct, inr } from '../utils/format';
 import PlaceholderImage from '../components/PlaceholderImage';
 import {
@@ -26,7 +26,10 @@ import {
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProductDetail'>;
 
-const PREFERRED_ATTRIBUTE_ORDER = ['Color', 'Size'];
+function priceForQuantity(basePrice: number, tiers: ProductPriceTier[], quantity: number): number {
+  const applicable = tiers.filter((t) => t.min_qty <= quantity).sort((a, b) => b.min_qty - a.min_qty)[0];
+  return applicable ? applicable.price : basePrice;
+}
 
 export default function ProductDetailScreen({ navigation, route }: Props) {
   const { id } = route.params;
@@ -35,19 +38,17 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
   const [qty, setQty] = useState(1);
   const [gallery, setGallery] = useState(0);
   const [detail, setDetail] = useState<ProductDetail | null>(null);
-  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     setDetail(null);
     setGallery(0);
-    setSelectedOptions({});
+    setQty(1);
+    setSelectedVariantId(null);
     ProductApi.show(id).then((res) => {
       if (cancelled) return;
       setDetail(res);
-      if (res.product.variants?.[0]) {
-        setSelectedOptions(res.product.variants[0].attributes);
-      }
     });
     return () => {
       cancelled = true;
@@ -73,24 +74,25 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
 
   const { product, reviews, rating_breakdown: ratingBars } = detail;
   const variants = product.variants ?? [];
-  const allAttributeKeys = Array.from(new Set(variants.flatMap((v) => Object.keys(v.attributes ?? {}))));
-  const attributeOrder = [
-    ...PREFERRED_ATTRIBUTE_ORDER.filter((k) => allAttributeKeys.includes(k)),
-    ...allAttributeKeys.filter((k) => !PREFERRED_ATTRIBUTE_ORDER.includes(k)),
-  ];
-  const attributeGroups = attributeOrder.map((key) => ({
-    key,
-    values: Array.from(new Set(variants.map((v) => v.attributes[key]).filter((v): v is string => !!v))),
-  })).filter((g) => g.values.length > 0);
-  const selectedVariant = variants.find((v) =>
-    attributeGroups.every((g) => v.attributes[g.key] === selectedOptions[g.key])
-  );
-  const effectivePrice = selectedVariant ? selectedVariant.price : product.price;
+  const selectedVariant = variants.find((v) => v.id === selectedVariantId);
+
+  // A variant with its own bulk-pricing tiers uses those; otherwise it only
+  // inherits the base product's tiers when the seller opted every variant
+  // into them via apply_bulk_pricing_to_all_variants.
+  const activeTiers: ProductPriceTier[] = variants.length > 0
+    ? (selectedVariant
+      ? (selectedVariant.price_tiers.length ? selectedVariant.price_tiers : (product.apply_bulk_pricing_to_all_variants ? product.price_tiers : []))
+      : [])
+    : (product.price_tiers ?? []);
+  const basePrice = selectedVariant ? selectedVariant.price : product.price;
+  const effectivePrice = variants.length > 0 && !selectedVariant ? product.price : priceForQuantity(basePrice, activeTiers, qty);
   const off = discountPct(effectivePrice, product.mrp);
   const wished = !!wishlist[product.id];
   const images = product.images ?? [];
-  const heroImage = images[gallery] ?? images[0];
-  const outOfStock = variants.length > 0 ? !selectedVariant || selectedVariant.stock <= 0 : product.stock <= 0;
+  const heroImage = selectedVariant?.image ?? images[gallery] ?? images[0];
+  const availableStock = variants.length > 0 ? (selectedVariant?.stock ?? 0) : product.stock;
+  const outOfStock = variants.length > 0 ? (!selectedVariant || selectedVariant.stock <= 0) : product.stock <= 0;
+  const exceedsStock = qty > availableStock;
   const inCart = cart.items.some(
     (i) => i.product.id === product.id && (i.variant?.id ?? undefined) === selectedVariant?.id
   );
@@ -183,19 +185,22 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
           </View>
           <Text style={styles.taxNote}>Inclusive of all taxes · per {product.unit}</Text>
 
-          {variants.length === 0 && (product.price_tiers?.length ?? 0) > 0 && (
+          {activeTiers.length > 0 && (
             <View style={styles.tierBox}>
               <Text style={styles.tierTitle}>Buy more, save more</Text>
-              {[{ min_qty: 1, price: product.price }, ...product.price_tiers]
+              {[{ min_qty: 1, price: basePrice }, ...activeTiers]
                 .sort((a, b) => a.min_qty - b.min_qty)
-                .map((tier, i, arr) => (
-                  <View key={tier.min_qty} style={[styles.tierRow, i > 0 ? styles.tierRowBorder : null]}>
-                    <Text style={styles.tierRange}>
-                      {arr[i + 1] ? `${tier.min_qty} – ${arr[i + 1].min_qty - 1}` : `${tier.min_qty}+`} {product.unit}
-                    </Text>
-                    <Text style={styles.tierPrice}>{inr(tier.price)} / {product.unit}</Text>
-                  </View>
-                ))}
+                .map((tier, i, arr) => {
+                  const isActiveRow = qty >= tier.min_qty && (!arr[i + 1] || qty < arr[i + 1].min_qty);
+                  return (
+                    <View key={tier.min_qty} style={[styles.tierRow, i > 0 ? styles.tierRowBorder : null, isActiveRow ? styles.tierRowActive : null]}>
+                      <Text style={styles.tierRange}>
+                        {arr[i + 1] ? `${tier.min_qty} – ${arr[i + 1].min_qty - 1}` : `${tier.min_qty}+`} {product.unit}
+                      </Text>
+                      <Text style={styles.tierPrice}>{inr(tier.price)} / {product.unit}</Text>
+                    </View>
+                  );
+                })}
             </View>
           )}
 
@@ -212,25 +217,25 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
             </View>
           )}
 
-          {attributeGroups.map((group) => (
-            <View key={group.key} style={styles.optionGroup}>
-              <Text style={styles.optionLabel}>{group.key}</Text>
+          {variants.length > 0 && (
+            <View style={styles.optionGroup}>
+              <Text style={styles.optionLabel}>Options</Text>
               <View style={styles.optionRow}>
-                {group.values.map((value) => {
-                  const active = selectedOptions[group.key] === value;
+                {variants.map((v) => {
+                  const active = v.id === selectedVariantId;
                   return (
                     <Pressable
-                      key={value}
-                      onPress={() => setSelectedOptions((prev) => ({ ...prev, [group.key]: value }))}
+                      key={v.id}
+                      onPress={() => setSelectedVariantId(v.id)}
                       style={[styles.optionChip, active ? styles.optionChipActive : null]}
                     >
-                      <Text style={[styles.optionChipText, active ? styles.optionChipTextActive : null]}>{value}</Text>
+                      <Text style={[styles.optionChipText, active ? styles.optionChipTextActive : null]}>{v.label}</Text>
                     </Pressable>
                   );
                 })}
               </View>
             </View>
-          ))}
+          )}
 
           <View style={styles.infoCards}>
             <View style={[styles.infoCard, { backgroundColor: outOfStock ? colors.dangerBg : colors.successBg }]}>
@@ -332,13 +337,16 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
             <IconMinus size={18} />
           </Pressable>
           <Text style={styles.qtyText}>{qty}</Text>
-          <Pressable style={styles.qtyBtn} onPress={() => setQty((q) => q + 1)}>
+          <Pressable
+            style={styles.qtyBtn}
+            onPress={() => setQty((q) => (availableStock > 0 ? Math.min(availableStock, q + 1) : q + 1))}
+          >
             <IconPlus size={17} color={colors.textSub} />
           </Pressable>
         </View>
         <Pressable
-          style={[styles.addCartBtn, outOfStock ? styles.btnDisabled : null]}
-          disabled={outOfStock}
+          style={[styles.addCartBtn, (outOfStock || exceedsStock) ? styles.btnDisabled : null]}
+          disabled={outOfStock || exceedsStock}
           onPress={() =>
             inCart ? navigation.navigate('Main', { screen: 'Cart' }) : addToCart(product.id, qty, selectedVariant?.id)
           }
@@ -346,8 +354,8 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
           <Text style={styles.addCartText}>{inCart ? 'Go to Cart' : 'Add to Cart'}</Text>
         </Pressable>
         <Pressable
-          style={[styles.buyNowBtn, outOfStock ? styles.btnDisabled : null]}
-          disabled={outOfStock}
+          style={[styles.buyNowBtn, (outOfStock || exceedsStock) ? styles.btnDisabled : null]}
+          disabled={outOfStock || exceedsStock}
           onPress={() => {
             addToCart(product.id, qty, selectedVariant?.id);
             navigation.navigate('Main', { screen: 'Cart' });
@@ -423,6 +431,7 @@ const styles = StyleSheet.create({
   tierTitle: { fontSize: 12.5, fontFamily: fonts.bodyBold, color: colors.text, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: colors.bgAlt },
   tierRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 9 },
   tierRowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
+  tierRowActive: { backgroundColor: colors.accentLight },
   tierRange: { fontSize: 13, color: colors.textMuted },
   tierPrice: { fontSize: 13, fontFamily: fonts.bodyBold, color: colors.text },
   contactRow: { flexDirection: 'row', gap: 10, marginTop: 14 },

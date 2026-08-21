@@ -17,7 +17,7 @@ class ProductController extends Controller
 
     public function index(Request $request)
     {
-        $query = Product::query()->approved()->with(['brand', 'category', 'seller', 'specs', 'images', 'variants', 'priceTiers']);
+        $query = Product::query()->approved()->with(['brand', 'category', 'seller', 'specs', 'images', 'variants.priceTiers', 'priceTiers']);
 
         if ($q = $request->query('q')) {
             $query->where(function ($w) use ($q) {
@@ -53,7 +53,7 @@ class ProductController extends Controller
 
     public function show(Request $request, Product $product)
     {
-        $product->load(['brand', 'category', 'seller', 'specs', 'images', 'variants', 'priceTiers']);
+        $product->load(['brand', 'category', 'seller', 'specs', 'images', 'variants.priceTiers', 'priceTiers']);
 
         return response()->json([
             'product' => new ProductResource($product),

@@ -24,7 +24,7 @@ class ProductController extends Controller
     {
         abort_unless($product->approval_status === 'Approved', 404);
 
-        $product->load(['brand', 'category', 'seller', 'specs', 'images', 'variants', 'priceTiers']);
+        $product->load(['brand', 'category', 'seller', 'specs', 'images', 'variants.priceTiers', 'priceTiers']);
 
         $related = Product::query()->approved()
             ->where('category_id', $product->category_id)

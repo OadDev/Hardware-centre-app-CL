@@ -4,10 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class ProductVariant extends Model
 {
-    protected $fillable = ['product_id', 'variant_code', 'sku', 'options', 'price', 'stock', 'status'];
+    protected $fillable = ['product_id', 'name', 'variant_code', 'sku', 'image_path', 'options', 'price', 'stock', 'status'];
+
+    protected $appends = ['image_url'];
 
     protected function casts(): array
     {
@@ -27,13 +31,28 @@ class ProductVariant extends Model
         return $this->belongsTo(Product::class);
     }
 
+    public function priceTiers(): HasMany
+    {
+        return $this->hasMany(ProductPriceTier::class)->orderBy('min_qty');
+    }
+
+    public function getImageUrlAttribute(): ?string
+    {
+        return $this->image_path ? Storage::disk('uploads')->url($this->image_path) : null;
+    }
+
     /**
-     * MySQL's JSON column doesn't guarantee key order is preserved on
-     * round-trip, so build the label in a fixed, predictable order rather
-     * than trusting array_values() on the raw decoded object.
+     * A variant's display name is whatever the seller typed when creating
+     * it (e.g. "Black", "Black - 3mm"). Older rows created before variants
+     * were simplified only have the legacy Color/Size attribute map, so
+     * fall back to building a label from that.
      */
     public function getLabelAttribute(): string
     {
+        if ($this->name) {
+            return $this->name;
+        }
+
         $options = $this->options ?? [];
         $ordered = [];
 
@@ -48,11 +67,33 @@ class ProductVariant extends Model
             }
         }
 
-        return implode(' / ', $ordered);
+        return implode(' / ', $ordered) ?: $this->sku;
     }
 
     public function getEffectivePriceAttribute(): float
     {
         return (float) ($this->price ?? $this->product->price);
+    }
+
+    public function priceForQuantity(int $quantity): float
+    {
+        // A variant with its own tier schedule uses only that schedule —
+        // it doesn't matter whether apply_bulk_pricing_to_all_variants is
+        // on, and a quantity below the variant's own lowest tier just means
+        // no discount yet, not "fall through to the base schedule".
+        $tiers = $this->priceTiers->isNotEmpty()
+            ? $this->priceTiers
+            : ($this->product->apply_bulk_pricing_to_all_variants ? $this->product->priceTiers : collect());
+
+        $tier = $tiers
+            ->filter(fn (ProductPriceTier $t) => $t->min_qty <= $quantity)
+            ->sortByDesc('min_qty')
+            ->first();
+
+        if ($tier) {
+            return (float) $tier->price;
+        }
+
+        return $this->effective_price;
     }
 }
