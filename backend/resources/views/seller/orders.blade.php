@@ -8,7 +8,8 @@
   @if($items->isEmpty())
   <p class="text-sm text-ink-400">No orders for your products yet.</p>
   @else
-  <table class="w-full text-sm">
+  <div class="overflow-x-auto">
+  <table class="w-full seller-table-wide text-sm">
     <thead><tr class="text-left text-ink-400 border-b border-ink-100">
       <th class="py-2 font-medium">Order</th><th class="font-medium">Customer</th><th class="font-medium">Ship To</th><th class="font-medium">Product</th><th class="font-medium">Qty</th><th class="font-medium">Line Total</th><th class="font-medium">Commission</th><th class="font-medium">Status</th><th class="font-medium">Placed</th>
     </tr></thead>
@@ -46,6 +47,7 @@
       @endforeach
     </tbody>
   </table>
+  </div>
   <div class="mt-4">{{ $items->links() }}</div>
   @endif
 </div>

@@ -46,7 +46,8 @@
   @if($products->isEmpty())
   <p class="text-sm text-ink-400">You haven't listed any products yet.</p>
   @else
-  <table class="w-full text-sm">
+  <div class="overflow-x-auto">
+  <table class="w-full seller-table-wide text-sm">
     <thead><tr class="text-left text-ink-400 border-b border-ink-100">
       <th class="py-2 font-medium"></th><th class="font-medium">Product</th><th class="font-medium">Price</th><th class="font-medium">Stock</th><th class="font-medium">Approval</th><th class="font-medium"></th>
     </tr></thead>
@@ -82,6 +83,7 @@
       @endforeach
     </tbody>
   </table>
+  </div>
   <div class="mt-4">{{ $products->links() }}</div>
   @endif
 </div>

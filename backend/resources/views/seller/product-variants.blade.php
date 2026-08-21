@@ -59,7 +59,8 @@ document.getElementById('add-attr-row')?.addEventListener('click', function () {
   @if($product->variants->isEmpty())
   <p class="text-sm text-ink-400">No options yet. Customers will just buy the base product above.</p>
   @else
-  <table class="w-full text-sm">
+  <div class="overflow-x-auto">
+  <table class="w-full seller-table-wide text-sm">
     <thead><tr class="text-left text-ink-400 border-b border-ink-100">
       <th class="py-2 font-medium">Option</th><th class="font-medium">SKU</th><th class="font-medium">Price</th><th class="font-medium">Stock</th><th class="font-medium">Status</th><th class="font-medium"></th>
     </tr></thead>
@@ -117,6 +118,7 @@ document.getElementById('add-attr-row')?.addEventListener('click', function () {
       @endforeach
     </tbody>
   </table>
+  </div>
   @endif
 </div>
 
@@ -134,7 +136,8 @@ document.getElementById('add-attr-row')?.addEventListener('click', function () {
   @if($product->priceTiers->isEmpty())
   <p class="text-sm text-ink-400">No quantity tiers yet — every order pays the base price of ₹{{ number_format($product->price, 2) }}.</p>
   @else
-  <table class="w-full text-sm">
+  <div class="overflow-x-auto">
+  <table class="w-full seller-table-wide text-sm">
     <thead><tr class="text-left text-ink-400 border-b border-ink-100">
       <th class="py-2 font-medium">Minimum quantity</th><th class="font-medium">Price per unit</th><th class="font-medium"></th>
     </tr></thead>
@@ -153,6 +156,7 @@ document.getElementById('add-attr-row')?.addEventListener('click', function () {
       @endforeach
     </tbody>
   </table>
+  </div>
   @endif
 </div>
 

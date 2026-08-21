@@ -10,7 +10,8 @@
     @if($inventory->isEmpty())
     <p class="text-sm text-ink-400">You don't have any stock in our warehouse yet. Send a shipment below to get started.</p>
     @else
-    <table class="w-full text-sm">
+    <div class="overflow-x-auto">
+  <table class="w-full seller-table-wide text-sm">
       <thead><tr class="text-left text-ink-400 border-b border-ink-100">
         <th class="py-2 font-medium">Product</th><th class="font-medium">Variant</th><th class="font-medium">Warehouse</th><th class="font-medium">Available</th><th class="font-medium">Reserved</th>
       </tr></thead>
@@ -26,6 +27,7 @@
         @endforeach
       </tbody>
     </table>
+  </div>
     <div class="mt-4">{{ $inventory->links() }}</div>
     @endif
   </div>
@@ -78,7 +80,8 @@
     @if($shipments->isEmpty())
     <p class="text-sm text-ink-400">No shipments sent yet.</p>
     @else
-    <table class="w-full text-sm">
+    <div class="overflow-x-auto">
+  <table class="w-full seller-table-wide text-sm">
       <thead><tr class="text-left text-ink-400 border-b border-ink-100">
         <th class="py-2 font-medium">Shipment</th><th class="font-medium">Items</th><th class="font-medium">Status</th><th class="font-medium">Created</th>
       </tr></thead>
@@ -98,6 +101,7 @@
         @endforeach
       </tbody>
     </table>
+  </div>
     <div class="mt-4">{{ $shipments->links() }}</div>
     @endif
   </div>

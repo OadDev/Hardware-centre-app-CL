@@ -8,7 +8,8 @@
   @if($settlements->isEmpty())
   <p class="text-sm text-ink-400">No settlements recorded yet.</p>
   @else
-  <table class="w-full text-sm">
+  <div class="overflow-x-auto">
+  <table class="w-full seller-table-wide text-sm">
     <thead><tr class="text-left text-ink-400 border-b border-ink-100">
       <th class="py-2 font-medium">Settlement No.</th><th class="font-medium">Order</th><th class="font-medium">Amount</th><th class="font-medium">Mode</th><th class="font-medium">Status</th><th class="font-medium">UTR</th><th class="font-medium">Settled</th>
     </tr></thead>
@@ -31,6 +32,7 @@
       @endforeach
     </tbody>
   </table>
+  </div>
   <div class="mt-4">{{ $settlements->links() }}</div>
   @endif
 </div>
