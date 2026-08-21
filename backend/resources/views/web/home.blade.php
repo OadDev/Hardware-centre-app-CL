@@ -33,7 +33,7 @@
         </div>
       </div>
       <div class="hero-float-card" style="top:-18px; right:10px;">
-        <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="#22C55E" stroke="none" stroke-width="0"><path d="m12 1 2.6 1.9 3.2-.2 1 3 2.6 1.8-1 3 1 3-2.6 1.8-1 3-3.2-.2L12 23l-2.6-1.9-3.2.2-1-3L2.6 16.7l1-3-1-3 2.6-1.8 1-3 3.2.2z"/><path d="m8.5 12 2.3 2.3 4.7-4.8" stroke="#fff" stroke-width="2" fill="none"/></svg></div>
+        <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="#22C55E" stroke="none" stroke-width="0"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m8.5 12 2.3 2.3 4.7-4.8" stroke="#fff" stroke-width="2" fill="none"/></svg></div>
         <div><div class="t1">GST Verified</div><div class="t2">1,200+ suppliers</div></div>
       </div>
       <div class="hero-float-card" style="bottom:-18px; left:0;">
@@ -152,7 +152,7 @@
       <a class="supplier-row" href="{{ route('web.categories') }}">
         <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F2937" stroke-width="1.6"><path d="M3 21V8l6-3 6 3v13"/><path d="M15 11h6v10h-6"/><path d="M6 11h3M6 14h3M6 17h3M18 14h0M18 17h0"/></svg></div>
         <div>
-          <div class="name">{{ $s->store_name }} <svg width="15" height="15" viewBox="0 0 24 24" fill="#22C55E" stroke="none" stroke-width="0"><path d="m12 1 2.6 1.9 3.2-.2 1 3 2.6 1.8-1 3 1 3-2.6 1.8-1 3-3.2-.2L12 23l-2.6-1.9-3.2.2-1-3L2.6 16.7l1-3-1-3 2.6-1.8 1-3 3.2.2z"/><path d="m8.5 12 2.3 2.3 4.7-4.8" stroke="#fff" stroke-width="2" fill="none"/></svg></div>
+          <div class="name">{{ $s->store_name }} <svg width="15" height="15" viewBox="0 0 24 24" fill="#22C55E" stroke="none" stroke-width="0"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m8.5 12 2.3 2.3 4.7-4.8" stroke="#fff" stroke-width="2" fill="none"/></svg></div>
           <div class="meta">{{ $s->city }} · {{ $s->joined_at ? (int) now()->diffInYears($s->joined_at, true) : 0 }} yrs · GST Verified</div>
         </div>
         <div class="score"><svg width="12" height="12" viewBox="0 0 24 24" fill="#22C55E" stroke="none" stroke-width="0"><path d="m12 2 3 6.5 7 .6-5.3 4.6L18.4 21 12 17.3 5.6 21l1.7-7.3L2 9.1l7-.6L12 2Z"/></svg><span>{{ number_format($s->rating, 1) }}</span></div>

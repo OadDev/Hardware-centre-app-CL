@@ -103,7 +103,7 @@ $images = $product->images->pluck('url')->filter()->values();
       </div>
 
       <div class="pdp-actions">
-        <button class="pdp-wish-btn" data-pdp-wish="{{ $product->product_code }}" aria-label="Save"><svg width="19" height="19" viewBox="0 0 24 24" fill="#9CA3AF" stroke="#9CA3AF" stroke-width="1.5"><path d="M12 21s-7.5-4.6-10-9.1C.4 8.8 1.6 5.5 4.7 5c2-.3 3.6.8 4.3 2 .7-1.2 2.3-2.3 4.3-2 3.1.5 4.3 3.8 2.7 6.9C19.5 16.4 12 21 12 21Z"/></svg></button>
+        <button class="pdp-wish-btn" data-pdp-wish="{{ $product->product_code }}" aria-label="Save"><svg width="19" height="19" viewBox="0 0 24 24" fill="#9CA3AF" stroke="#9CA3AF" stroke-width="1.5"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>
         <button class="btn btn-primary" data-pdp data-add-to-cart="{{ $product->product_code }}" @if($variants->isEmpty() && $product->stock <= 0) disabled @endif>Add to Cart</button>
       </div>
 

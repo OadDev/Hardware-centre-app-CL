@@ -199,7 +199,7 @@ export function IconStar({ size = 12, color = '#F59E0B' }: IconProps) {
 export function IconHeart({ size = 16, color = 'none', stroke = '#9CA3AF', strokeWidth = 2 }: IconProps & { color?: string; stroke?: string }) {
   return (
     <Svg {...base(size)} fill={color} stroke={stroke} strokeWidth={strokeWidth}>
-      <Path d="M12 21s-7.5-4.6-10-9.1C.4 8.8 1.6 5.5 4.7 5c2-.3 3.6.8 4.3 2 .7-1.2 2.3-2.3 4.3-2 3.1.5 4.3 3.8 2.7 6.9C19.5 16.4 12 21 12 21Z" />
+      <Path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
     </Svg>
   );
 }
@@ -287,7 +287,7 @@ export function IconFilter({ size = 15, color = '#374151', strokeWidth = 2 }: Ic
 export function IconVerified({ size = 15, color = '#22C55E' }: IconProps) {
   return (
     <Svg {...base(size)} fill={color}>
-      <Path d="m12 1 2.6 1.9 3.2-.2 1 3 2.6 1.8-1 3 1 3-2.6 1.8-1 3-3.2-.2L12 23l-2.6-1.9-3.2.2-1-3L2.6 16.7l1-3-1-3 2.6-1.8 1-3 3.2.2z" />
+      <Path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" />
       <Path d="m8.5 12 2.3 2.3 4.7-4.8" stroke="#fff" strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
@@ -396,7 +396,7 @@ export function IconEdit({ size = 17, color = '#fff', strokeWidth = 1.9 }: IconP
 export function IconWishlist({ size = 19, color = '#1F2937', strokeWidth = 1.7 }: IconProps) {
   return (
     <Svg {...base(size)} fill="none" stroke={color} strokeWidth={strokeWidth}>
-      <Path d="M12 21s-7.5-4.6-10-9.1C.4 8.8 1.6 5.5 4.7 5c2-.3 3.6.8 4.3 2 .7-1.2 2.3-2.3 4.3-2 3.1.5 4.3 3.8 2.7 6.9C19.5 16.4 12 21 12 21Z" />
+      <Path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
     </Svg>
   );
 }
