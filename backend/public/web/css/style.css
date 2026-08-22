@@ -100,6 +100,8 @@ p{ margin:0; }
 .btn-outline:hover{ border-color:var(--navy); }
 .btn-outline-light{ background:transparent; color:#fff; border:1.5px solid rgba(255,255,255,.35); }
 .btn-outline-light:hover{ border-color:#fff; }
+/* Still clickable (so tapping explains why, instead of doing nothing) — just visually muted. */
+.btn.is-blocked{ opacity:.5; box-shadow:none; }
 .btn-sm{ height:40px; padding:0 18px; border-radius:10px; font-size:13.5px; }
 .btn-block{ width:100%; }
 
@@ -442,7 +444,8 @@ p{ margin:0; }
 .pdp-info-card{ flex:1; display:flex; align-items:center; gap:10px; border-radius:13px; padding:13px; }
 .pdp-info-card .t1{ font-size:13px; font-weight:700; color:var(--ink); }
 .pdp-info-card .t2{ font-size:11px; color:var(--muted); margin-top:1px; }
-.pdp-variant-group{ margin-top:20px; }
+.pdp-variant-group{ margin-top:20px; border-radius:12px; transition:box-shadow .2s ease; }
+.pdp-variant-group-flash{ box-shadow:0 0 0 3px var(--orange-light-border, rgba(249,115,22,.35)); }
 .pdp-variant-label{ font-size:12.5px; font-weight:700; color:#374151; margin-bottom:8px; }
 .pdp-variant-row{ display:flex; gap:8px; flex-wrap:wrap; }
 .pdp-actions{ display:flex; gap:12px; margin-top:26px; }

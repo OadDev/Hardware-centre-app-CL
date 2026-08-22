@@ -33,7 +33,7 @@ function priceForQuantity(basePrice: number, tiers: ProductPriceTier[], quantity
 
 export default function ProductDetailScreen({ navigation, route }: Props) {
   const { id } = route.params;
-  const { wishlist, toggleWish, addToCart, cart, deliveryLabel } = useApp();
+  const { wishlist, toggleWish, addToCart, cart, deliveryLabel, showToast } = useApp();
   const insets = useSafeAreaInsets();
   const [qty, setQty] = useState(1);
   const [gallery, setGallery] = useState(0);
@@ -93,6 +93,16 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
   const availableStock = variants.length > 0 ? (selectedVariant?.stock ?? 0) : product.stock;
   const outOfStock = variants.length > 0 ? (!selectedVariant || selectedVariant.stock <= 0) : product.stock <= 0;
   const exceedsStock = qty > availableStock;
+  // Add to Cart / Buy Now stay pressable even when blocked — a truly disabled
+  // Pressable swallows the tap silently, which reads as "the button is
+  // broken" rather than telling the customer what to do.
+  const blockReason = variants.length > 0 && !selectedVariant
+    ? 'Please select an option above before continuing'
+    : outOfStock
+    ? 'That option is out of stock'
+    : exceedsStock
+    ? `Only ${availableStock} in stock`
+    : null;
   const inCart = cart.items.some(
     (i) => i.product.id === product.id && (i.variant?.id ?? undefined) === selectedVariant?.id
   );
@@ -345,18 +355,18 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
           </Pressable>
         </View>
         <Pressable
-          style={[styles.addCartBtn, (outOfStock || exceedsStock) ? styles.btnDisabled : null]}
-          disabled={outOfStock || exceedsStock}
-          onPress={() =>
-            inCart ? navigation.navigate('Main', { screen: 'Cart' }) : addToCart(product.id, qty, selectedVariant?.id)
-          }
+          style={[styles.addCartBtn, blockReason ? styles.btnDisabled : null]}
+          onPress={() => {
+            if (blockReason) { showToast(blockReason); return; }
+            inCart ? navigation.navigate('Main', { screen: 'Cart' }) : addToCart(product.id, qty, selectedVariant?.id);
+          }}
         >
           <Text style={styles.addCartText}>{inCart ? 'Go to Cart' : 'Add to Cart'}</Text>
         </Pressable>
         <Pressable
-          style={[styles.buyNowBtn, (outOfStock || exceedsStock) ? styles.btnDisabled : null]}
-          disabled={outOfStock || exceedsStock}
+          style={[styles.buyNowBtn, blockReason ? styles.btnDisabled : null]}
           onPress={() => {
+            if (blockReason) { showToast(blockReason); return; }
             addToCart(product.id, qty, selectedVariant?.id);
             navigation.navigate('Main', { screen: 'Cart' });
           }}

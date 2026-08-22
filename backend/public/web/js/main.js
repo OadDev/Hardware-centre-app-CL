@@ -801,12 +801,33 @@
   }
   bindWishButtons(document);
 
+  // A blocked PDP button (no variant picked yet, or the picked one is out
+  // of stock) stays clickable on purpose — tapping it explains why instead
+  // of doing nothing, which otherwise reads as "the button is broken".
+  function explainBlockedPdpButton(btn) {
+    var reason = btn.getAttribute("data-block");
+    if (!reason) return false;
+    if (reason === "select-option") {
+      showToast("Please select an option above before continuing");
+      var group = document.querySelector(".pdp-variant-group");
+      if (group) {
+        group.scrollIntoView({ behavior: "smooth", block: "center" });
+        group.classList.add("pdp-variant-group-flash");
+        setTimeout(function () { group.classList.remove("pdp-variant-group-flash"); }, 900);
+      }
+    } else if (reason === "out-of-stock") {
+      showToast("That option is out of stock");
+    }
+    return true;
+  }
+
   // ---------------- Add to cart ----------------
   document.addEventListener("click", function (e) {
     var btn = e.target.closest("[data-add-to-cart]");
     if (!btn || btn.disabled) return;
     e.preventDefault();
     e.stopPropagation();
+    if (explainBlockedPdpButton(btn)) return;
 
     var code = btn.getAttribute("data-add-to-cart");
     if (!code) return;
@@ -838,6 +859,7 @@
     if (!btn || btn.disabled) return;
     e.preventDefault();
     e.stopPropagation();
+    if (explainBlockedPdpButton(btn)) return;
 
     var code = btn.getAttribute("data-buy-now");
     if (!code) return;
@@ -915,11 +937,23 @@
       tierBoxEl.innerHTML = '<div class="pdp-tier-box"><div class="pdp-tier-title">Buy more, save more</div><table class="pdp-tier-table"><tbody>' + rows + '</tbody></table></div>';
     };
 
+    // Buttons stay clickable even when a variant still needs picking or the
+    // picked one is out of stock — a truly `disabled` button swallows the
+    // click silently, so a customer tapping it gets no feedback at all and
+    // assumes the button is broken. Instead we mark *why* it's blocked via
+    // data-block and let the click handlers explain it with a toast.
+    var setBtnBlocked = function (btn, reason) {
+      if (!btn) return;
+      if (reason) { btn.setAttribute("data-block", reason); btn.classList.add("is-blocked"); }
+      else { btn.removeAttribute("data-block"); btn.classList.remove("is-blocked"); }
+    };
+
     var applySelection = function (variant) {
       if (!variant) {
         pdpAddBtn.removeAttribute("data-variant");
-        pdpAddBtn.disabled = true;
-        if (pdpBuyBtn) { pdpBuyBtn.removeAttribute("data-variant"); pdpBuyBtn.disabled = true; }
+        setBtnBlocked(pdpAddBtn, "select-option");
+        setBtnBlocked(pdpBuyBtn, "select-option");
+        if (pdpBuyBtn) pdpBuyBtn.removeAttribute("data-variant");
         if (stockTitleEl) stockTitleEl.textContent = "Select an option";
         if (stockSubEl) stockSubEl.textContent = "";
         if (tierBoxEl) tierBoxEl.innerHTML = "";
@@ -930,8 +964,8 @@
       pdpAddBtn.setAttribute("data-variant", variant.id);
       if (priceEl) priceEl.textContent = "₹" + Math.round(variant.price).toLocaleString("en-IN");
       var inStock = variant.stock > 0;
-      pdpAddBtn.disabled = !inStock;
-      if (pdpBuyBtn) { pdpBuyBtn.setAttribute("data-variant", variant.id); pdpBuyBtn.disabled = !inStock; }
+      setBtnBlocked(pdpAddBtn, inStock ? null : "out-of-stock");
+      if (pdpBuyBtn) { pdpBuyBtn.setAttribute("data-variant", variant.id); setBtnBlocked(pdpBuyBtn, inStock ? null : "out-of-stock"); }
       if (stockTitleEl) stockTitleEl.textContent = inStock ? variant.stock + " in stock" : "Out of Stock";
       if (stockSubEl) stockSubEl.textContent = inStock ? "Ready to ship" : "Currently unavailable";
       if (stockCardEl) stockCardEl.style.background = inStock ? "var(--green-bg)" : "var(--red-bg)";
