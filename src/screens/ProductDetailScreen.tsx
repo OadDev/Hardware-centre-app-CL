@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Linking, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/types';
 import { useApp } from '../context/AppContext';
 import { colors, fonts, radii, shadow } from '../theme/theme';
-import { ProductApi } from '../api/endpoints';
+import { ApiError } from '../api/client';
+import { ProductApi, ReviewApi } from '../api/endpoints';
 import { ProductDetail, ProductPriceTier } from '../api/types';
 import { discountPct, inr } from '../utils/format';
 import PlaceholderImage from '../components/PlaceholderImage';
@@ -39,6 +40,11 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
   const [gallery, setGallery] = useState(0);
   const [detail, setDetail] = useState<ProductDetail | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  const [reviewFormOpen, setReviewFormOpen] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewBody, setReviewBody] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,6 +52,7 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
     setGallery(0);
     setQty(1);
     setSelectedVariantId(null);
+    setReviewFormOpen(false);
     ProductApi.show(id).then((res) => {
       if (cancelled) return;
       setDetail(res);
@@ -54,6 +61,53 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
       cancelled = true;
     };
   }, [id]);
+
+  const openReviewForm = () => {
+    setReviewRating(detail?.my_review?.stars ?? 5);
+    setReviewTitle(detail?.my_review?.title ?? '');
+    setReviewBody(detail?.my_review?.text ?? '');
+    setReviewFormOpen(true);
+  };
+
+  const submitReview = async () => {
+    if (!detail || !reviewBody.trim()) {
+      showToast('Please write a few words about the product');
+      return;
+    }
+    setReviewSubmitting(true);
+    try {
+      const res = await ReviewApi.submit(detail.product.id, {
+        rating: reviewRating,
+        title: reviewTitle.trim() || undefined,
+        body: reviewBody.trim(),
+      });
+      setDetail((d) => (d ? { ...d, my_review: res.review, can_review: false } : d));
+      setReviewFormOpen(false);
+      showToast('Thanks — your review has been posted');
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not post your review');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
+  const deleteReview = async () => {
+    if (!detail?.my_review) return;
+    const removedId = detail.my_review.id;
+    setReviewSubmitting(true);
+    try {
+      await ReviewApi.remove(detail.product.id);
+      setDetail((d) =>
+        d ? { ...d, my_review: null, can_review: true, reviews: d.reviews.filter((r) => r.id !== removedId) } : d
+      );
+      setReviewFormOpen(false);
+      showToast('Review deleted');
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not delete your review');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
 
   const back = () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Main', { screen: 'Home' }));
 
@@ -73,6 +127,7 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
   }
 
   const { product, reviews, rating_breakdown: ratingBars } = detail;
+  const otherReviews = reviews.filter((r) => r.id !== detail.my_review?.id);
   const variants = product.variants ?? [];
   const selectedVariant = variants.find((v) => v.id === selectedVariantId);
 
@@ -310,7 +365,7 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
           <View style={styles.ratingSummaryRow}>
             <View style={styles.ratingBig}>
               <Text style={styles.ratingBigNum}>{product.rating.toFixed(1)}</Text>
-              <Text style={styles.ratingBigStars}>★★★★★</Text>
+              <Text style={styles.ratingBigStars}>{'★'.repeat(Math.round(product.rating))}{'☆'.repeat(5 - Math.round(product.rating))}</Text>
               <Text style={styles.ratingBigCount}>{product.reviews.toLocaleString('en-IN')} reviews</Text>
             </View>
             <View style={{ flex: 1, gap: 5 }}>
@@ -324,17 +379,87 @@ export default function ProductDetailScreen({ navigation, route }: Props) {
               ))}
             </View>
           </View>
-          {reviews.map((r) => (
-            <View key={r.name} style={styles.reviewRow}>
+          {detail.my_review && !reviewFormOpen && (
+            <View style={styles.myReviewBox}>
+              <View style={styles.rowBetween}>
+                <Text style={styles.myReviewLabel}>Your review</Text>
+                <View style={{ flexDirection: 'row', gap: 14 }}>
+                  <Pressable onPress={openReviewForm}><Text style={styles.myReviewAction}>Edit</Text></Pressable>
+                  <Pressable onPress={deleteReview} disabled={reviewSubmitting}>
+                    <Text style={[styles.myReviewAction, { color: colors.danger }]}>Delete</Text>
+                  </Pressable>
+                </View>
+              </View>
+              <Text style={styles.reviewMeta}>{'★'.repeat(detail.my_review.stars)}{'☆'.repeat(5 - detail.my_review.stars)}</Text>
+              {!!detail.my_review.title && <Text style={styles.reviewName}>{detail.my_review.title}</Text>}
+              <Text style={styles.reviewText}>{detail.my_review.text}</Text>
+            </View>
+          )}
+
+          {detail.can_review && !reviewFormOpen && (
+            <Pressable style={styles.writeReviewBtn} onPress={openReviewForm}>
+              <IconStar size={15} color={colors.accentDark} />
+              <Text style={styles.writeReviewBtnText}>Write a Review</Text>
+            </Pressable>
+          )}
+
+          {reviewFormOpen && (
+            <View style={styles.reviewForm}>
+              <Text style={styles.myReviewLabel}>{detail.my_review ? 'Edit your review' : 'Rate this product'}</Text>
+              <View style={styles.starPickerRow}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Pressable key={n} onPress={() => setReviewRating(n)} hitSlop={6}>
+                    <IconStar size={28} color={n <= reviewRating ? colors.star : colors.divider} />
+                  </Pressable>
+                ))}
+              </View>
+              <TextInput
+                style={styles.reviewFormInput}
+                placeholder="Title (optional)"
+                placeholderTextColor={colors.textFaint}
+                value={reviewTitle}
+                onChangeText={setReviewTitle}
+                maxLength={120}
+              />
+              <TextInput
+                style={[styles.reviewFormInput, styles.reviewFormTextarea]}
+                placeholder="Share what you liked or didn't about this product"
+                placeholderTextColor={colors.textFaint}
+                value={reviewBody}
+                onChangeText={setReviewBody}
+                multiline
+                maxLength={2000}
+              />
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                <Pressable
+                  style={[styles.buyNowBtn, { flex: 1, opacity: reviewSubmitting ? 0.6 : 1 }]}
+                  onPress={submitReview}
+                  disabled={reviewSubmitting}
+                >
+                  <Text style={styles.buyNowText}>{reviewSubmitting ? 'Posting…' : 'Submit'}</Text>
+                </Pressable>
+                <Pressable style={[styles.addCartBtn, { flex: 1 }]} onPress={() => setReviewFormOpen(false)}>
+                  <Text style={styles.addCartText}>Cancel</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+
+          {otherReviews.length === 0 && !detail.my_review && (
+            <Text style={styles.noReviewsText}>No reviews yet — be the first to review this product.</Text>
+          )}
+          {otherReviews.map((r) => (
+            <View key={r.id} style={styles.reviewRow}>
               <View style={styles.reviewHeader}>
                 <View style={styles.reviewAvatar}>
                   <Text style={styles.reviewAvatarText}>{r.init}</Text>
                 </View>
                 <View>
-                  <Text style={styles.reviewName}>{r.name}</Text>
-                  <Text style={styles.reviewMeta}>★★★★★ · {r.date}</Text>
+                  <Text style={styles.reviewName}>{r.name}{r.verified ? ' · Verified Purchase' : ''}</Text>
+                  <Text style={styles.reviewMeta}>{'★'.repeat(r.stars)}{'☆'.repeat(5 - r.stars)} · {r.date}</Text>
                 </View>
               </View>
+              {!!r.title && <Text style={[styles.reviewName, { marginTop: 8 }]}>{r.title}</Text>}
               <Text style={styles.reviewText}>{r.text}</Text>
             </View>
           ))}
@@ -493,6 +618,35 @@ const styles = StyleSheet.create({
   reviewName: { fontSize: 13, fontFamily: fonts.bodyBold, color: colors.text },
   reviewMeta: { fontSize: 10.5, color: colors.textFaint },
   reviewText: { fontSize: 13, color: '#4B5563', lineHeight: 20, marginTop: 9 },
+  noReviewsText: { fontSize: 13, color: colors.textMuted, paddingVertical: 16 },
+  myReviewBox: { marginTop: 14, padding: 14, borderRadius: radii.md, backgroundColor: colors.accentLight, gap: 6 },
+  myReviewLabel: { fontSize: 13, fontFamily: fonts.bodyBold, color: colors.text },
+  myReviewAction: { fontSize: 12.5, fontFamily: fonts.bodyBold, color: colors.accentDark },
+  writeReviewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 14,
+    paddingVertical: 12,
+    borderRadius: radii.md,
+    borderWidth: 1.5,
+    borderColor: colors.accent,
+  },
+  writeReviewBtnText: { fontSize: 13.5, fontFamily: fonts.bodyBold, color: colors.accentDark },
+  reviewForm: { marginTop: 14, padding: 14, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, gap: 10 },
+  starPickerRow: { flexDirection: 'row', gap: 8 },
+  reviewFormInput: {
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
+    borderRadius: radii.md,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 13.5,
+    color: colors.text,
+    backgroundColor: colors.bgAlt,
+  },
+  reviewFormTextarea: { height: 90, textAlignVertical: 'top' },
   stickyBar: {
     position: 'absolute',
     left: 0,

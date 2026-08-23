@@ -10,6 +10,7 @@ import {
   Order,
   Product,
   ProductDetail,
+  Review,
   Supplier,
   Totals,
 } from './types';
@@ -71,6 +72,13 @@ export const ProductApi = {
     return (await http.get<{ data: Product[] }>(`/products${suffix}`)).data;
   },
   show: (code: string) => http.get<ProductDetail>(`/products/${encodeURIComponent(code)}`),
+};
+
+export const ReviewApi = {
+  submit: (productCode: string, payload: { rating: number; title?: string; body: string }) =>
+    http.post<{ review: Review }>(`/products/${encodeURIComponent(productCode)}/reviews`, payload),
+  remove: (productCode: string) =>
+    http.delete<{ message: string }>(`/products/${encodeURIComponent(productCode)}/reviews`),
 };
 
 export const SupplierApi = {

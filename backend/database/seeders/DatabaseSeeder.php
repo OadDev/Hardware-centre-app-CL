@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             BannerSeeder::class,
             CustomerSeeder::class,
             OrderSeeder::class,
+            ReviewSeeder::class,
             ShippingZoneSeeder::class,
             CommissionTierSeeder::class,
             PaymentGatewayConfigSeeder::class,

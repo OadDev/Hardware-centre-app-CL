@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PushController;
 use App\Http\Controllers\Api\V1\ProductController;
+use App\Http\Controllers\Api\V1\ReviewController;
 use App\Http\Controllers\Api\V1\SupplierController;
 use App\Http\Controllers\Api\V1\WebLeadController;
 use App\Http\Controllers\Api\V1\WebOrderLookupController;
@@ -38,6 +39,7 @@ Route::middleware('customer.optional')->group(function () {
     Route::get('categories/{category:icon}/products', [CategoryController::class, 'products']);
     Route::get('products', [ProductController::class, 'index']);
     Route::get('products/{product:product_code}', [ProductController::class, 'show']);
+    Route::get('products/{product:product_code}/reviews', [ReviewController::class, 'index']);
     Route::get('suppliers', SupplierController::class);
 });
 
@@ -57,6 +59,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('wishlist', [WishlistController::class, 'index']);
     Route::post('wishlist/{product:product_code}', [WishlistController::class, 'store']);
     Route::delete('wishlist/{product:product_code}', [WishlistController::class, 'destroy']);
+
+    Route::post('products/{product:product_code}/reviews', [ReviewController::class, 'store']);
+    Route::delete('products/{product:product_code}/reviews', [ReviewController::class, 'destroy']);
 
     Route::get('addresses', [AddressController::class, 'index']);
     Route::post('addresses', [AddressController::class, 'store']);

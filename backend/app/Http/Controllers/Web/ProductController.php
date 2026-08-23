@@ -2,24 +2,15 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Api\V1\ReviewController;
 use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use App\Models\Product;
+use App\Models\Review;
+use App\Support\ReviewAggregator;
 
 class ProductController extends Controller
 {
-    private const SAMPLE_REVIEWS = [
-        ['name' => 'Amit Sharma', 'init' => 'A', 'date' => '2 weeks ago', 'stars' => 5, 'text' => 'Genuine product, delivered on time. Packaging was solid and price was better than my local market.'],
-        ['name' => 'Priya Verma', 'init' => 'P', 'date' => '1 month ago', 'stars' => 4, 'text' => 'Good quality and works as described. Would order again for my next site project.'],
-    ];
-
-    private const RATING_BREAKDOWN = [
-        ['stars' => 5, 'pct' => 78],
-        ['stars' => 4, 'pct' => 54],
-        ['stars' => 3, 'pct' => 22],
-        ['stars' => 2, 'pct' => 8],
-    ];
-
     public function show(Product $product)
     {
         abort_unless($product->approval_status === 'Approved', 404);
@@ -34,11 +25,15 @@ class ProductController extends Controller
             ->limit(4)
             ->get();
 
+        $reviews = $product->reviews()->approved()->with('customer')
+            ->orderByDesc('created_at')->limit(20)->get()
+            ->map(fn (Review $r) => ReviewController::transform($r));
+
         return view('web.product', [
             'product' => $product,
             'related' => $related,
-            'reviews' => self::SAMPLE_REVIEWS,
-            'ratingBreakdown' => self::RATING_BREAKDOWN,
+            'reviews' => $reviews,
+            'ratingBreakdown' => ReviewAggregator::breakdown($product),
             'contactNumber' => AppSetting::current()->contact_number,
         ]);
     }

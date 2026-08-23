@@ -179,11 +179,14 @@ export type CartResponse = {
 };
 
 export type Review = {
+  id: number;
   name: string;
   init: string;
   date: string;
   stars: number;
+  title: string | null;
   text: string;
+  verified: boolean;
 };
 
 export type RatingBar = { stars: number; pct: number };
@@ -192,6 +195,8 @@ export type ProductDetail = {
   product: Product;
   reviews: Review[];
   rating_breakdown: RatingBar[];
+  my_review: Review | null;
+  can_review: boolean;
   contact_number: string | null;
 };
 

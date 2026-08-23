@@ -186,6 +186,7 @@ async function refreshDashboard() { DATA.dashboard = await api('GET', '/dashboar
 async function refreshGst() { DATA.gst = await api('GET', '/gst'); }
 async function refreshShipping() { DATA.shipping = await api('GET', '/shipping'); }
 async function refreshAbandonedCarts() { DATA.abandonedCarts = unwrap(await api('GET', '/abandoned-carts?per_page=250')); }
+async function refreshReviews() { DATA.reviews = unwrap(await api('GET', '/reviews?per_page=250')); }
 async function refreshPayments() { DATA.payments = await api('GET', '/payments'); }
 async function refreshShiprocket() { DATA.shiprocket = await api('GET', '/shiprocket'); }
 async function refreshNotifications() { DATA.notifications = await api('GET', '/notifications'); }
@@ -223,7 +224,7 @@ const LOAD_TASKS = [
   ['Orders', refreshOrders], ['Returns', refreshReturns], ['Coupons', refreshCoupons],
   ['Banners', refreshBanners], ['Onboarding Slides', refreshOnboardingSlides], ['Settlements', refreshSettlements], ['Commission', refreshCommission],
   ['GST', refreshGst], ['Shipping', refreshShipping], ['Payments', refreshPayments],
-  ['Abandoned Carts', refreshAbandonedCarts],
+  ['Abandoned Carts', refreshAbandonedCarts], ['Reviews', refreshReviews],
   ['Shiprocket', refreshShiprocket], ['Notifications', refreshNotifications], ['Roles', refreshRoles],
   ['Settings', refreshSettings], ['Warehouse Overview', refreshWarehouseOverview],
   ['Warehouse Inventory', refreshWarehouseInventory], ['Warehouse Shipments', refreshWarehouseShipments],
@@ -238,7 +239,7 @@ async function loadAll() {
     dashboard: {}, sellers: [], customers: [], products: [], categories: [], brands: [],
     orders: [], returns: [], coupons: [], banners: [], onboardingSlides: [], settlements: [],
     commission: { sellers: [], tiers: [] }, gst: {}, shipping: {}, payments: {}, shiprocket: {},
-    abandonedCarts: [],
+    abandonedCarts: [], reviews: [],
     notifications: {}, rolesData: {}, settings: {},
     warehouseOverview: { warehouses: [], dispatch_pending: 0 },
     warehouseInventory: [], warehouseShipments: [], dispatchQueue: [],
@@ -290,6 +291,7 @@ const NAV_GROUPS = [
   { title:'Sales', items: [
     { key:'orders', label:'Orders', icon:'shopping-cart' },
     { key:'abandoned-carts', label:'Abandoned Carts', icon:'shopping-basket' },
+    { key:'reviews', label:'Reviews', icon:'star' },
     { key:'returns', label:'Returns & Refunds', icon:'undo-2' },
     { key:'commission', label:'Commission Management', icon:'percent' },
     { key:'settlements', label:'Settlement Management', icon:'banknote' },
@@ -323,6 +325,7 @@ const SECTION_TITLES = {
   brands: ['Brands', 'Manage brand listings shown on the storefront'],
   orders: ['Orders', 'Track and fulfil orders across all sellers'],
   'abandoned-carts': ['Abandoned Carts', 'Customers who added a product but didn\'t check out'],
+  reviews: ['Reviews', 'Moderate product ratings and reviews left by customers'],
   returns: ['Returns & Refunds', 'Review and action return and refund requests'],
   commission: ['Commission Management', 'Configure marketplace commission and view earnings'],
   settlements: ['Settlement Management', 'Track payouts to sellers'],

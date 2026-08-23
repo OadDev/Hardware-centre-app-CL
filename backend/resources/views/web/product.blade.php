@@ -163,7 +163,7 @@ $images = $product->images->pluck('url')->filter()->values();
     <div class="pdp-rating-summary">
       <div class="pdp-rating-big">
         <div class="num">{{ number_format($product->rating, 1) }}</div>
-        <div class="stars">★★★★★</div>
+        <div class="stars">{{ str_repeat('★', (int) round($product->rating)) }}{{ str_repeat('☆', 5 - (int) round($product->rating)) }}</div>
         <div class="cnt">{{ number_format($product->reviews_count) }} reviews</div>
       </div>
       <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
@@ -172,15 +172,18 @@ $images = $product->images->pluck('url')->filter()->values();
         @endforeach
       </div>
     </div>
-    @foreach($reviews as $r)
+    @forelse($reviews as $r)
     <div class="pdp-review">
       <div style="display:flex;align-items:center;gap:10px;">
         <div class="pdp-review-avatar">{{ $r['init'] }}</div>
-        <div><div class="pdp-review-name">{{ $r['name'] }}</div><div class="pdp-review-meta">★★★★★ · {{ $r['date'] }}</div></div>
+        <div><div class="pdp-review-name">{{ $r['name'] }}{{ $r['verified'] ? ' · Verified Purchase' : '' }}</div><div class="pdp-review-meta">{{ str_repeat('★', $r['stars']) }}{{ str_repeat('☆', 5 - $r['stars']) }} · {{ $r['date'] }}</div></div>
       </div>
+      @if($r['title'])<div class="pdp-review-name" style="margin-top:8px;">{{ $r['title'] }}</div>@endif
       <div class="pdp-review-text">{{ $r['text'] }}</div>
     </div>
-    @endforeach
+    @empty
+    <p style="color:#6B7280;font-size:14px;padding:14px 0;">No reviews yet for this product.</p>
+    @endforelse
   </div>
 </section>
 

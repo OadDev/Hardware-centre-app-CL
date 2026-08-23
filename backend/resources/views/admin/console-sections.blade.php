@@ -901,6 +901,54 @@ SECTION_RENDERERS['abandoned-carts'] = async function(main) {
   });
 };
 
+/* ===== REVIEWS ===== */
+SECTION_RENDERERS.reviews = async function(main) {
+  const reviews = DATA.reviews;
+  const pending = reviews.filter(r => r.status === 'Approved').length;
+  const rejected = reviews.filter(r => r.status === 'Rejected').length;
+  const avgRating = reviews.length ? (reviews.reduce((a, r) => a + r.rating, 0) / reviews.length).toFixed(1) : '0.0';
+
+  main.innerHTML = `
+    ${pageHeader('Reviews', 'Moderate product ratings and reviews left by customers')}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      ${kpiCard({label:'Total Reviews', value: fmtNum(reviews.length), icon:'star', accent:'brand'})}
+      ${kpiCard({label:'Average Rating', value: avgRating, icon:'star', accent:'amber'})}
+      ${kpiCard({label:'Live / Approved', value: fmtNum(pending), icon:'check-circle', accent:'emerald'})}
+      ${kpiCard({label:'Hidden / Rejected', value: fmtNum(rejected), icon:'eye-off', accent:'rose'})}
+    </div>
+    ${tableCard('reviews-table-inner')}
+  `;
+  renderDataTable('reviews-table-inner', {
+    title:'Product Reviews', subtitle:`${reviews.length} review${reviews.length===1?'':'s'}`,
+    data: reviews, searchKeys:['customerName','product','text'],
+    filters: [{key:'status', label:'Status', options:['Approved','Rejected']}, {key:'rating', label:'Rating', options:[1,2,3,4,5]}],
+    columns: [
+      { label:'Customer', render: r => `<div class="font-medium text-ink-900 dark:text-white">${r.customerName}</div>${r.verified ? '<div class="text-xs text-emerald-600">Verified Purchase</div>' : ''}` },
+      { label:'Product', key:'product' },
+      { label:'Rating', render: r => '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating) },
+      { label:'Review', render: r => `${r.title ? `<div class="font-medium">${r.title}</div>` : ''}<div class="text-xs text-ink-400 max-w-xs truncate">${r.text}</div>` },
+      { label:'Date', render: r => new Date(r.createdAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) },
+      { label:'Status', render: r => statusBadge(r.status) },
+      { label:'', render: r => `<div class="flex gap-1.5">${r.status==='Approved' ? `<button data-stop-row-click data-reject-review="${r.id}" class="text-xs font-medium text-rose-600 hover:underline">Reject</button>` : `<button data-stop-row-click data-approve-review="${r.id}" class="text-xs font-medium text-emerald-600 hover:underline">Approve</button>`}<button data-stop-row-click data-delete-review="${r.id}" class="text-xs font-medium text-ink-500 hover:underline">Delete</button></div>` },
+    ],
+    afterRender: (container) => {
+      container.querySelectorAll('[data-approve-review]').forEach(btn => btn.addEventListener('click', withErr(async () => {
+        await api('PATCH', '/reviews/'+btn.dataset.approveReview, { status:'Approved' });
+        toast('Review approved'); await refreshReviews(); navigateTo('reviews');
+      })));
+      container.querySelectorAll('[data-reject-review]').forEach(btn => btn.addEventListener('click', withErr(async () => {
+        await api('PATCH', '/reviews/'+btn.dataset.rejectReview, { status:'Rejected' });
+        toast('Review hidden','warn'); await refreshReviews(); navigateTo('reviews');
+      })));
+      container.querySelectorAll('[data-delete-review]').forEach(btn => btn.addEventListener('click', withErr(async () => {
+        if (!confirm('Delete this review permanently?')) return;
+        await api('DELETE', '/reviews/'+btn.dataset.deleteReview);
+        toast('Review deleted','warn'); await refreshReviews(); navigateTo('reviews');
+      })));
+    }
+  });
+};
+
 /* ===== RETURNS & REFUNDS ===== */
 SECTION_RENDERERS.returns = async function(main) {
   const pending = DATA.returns.filter(r=>r.status==='Pending').length;

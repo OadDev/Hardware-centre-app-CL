@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ReturnController;
+use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SellerController;
 use App\Http\Controllers\Admin\SettingController;
@@ -48,6 +49,7 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::delete('brands/{brand}/logo', [BrandController::class, 'destroyLogo']);
     Route::apiResource('orders', OrderController::class)->only(['index', 'show', 'update']);
     Route::apiResource('returns', ReturnController::class)->only(['index', 'update']);
+    Route::apiResource('reviews', ReviewController::class)->only(['index', 'update', 'destroy']);
     Route::apiResource('coupons', CouponController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::apiResource('banners', BannerController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::post('banners/{banner}/image', [BannerController::class, 'uploadImage']);

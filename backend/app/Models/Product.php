@@ -118,6 +118,11 @@ class Product extends Model
         return $this->belongsToMany(Customer::class, 'wishlists');
     }
 
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
+
     public function getStockStatusAttribute(): string
     {
         if ($this->stock <= 0) {
