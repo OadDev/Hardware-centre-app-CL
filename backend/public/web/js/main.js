@@ -832,9 +832,10 @@
     var code = btn.getAttribute("data-add-to-cart");
     if (!code) return;
     var variant = btn.getAttribute("data-variant") || null;
+    var qty = parseInt(btn.getAttribute("data-qty"), 10) || 1;
 
     var run = function () {
-      var payload = { product_code: code, quantity: 1 };
+      var payload = { product_code: code, quantity: qty };
       if (variant) payload.variant_code = variant;
       btn.disabled = true;
       apiFetch("/cart/items", { method: "POST", body: JSON.stringify(payload) })
@@ -864,9 +865,10 @@
     var code = btn.getAttribute("data-buy-now");
     if (!code) return;
     var variant = btn.getAttribute("data-variant") || null;
+    var qty = parseInt(btn.getAttribute("data-qty"), 10) || 1;
 
     var run = function () {
-      var payload = { product_code: code, quantity: 1 };
+      var payload = { product_code: code, quantity: qty };
       if (variant) payload.variant_code = variant;
       btn.disabled = true;
       apiFetch("/cart/items", { method: "POST", body: JSON.stringify(payload) })
@@ -909,6 +911,42 @@
   if (variantDataEl) {
     try { pdpData = JSON.parse(variantDataEl.textContent) || null; } catch (e) { pdpData = null; }
   }
+
+  // ---------------- Quantity stepper ----------------
+  if (pdpAddBtn) {
+    var qtyValEl = document.querySelector("[data-pdp-qty-val]");
+    var qtyMinusBtn = document.querySelector("[data-pdp-qty-minus]");
+    var qtyPlusBtn = document.querySelector("[data-pdp-qty-plus]");
+    var pdpQty = 1;
+    var pdpQtyMax = null; // null = no known stock cap yet (variant products before a pick)
+
+    var syncQtyButtons = function () {
+      if (qtyValEl) qtyValEl.textContent = pdpQty;
+      pdpAddBtn.setAttribute("data-qty", pdpQty);
+      if (pdpBuyBtn) pdpBuyBtn.setAttribute("data-qty", pdpQty);
+      if (qtyMinusBtn) qtyMinusBtn.disabled = pdpQty <= 1;
+      if (qtyPlusBtn) qtyPlusBtn.disabled = pdpQtyMax !== null && pdpQty >= pdpQtyMax;
+    };
+
+    var setQtyMax = function (max) {
+      pdpQtyMax = max;
+      if (max !== null && pdpQty > max) pdpQty = Math.max(1, max);
+      syncQtyButtons();
+    };
+
+    if (qtyMinusBtn) qtyMinusBtn.addEventListener("click", function () {
+      if (pdpQty > 1) { pdpQty -= 1; syncQtyButtons(); }
+    });
+    if (qtyPlusBtn) qtyPlusBtn.addEventListener("click", function () {
+      if (pdpQtyMax === null || pdpQty < pdpQtyMax) { pdpQty += 1; syncQtyButtons(); }
+    });
+
+    var qtyRowEl = document.querySelector("[data-pdp-qty-row]");
+    var baseStockAttr = qtyRowEl ? qtyRowEl.getAttribute("data-base-stock") : "";
+    if (baseStockAttr) setQtyMax(parseInt(baseStockAttr, 10));
+    else syncQtyButtons();
+  }
+
   if (pdpAddBtn && pdpData && pdpData.variants && pdpData.variants.length) {
     var priceEl = document.querySelector(".pdp-price");
     var stockTitleEl = document.querySelector("[data-pdp-stock-title]");
@@ -958,6 +996,7 @@
         if (stockSubEl) stockSubEl.textContent = "";
         if (tierBoxEl) tierBoxEl.innerHTML = "";
         if (heroImg && defaultHeroSrc) heroImg.src = defaultHeroSrc;
+        if (typeof setQtyMax === "function") setQtyMax(null);
         return;
       }
 
@@ -972,17 +1011,17 @@
       if (heroImg && variant.image) heroImg.src = variant.image;
       else if (heroImg && defaultHeroSrc) heroImg.src = defaultHeroSrc;
       renderTierBox(variant);
+      if (typeof setQtyMax === "function") setQtyMax(inStock ? variant.stock : 0);
     };
 
-    document.querySelectorAll("[data-variant-option]").forEach(function (chip) {
-      chip.addEventListener("click", function () {
-        var id = chip.getAttribute("data-variant-option");
+    var variantSelectEl = document.querySelector("[data-variant-select]");
+    if (variantSelectEl) {
+      variantSelectEl.addEventListener("change", function () {
+        var id = variantSelectEl.value;
         var variant = pdpData.variants.find(function (v) { return v.id === id; });
-        document.querySelectorAll("[data-variant-option]").forEach(function (c) { c.classList.remove("active"); });
-        chip.classList.add("active");
-        applySelection(variant);
+        applySelection(variant || null);
       });
-    });
+    }
 
     applySelection(null);
   }
