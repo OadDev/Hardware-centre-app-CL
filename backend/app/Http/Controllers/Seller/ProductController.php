@@ -47,12 +47,16 @@ class ProductController extends Controller
             'mrp' => ['required', 'numeric', 'min:0'],
             'unit' => ['sometimes', 'string', 'max:30'],
             'stock' => ['required', 'integer', 'min:0'],
-            'weight_kg' => ['sometimes', 'numeric', 'min:0.001', 'max:1000'],
+            'weight_kg' => ['nullable', 'numeric', 'min:0.001', 'max:1000'],
             'description' => ['nullable', 'string'],
             'video_url' => ['nullable', 'url', 'max:255'],
             'images' => ['nullable', 'array', 'max:8'],
             'images.*' => ['image', 'max:5120'],
         ]);
+
+        if (empty($data['weight_kg'])) {
+            unset($data['weight_kg']);
+        }
 
         $data['category_id'] = Category::where('category_code', $data['category_code'])->value('id');
         $data['brand_id'] = Brand::where('brand_code', $data['brand_code'])->value('id');
@@ -82,7 +86,7 @@ class ProductController extends Controller
             'price' => ['sometimes', 'numeric', 'min:0'],
             'mrp' => ['sometimes', 'numeric', 'min:0'],
             'stock' => ['sometimes', 'integer', 'min:0'],
-            'weight_kg' => ['sometimes', 'numeric', 'min:0.001', 'max:1000'],
+            'weight_kg' => ['sometimes', 'nullable', 'numeric', 'min:0.001', 'max:1000'],
             'description' => ['sometimes', 'nullable', 'string'],
             'video_url' => ['sometimes', 'nullable', 'url', 'max:255'],
             'apply_bulk_pricing_to_all_variants' => ['sometimes', 'boolean'],
@@ -92,6 +96,10 @@ class ProductController extends Controller
 
         $images = $data['images'] ?? [];
         unset($data['images']);
+
+        if (array_key_exists('weight_kg', $data) && empty($data['weight_kg'])) {
+            unset($data['weight_kg']);
+        }
 
         $product->update($data);
         ProductImage::storeUploads($product, $images);

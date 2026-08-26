@@ -31,7 +31,7 @@
     <div><label class="block text-xs font-medium text-ink-500 mb-1">Price (₹)</label><input type="number" step="0.01" name="price" required class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
     <div><label class="block text-xs font-medium text-ink-500 mb-1">MRP (₹)</label><input type="number" step="0.01" name="mrp" required class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
     <div><label class="block text-xs font-medium text-ink-500 mb-1">Stock</label><input type="number" name="stock" required class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
-    <div><label class="block text-xs font-medium text-ink-500 mb-1">Weight per unit (kg)</label><input type="number" step="0.001" name="weight_kg" placeholder="e.g. 0.5" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
+    <div><label class="block text-xs font-medium text-ink-500 mb-1">Weight per unit (kg) <span class="text-ink-400 font-normal">(optional)</span></label><input type="number" step="0.001" name="weight_kg" placeholder="e.g. 0.5" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
     <div class="col-span-2 md:col-span-3"><label class="block text-xs font-medium text-ink-500 mb-1">Description</label><textarea name="description" rows="2" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></textarea></div>
     <div class="col-span-2 md:col-span-2">
       <label class="block text-xs font-medium text-ink-500 mb-1">Product Photos (up to 8)</label>

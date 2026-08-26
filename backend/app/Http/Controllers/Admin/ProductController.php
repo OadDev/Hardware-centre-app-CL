@@ -44,6 +44,10 @@ class ProductController extends Controller
         $data = $this->validated($request);
         $data = $this->resolveRelations($data);
 
+        if (empty($data['weight_kg'])) {
+            $data['weight_kg'] = 0.5;
+        }
+
         $product = Product::create([
             ...$data,
             'product_code' => 'PRD-'.(10000 + Product::count()),
@@ -58,6 +62,11 @@ class ProductController extends Controller
     {
         $data = $this->validated($request, isUpdate: true);
         $data = $this->resolveRelations($data);
+
+        if (array_key_exists('weight_kg', $data) && empty($data['weight_kg'])) {
+            unset($data['weight_kg']);
+        }
+
         $product->update($data);
 
         return response()->json($this->transform($product->load(self::WITH)));
@@ -175,7 +184,7 @@ class ProductController extends Controller
             'mrp' => [$required, 'numeric', 'min:0'],
             'unit' => ['sometimes', 'string', 'max:30'],
             'stock' => [$required, 'integer', 'min:0'],
-            'weight_kg' => ['sometimes', 'numeric', 'min:0.001', 'max:1000'],
+            'weight_kg' => ['sometimes', 'nullable', 'numeric', 'min:0.001', 'max:1000'],
             'approval_status' => ['sometimes', Rule::in(['Approved', 'Pending', 'Rejected'])],
             'featured' => ['sometimes', 'boolean'],
             'description' => ['sometimes', 'nullable', 'string'],
