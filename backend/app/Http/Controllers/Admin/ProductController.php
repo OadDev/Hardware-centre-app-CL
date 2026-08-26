@@ -48,14 +48,20 @@ class ProductController extends Controller
             $data['weight_kg'] = 0.5;
         }
 
-        $product = Product::create([
-            ...$data,
-            'product_code' => 'PRD-'.(10000 + Product::count()),
-            'sku' => 'SKU'.strtoupper(Str::random(6)),
-            'slug' => Str::slug($data['name']).'-'.Str::random(4),
-        ]);
+        try {
+            $product = Product::create([
+                ...$data,
+                'product_code' => 'PRD-'.(10000 + Product::count()),
+                'sku' => 'SKU'.strtoupper(Str::random(6)),
+                'slug' => Str::slug($data['name']).'-'.Str::random(4),
+            ]);
 
-        return response()->json($this->transform($product->load(self::WITH)), 201);
+            return response()->json($this->transform($product->load(self::WITH)), 201);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json(['message' => 'Could not create product: '.$e->getMessage()], 500);
+        }
     }
 
     public function update(Request $request, Product $product)
@@ -67,9 +73,15 @@ class ProductController extends Controller
             unset($data['weight_kg']);
         }
 
-        $product->update($data);
+        try {
+            $product->update($data);
 
-        return response()->json($this->transform($product->load(self::WITH)));
+            return response()->json($this->transform($product->load(self::WITH)));
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json(['message' => 'Could not update product: '.$e->getMessage()], 500);
+        }
     }
 
     public function destroy(Product $product)
@@ -86,9 +98,15 @@ class ProductController extends Controller
             'images.*' => ['image', 'max:5120'],
         ]);
 
-        ProductImage::storeUploads($product, $request->file('images', []));
+        try {
+            ProductImage::storeUploads($product, $request->file('images', []));
 
-        return response()->json($this->transform($product->load(self::WITH)), 201);
+            return response()->json($this->transform($product->load(self::WITH)), 201);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json(['message' => 'Could not upload photos: '.$e->getMessage()], 500);
+        }
     }
 
     public function destroyImage(Product $product, ProductImage $image)

@@ -64,15 +64,21 @@ class ProductController extends Controller
         $images = $data['images'] ?? [];
         unset($data['images']);
 
-        $product = $seller->products()->create([
-            ...$data,
-            'product_code' => 'PRD-'.(10000 + Product::count()),
-            'sku' => 'SKU'.strtoupper(Str::random(6)),
-            'slug' => Str::slug($data['name']).'-'.Str::random(4),
-            'approval_status' => 'Pending',
-        ]);
+        try {
+            $product = $seller->products()->create([
+                ...$data,
+                'product_code' => 'PRD-'.(10000 + Product::count()),
+                'sku' => 'SKU'.strtoupper(Str::random(6)),
+                'slug' => Str::slug($data['name']).'-'.Str::random(4),
+                'approval_status' => 'Pending',
+            ]);
 
-        ProductImage::storeUploads($product, $images);
+            ProductImage::storeUploads($product, $images);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->withErrors(['name' => 'Could not create product: '.$e->getMessage()]);
+        }
 
         return back()->with('status', 'Product submitted for approval.');
     }
