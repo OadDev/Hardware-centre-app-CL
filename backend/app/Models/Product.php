@@ -33,6 +33,15 @@ class Product extends Model
         return $query->where('approval_status', 'Approved');
     }
 
+    public static function nextProductCode(): string
+    {
+        $maxSuffix = (int) static::query()
+            ->selectRaw("MAX(CAST(SUBSTRING(product_code, 5) AS UNSIGNED)) as max_suffix")
+            ->value('max_suffix');
+
+        return 'PRD-'.max(10000, $maxSuffix + 1);
+    }
+
     public function getRouteKeyName(): string
     {
         return 'product_code';

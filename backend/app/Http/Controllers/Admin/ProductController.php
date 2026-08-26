@@ -51,7 +51,7 @@ class ProductController extends Controller
         try {
             $product = Product::create([
                 ...$data,
-                'product_code' => 'PRD-'.(10000 + Product::count()),
+                'product_code' => Product::nextProductCode(),
                 'sku' => 'SKU'.strtoupper(Str::random(6)),
                 'slug' => Str::slug($data['name']).'-'.Str::random(4),
             ]);
