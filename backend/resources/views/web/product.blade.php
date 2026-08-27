@@ -154,10 +154,12 @@ $images = $product->images->pluck('url')->filter()->values();
       </div>
       <div class="pdp-actions-spacer"></div>
 
-      @if($variants->isNotEmpty())
+      @if($variants->isNotEmpty() || $priceTiers->isNotEmpty())
       <script type="application/json" id="pdp-variants-data">{!! json_encode([
         'unit' => $product->unit,
         'gst_rate' => $gstRate,
+        'base_price' => (float) $product->price,
+        'mrp' => (float) $product->mrp,
         'apply_bulk_pricing_to_all_variants' => (bool) $product->apply_bulk_pricing_to_all_variants,
         'product_price_tiers' => $priceTiers->map(fn ($t) => ['min_qty' => $t->min_qty, 'price' => (float) $t->price])->values(),
         'variants' => $variants->map(fn ($v) => [

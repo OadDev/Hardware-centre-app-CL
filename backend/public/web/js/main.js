@@ -945,11 +945,15 @@
     var baseStockAttr = qtyRowEl ? qtyRowEl.getAttribute("data-base-stock") : "";
     if (baseStockAttr) setQtyMax(parseInt(baseStockAttr, 10));
     else syncQtyButtons();
+
+    if (qtyMinusBtn) qtyMinusBtn.addEventListener("click", function () { if (typeof updatePriceForQty === "function") updatePriceForQty(); });
+    if (qtyPlusBtn) qtyPlusBtn.addEventListener("click", function () { if (typeof updatePriceForQty === "function") updatePriceForQty(); });
   }
 
-  if (pdpAddBtn && pdpData && pdpData.variants && pdpData.variants.length) {
+  if (pdpAddBtn && pdpData) {
     var priceEl = document.querySelector("[data-pdp-price-value]");
     var inclNoteEl = document.querySelector("[data-pdp-incl-note]");
+    var offPillEl = document.querySelector("[data-pdp-off-pill]");
     var gstRate = pdpData.gst_rate || 0;
     var stockTitleEl = document.querySelector("[data-pdp-stock-title]");
     var stockSubEl = document.querySelector("[data-pdp-stock-sub]");
@@ -958,6 +962,45 @@
     var tierBoxEl = document.getElementById("pdp-tier-box-dynamic");
     var defaultHeroSrc = heroImg ? heroImg.src : null;
     var unit = pdpData.unit || "unit";
+    var currentVariant = null;
+
+    var tierPriceFor = function (tiers, basePrice, qty) {
+      if (!tiers || !tiers.length) return basePrice;
+      var best = null;
+      tiers.forEach(function (t) {
+        if (t.min_qty <= qty && (!best || t.min_qty > best.min_qty)) best = t;
+      });
+      return best ? best.price : basePrice;
+    };
+
+    // As the quantity stepper changes, re-price against whichever tier
+    // table currently applies — the selected variant's own tiers (or the
+    // product's, if bulk pricing is shared across variants), or the
+    // product's own tiers when there are no variants at all. Left alone
+    // (no-op) while variants exist but none is picked yet, since there's
+    // no single price to show.
+    var updatePriceForQty = function () {
+      var basePrice, tiers;
+      if (pdpData.variants && pdpData.variants.length) {
+        if (!currentVariant) return;
+        basePrice = currentVariant.price;
+        tiers = (currentVariant.price_tiers && currentVariant.price_tiers.length)
+          ? currentVariant.price_tiers
+          : (pdpData.apply_bulk_pricing_to_all_variants ? pdpData.product_price_tiers : []);
+      } else {
+        basePrice = pdpData.base_price;
+        tiers = pdpData.product_price_tiers;
+      }
+
+      var qty = parseInt(pdpAddBtn.getAttribute("data-qty"), 10) || 1;
+      var price = tierPriceFor(tiers, basePrice, qty);
+      if (priceEl) priceEl.textContent = "₹" + Math.round(price).toLocaleString("en-IN");
+      if (inclNoteEl && gstRate > 0) inclNoteEl.textContent = "₹" + Math.round(price * (1 + gstRate / 100)).toLocaleString("en-IN") + " (Incl. of all taxes)";
+      if (offPillEl && pdpData.mrp > 0) {
+        var off = Math.round((1 - price / pdpData.mrp) * 100);
+        offPillEl.textContent = (off > 0 ? off : 0) + "% OFF";
+      }
+    };
 
     var renderTierBox = function (variant) {
       if (!tierBoxEl) return;
@@ -977,56 +1020,60 @@
       tierBoxEl.innerHTML = '<div class="pdp-tier-box"><div class="pdp-tier-title">Buy more, save more</div><table class="pdp-tier-table"><tbody>' + rows + '</tbody></table></div>';
     };
 
-    // Buttons stay clickable even when a variant still needs picking or the
-    // picked one is out of stock — a truly `disabled` button swallows the
-    // click silently, so a customer tapping it gets no feedback at all and
-    // assumes the button is broken. Instead we mark *why* it's blocked via
-    // data-block and let the click handlers explain it with a toast.
-    var setBtnBlocked = function (btn, reason) {
-      if (!btn) return;
-      if (reason) { btn.setAttribute("data-block", reason); btn.classList.add("is-blocked"); }
-      else { btn.removeAttribute("data-block"); btn.classList.remove("is-blocked"); }
-    };
+    if (!(pdpData.variants && pdpData.variants.length)) updatePriceForQty();
 
-    var applySelection = function (variant) {
-      if (!variant) {
-        pdpAddBtn.removeAttribute("data-variant");
-        setBtnBlocked(pdpAddBtn, "select-option");
-        setBtnBlocked(pdpBuyBtn, "select-option");
-        if (pdpBuyBtn) pdpBuyBtn.removeAttribute("data-variant");
-        if (stockTitleEl) stockTitleEl.textContent = "Select an option";
-        if (stockSubEl) stockSubEl.textContent = "";
-        if (tierBoxEl) tierBoxEl.innerHTML = "";
-        if (heroImg && defaultHeroSrc) heroImg.src = defaultHeroSrc;
-        if (typeof setQtyMax === "function") setQtyMax(null);
-        return;
+    if (pdpData.variants && pdpData.variants.length) {
+      // Buttons stay clickable even when a variant still needs picking or the
+      // picked one is out of stock — a truly `disabled` button swallows the
+      // click silently, so a customer tapping it gets no feedback at all and
+      // assumes the button is broken. Instead we mark *why* it's blocked via
+      // data-block and let the click handlers explain it with a toast.
+      var setBtnBlocked = function (btn, reason) {
+        if (!btn) return;
+        if (reason) { btn.setAttribute("data-block", reason); btn.classList.add("is-blocked"); }
+        else { btn.removeAttribute("data-block"); btn.classList.remove("is-blocked"); }
+      };
+
+      var applySelection = function (variant) {
+        currentVariant = variant;
+        if (!variant) {
+          pdpAddBtn.removeAttribute("data-variant");
+          setBtnBlocked(pdpAddBtn, "select-option");
+          setBtnBlocked(pdpBuyBtn, "select-option");
+          if (pdpBuyBtn) pdpBuyBtn.removeAttribute("data-variant");
+          if (stockTitleEl) stockTitleEl.textContent = "Select an option";
+          if (stockSubEl) stockSubEl.textContent = "";
+          if (tierBoxEl) tierBoxEl.innerHTML = "";
+          if (heroImg && defaultHeroSrc) heroImg.src = defaultHeroSrc;
+          if (typeof setQtyMax === "function") setQtyMax(null);
+          return;
+        }
+
+        pdpAddBtn.setAttribute("data-variant", variant.id);
+        var inStock = variant.stock > 0;
+        setBtnBlocked(pdpAddBtn, inStock ? null : "out-of-stock");
+        if (pdpBuyBtn) { pdpBuyBtn.setAttribute("data-variant", variant.id); setBtnBlocked(pdpBuyBtn, inStock ? null : "out-of-stock"); }
+        if (stockTitleEl) stockTitleEl.textContent = inStock ? variant.stock + " in stock" : "Out of Stock";
+        if (stockSubEl) stockSubEl.textContent = inStock ? "Ready to ship" : "Currently unavailable";
+        if (stockCardEl) stockCardEl.style.background = inStock ? "var(--green-bg)" : "var(--red-bg)";
+        if (heroImg && variant.image) heroImg.src = variant.image;
+        else if (heroImg && defaultHeroSrc) heroImg.src = defaultHeroSrc;
+        renderTierBox(variant);
+        if (typeof setQtyMax === "function") setQtyMax(inStock ? variant.stock : 0);
+        updatePriceForQty();
+      };
+
+      var variantSelectEl = document.querySelector("[data-variant-select]");
+      if (variantSelectEl) {
+        variantSelectEl.addEventListener("change", function () {
+          var id = variantSelectEl.value;
+          var variant = pdpData.variants.find(function (v) { return v.id === id; });
+          applySelection(variant || null);
+        });
       }
 
-      pdpAddBtn.setAttribute("data-variant", variant.id);
-      if (priceEl) priceEl.textContent = "₹" + Math.round(variant.price).toLocaleString("en-IN");
-      if (inclNoteEl && gstRate > 0) inclNoteEl.textContent = "₹" + Math.round(variant.price * (1 + gstRate / 100)).toLocaleString("en-IN") + " (Incl. of all taxes)";
-      var inStock = variant.stock > 0;
-      setBtnBlocked(pdpAddBtn, inStock ? null : "out-of-stock");
-      if (pdpBuyBtn) { pdpBuyBtn.setAttribute("data-variant", variant.id); setBtnBlocked(pdpBuyBtn, inStock ? null : "out-of-stock"); }
-      if (stockTitleEl) stockTitleEl.textContent = inStock ? variant.stock + " in stock" : "Out of Stock";
-      if (stockSubEl) stockSubEl.textContent = inStock ? "Ready to ship" : "Currently unavailable";
-      if (stockCardEl) stockCardEl.style.background = inStock ? "var(--green-bg)" : "var(--red-bg)";
-      if (heroImg && variant.image) heroImg.src = variant.image;
-      else if (heroImg && defaultHeroSrc) heroImg.src = defaultHeroSrc;
-      renderTierBox(variant);
-      if (typeof setQtyMax === "function") setQtyMax(inStock ? variant.stock : 0);
-    };
-
-    var variantSelectEl = document.querySelector("[data-variant-select]");
-    if (variantSelectEl) {
-      variantSelectEl.addEventListener("change", function () {
-        var id = variantSelectEl.value;
-        var variant = pdpData.variants.find(function (v) { return v.id === id; });
-        applySelection(variant || null);
-      });
+      applySelection(null);
     }
-
-    applySelection(null);
   }
 
   // ---------------- Cart page ----------------
