@@ -190,7 +190,7 @@ class OrderController extends Controller
 
         $order->load(['items.product.brand']);
 
-        $notifications->notify('order_confirmation', $customer->email, $customer->phone, [
+        $notifications->notify('order_confirmation', $order->customer_email ?: $customer->email, $customer->phone, [
             'customer_name' => $customer->name,
             'order_id' => $order->order_no,
             'tracking_link' => config('app.url').'/track-order',

@@ -86,7 +86,7 @@ class OrderController extends Controller
 
         if ($data['status'] !== $previousStatus && isset(self::STATUS_TEMPLATE[$data['status']])) {
             $order->loadMissing('customer');
-            $notifications->notify(self::STATUS_TEMPLATE[$data['status']], $order->customer->email, $order->customer->phone, [
+            $notifications->notify(self::STATUS_TEMPLATE[$data['status']], $order->customer_email ?: $order->customer->email, $order->customer->phone, [
                 'customer_name' => $order->customer->name,
                 'order_id' => $order->order_no,
                 'tracking_link' => config('app.url').'/track-order',
