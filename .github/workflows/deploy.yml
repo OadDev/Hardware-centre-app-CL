@@ -108,3 +108,58 @@ jobs:
               "$PHP_BIN" artisan config:cache
             fi
           '
+
+      # Temporary, read-only diagnostic for a live-only bug report that
+      # can't be reproduced locally (contact_number / bulk-price display on
+      # a specific product). Remove this step once the investigation is
+      # done.
+      - name: TEMP diagnostic
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          SSHPASS: ${{ secrets.DEPLOY_PASSWORD }}
+        run: |
+          sshpass -e ssh -p "$DEPLOY_PORT" \
+            -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            "$DEPLOY_USER@$DEPLOY_HOST" '
+            [ -f ~/.bashrc ] && source ~/.bashrc
+            [ -f ~/.bash_profile ] && source ~/.bash_profile
+            set -euo pipefail
+
+            PHP_BIN=""
+            for v in 85 84 83 82; do
+              candidate="/opt/alt/php${v}/usr/bin/php"
+              if [ -x "$candidate" ]; then PHP_BIN="$candidate"; break; fi
+            done
+
+            cd "$HOME/domains/hardwarecenters.com/app/backend"
+            "$PHP_BIN" artisan tinker --execute="
+              echo \"APP_URL: \".config(\"app.url\").PHP_EOL;
+              \$s = App\Models\AppSetting::current();
+              echo \"contact_number: \".var_export(\$s->contact_number, true).PHP_EOL;
+              \$p = App\Models\Product::where(\"name\", \"like\", \"%Unistar%\")->orWhere(\"name\", \"like\", \"%Work Shoes%\")->first();
+              if (\$p) {
+                echo \"product: \".\$p->product_code.\" - \".\$p->name.PHP_EOL;
+                echo \"price=\".\$p->price.\" mrp=\".\$p->mrp.\" stock=\".\$p->stock.PHP_EOL;
+                echo \"variants: \".\$p->variants()->count().PHP_EOL;
+                foreach (\$p->priceTiers as \$t) echo \"tier min_qty=\".\$t->min_qty.\" price=\".\$t->price.PHP_EOL;
+                echo \"PRODUCT_CODE_MARKER:\".\$p->product_code.PHP_EOL;
+              } else {
+                echo \"product not found by name search\".PHP_EOL;
+              }
+            " > /tmp/diag_output.txt
+            cat /tmp/diag_output.txt
+
+            CODE=$(grep -oP "(?<=PRODUCT_CODE_MARKER:).*" /tmp/diag_output.txt || true)
+            if [ -n "$CODE" ]; then
+              echo "--- curl of live product page for $CODE ---"
+              curl -s "https://hardwarecenters.com/product/$CODE" -o /tmp/diag_page.html || true
+              echo "pdp-contact-row present: $(grep -c "pdp-contact-row" /tmp/diag_page.html || true)"
+              echo "--- pdp-variants-data script content ---"
+              grep -oP "(?<=id=\"pdp-variants-data\">).*?(?=</script>)" /tmp/diag_page.html || echo "(script tag not found)"
+              echo "--- main.js asset URL as referenced by this page ---"
+              grep -oP "web/js/main\.js\?v=[0-9]+" /tmp/diag_page.html || echo "(not found)"
+            fi
+          '
+
