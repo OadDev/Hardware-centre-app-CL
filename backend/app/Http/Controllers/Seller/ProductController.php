@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductPriceTier;
+use App\Models\ProductSpec;
 use App\Models\ProductVariant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -138,8 +139,32 @@ class ProductController extends Controller
 
         return view('seller.product-variants', [
             'seller' => $request->user()->seller,
-            'product' => $product->load(['variants.priceTiers', 'priceTiers']),
+            'product' => $product->load(['variants.priceTiers', 'priceTiers', 'specs']),
         ]);
+    }
+
+    public function storeSpec(Request $request, Product $product)
+    {
+        $this->authorizeOwnership($request, $product);
+
+        $data = $request->validate([
+            'label' => ['required', 'string', 'max:60'],
+            'value' => ['required', 'string', 'max:255'],
+        ]);
+
+        $nextSort = (int) $product->specs()->max('sort_order');
+        $product->specs()->create([...$data, 'sort_order' => $nextSort + 1]);
+
+        return back()->with('status', 'Specification added.');
+    }
+
+    public function destroySpec(Request $request, Product $product, ProductSpec $spec)
+    {
+        $this->authorizeOwnership($request, $product);
+        abort_unless($spec->product_id === $product->id, 404);
+        $spec->delete();
+
+        return back()->with('status', 'Specification removed.');
     }
 
     public function storePriceTier(Request $request, Product $product)

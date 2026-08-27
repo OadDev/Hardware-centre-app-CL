@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductPriceTier;
+use App\Models\ProductSpec;
 use App\Models\ProductVariant;
 use App\Models\Seller;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
-    private const WITH = ['brand', 'category', 'seller', 'images', 'variants.priceTiers', 'priceTiers'];
+    private const WITH = ['brand', 'category', 'seller', 'images', 'variants.priceTiers', 'priceTiers', 'specs'];
 
     public function index(Request $request)
     {
@@ -273,7 +274,33 @@ class ProductController extends Controller
                 'minQty' => $t->min_qty,
                 'price' => (float) $t->price,
             ])->all(),
+            'specs' => $p->specs->sortBy('sort_order')->values()->map(fn (ProductSpec $s) => [
+                'id' => $s->id,
+                'label' => $s->label,
+                'value' => $s->value,
+            ])->all(),
         ];
+    }
+
+    public function storeSpec(Request $request, Product $product)
+    {
+        $data = $request->validate([
+            'label' => ['required', 'string', 'max:60'],
+            'value' => ['required', 'string', 'max:255'],
+        ]);
+
+        $nextSort = (int) $product->specs()->max('sort_order');
+        $product->specs()->create([...$data, 'sort_order' => $nextSort + 1]);
+
+        return response()->json($this->transform($product->load(self::WITH)), 201);
+    }
+
+    public function destroySpec(Product $product, ProductSpec $spec)
+    {
+        abort_unless($spec->product_id === $product->id, 404);
+        $spec->delete();
+
+        return response()->json($this->transform($product->load(self::WITH)));
     }
 
     public function storePriceTier(Request $request, Product $product)

@@ -87,6 +87,39 @@
 </div>
 
 <div class="bg-white rounded-2xl border border-ink-200/70 p-5 mt-6">
+  <div class="font-bold text-ink-900">Specifications</div>
+  <p class="text-xs text-ink-400 mt-1 mb-4">Technical details shown on the product page, e.g. Power — 600 W, Warranty — 1 Year.</p>
+
+  <form method="POST" action="{{ route('seller.products.specs.store', $product) }}" class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-5">
+    @csrf
+    <div><label class="block text-xs font-medium text-ink-500 mb-1">Label</label><input name="label" required placeholder="e.g. Power" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
+    <div><label class="block text-xs font-medium text-ink-500 mb-1">Value</label><input name="value" required placeholder="e.g. 600 W" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200"></div>
+    <div class="flex items-end"><button type="submit" class="w-full px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold">Add Specification</button></div>
+  </form>
+
+  @if($product->specs->isEmpty())
+  <p class="text-sm text-ink-400">No specifications yet — the product page will show "No specifications listed".</p>
+  @else
+  <div class="overflow-x-auto"><table class="w-full seller-table-wide text-sm">
+    <tbody>
+      @foreach($product->specs->sortBy('sort_order') as $spec)
+      <tr class="border-b border-ink-100 last:border-0">
+        <td class="py-2 font-medium text-ink-900">{{ $spec->label }}</td>
+        <td>{{ $spec->value }}</td>
+        <td class="text-right">
+          <form method="POST" action="{{ route('seller.products.specs.destroy', [$product, $spec]) }}" class="inline" onsubmit="return confirm('Remove this specification?');">
+            @csrf @method('DELETE')
+            <button type="submit" class="text-xs font-semibold text-rose-600">Remove</button>
+          </form>
+        </td>
+      </tr>
+      @endforeach
+    </tbody>
+  </table></div>
+  @endif
+</div>
+
+<div class="bg-white rounded-2xl border border-ink-200/70 p-5 mt-6">
   <div class="font-bold text-ink-900">Bulk / Quantity Pricing</div>
   <p class="text-xs text-ink-400 mt-1 mb-4">Offer a lower unit price when a customer buys a larger quantity, e.g. ₹500/pc under 100 pcs, ₹450/pc from 100 pcs onward. Pick which variant (or the base product) each tier applies to.</p>
 

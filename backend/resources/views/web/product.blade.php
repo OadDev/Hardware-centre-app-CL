@@ -38,6 +38,9 @@ $images = $product->images->pluck('url')->filter()->values();
         @endforeach
       </div>
       @endif
+      @if($images->isNotEmpty())
+      <script type="application/json" id="pdp-images-data">{!! json_encode($images->values(), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) !!}</script>
+      @endif
     </div>
 
     <div>

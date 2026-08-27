@@ -497,6 +497,20 @@ function openProductProfile(p) {
       </div>
       <button id="drawer-add-variant-btn" class="w-full py-2 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700">+ Add Variant</button>
     `)}
+    ${drawerSection('Specifications', `
+      <div class="space-y-1.5 mb-3">
+        ${(p.specs||[]).map(s => `
+          <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-ink-200 dark:border-ink-700">
+            <div class="text-sm min-w-0"><span class="font-medium text-ink-900 dark:text-white">${s.label}</span><span class="text-ink-400"> — ${s.value}</span></div>
+            <button data-remove-spec="${s.id}" class="w-6 h-6 flex-shrink-0 rounded-full bg-rose-600 text-white text-xs leading-none flex items-center justify-center">×</button>
+          </div>`).join('') || `<p class="text-xs text-ink-400">No specifications yet — the product page will show "No specifications listed".</p>`}
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <input id="drawer-spec-label" placeholder="e.g. Power" class="px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
+        <input id="drawer-spec-value" placeholder="e.g. 600 W" class="px-2.5 py-1.5 text-sm rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">
+      </div>
+      <button id="drawer-add-spec-btn" class="mt-2 w-full py-2 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700">+ Add Specification</button>
+    `)}
     ${drawerSection('Bulk / Quantity Pricing', `
       <p class="text-[11px] text-ink-400 mb-3">Offer a lower unit price at higher quantities, e.g. ₹500/pc under 100 pcs, ₹450/pc from 100 pcs onward. Pick which variant (or the base product) each tier applies to.</p>
       ${(p.variants||[]).length ? `
@@ -610,6 +624,17 @@ function openProductProfile(p) {
   document.querySelectorAll('[data-remove-price-tier]').forEach(btn => btn.addEventListener('click', withErr(async () => {
     await api('DELETE', '/products/'+p.id+'/price-tiers/'+btn.dataset.removePriceTier);
     toast('Price tier removed'); await refreshProducts(); navigateTo('products');
+  })));
+  document.getElementById('drawer-add-spec-btn')?.addEventListener('click', withErr(async () => {
+    const label = document.getElementById('drawer-spec-label').value.trim();
+    const value = document.getElementById('drawer-spec-value').value.trim();
+    if (!label || !value) { toast('Enter both a label and a value', 'warn'); return; }
+    await api('POST', '/products/'+p.id+'/specs', { label, value });
+    toast('Specification added'); await refreshProducts(); navigateTo('products');
+  }));
+  document.querySelectorAll('[data-remove-spec]').forEach(btn => btn.addEventListener('click', withErr(async () => {
+    await api('DELETE', '/products/'+p.id+'/specs/'+btn.dataset.removeSpec);
+    toast('Specification removed'); await refreshProducts(); navigateTo('products');
   })));
   document.getElementById('approve-product-btn')?.addEventListener('click', withErr(async () => {
     await api('PATCH', '/products/'+p.id, { approval_status:'Approved' });
