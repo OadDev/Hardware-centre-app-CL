@@ -70,6 +70,9 @@ $images = $product->images->pluck('url')->filter()->values();
       <div class="pdp-visit-store">Visit the <a href="{{ route('web.search') }}?brand={{ urlencode($product->brand->name) }}">{{ $product->brand->name }}</a> Store</div>
 
       <div class="pdp-price-block">
+        @if($gstRate > 0)
+        <div class="pdp-incl-note" data-pdp-incl-note>₹{{ number_format(round($product->price * (1 + $gstRate / 100))) }} (Incl. of all taxes)</div>
+        @endif
         <div class="pdp-price"><span data-pdp-price-value>₹{{ number_format($product->price) }}</span><span class="pdp-gst-note">@if($gstRate > 0) +{{ rtrim(rtrim(number_format($gstRate, 2), '0'), '.') }}% GST @endif</span></div>
         @if($off > 0)
         <div class="pdp-mrp-row"><span class="pdp-mrp">MRP ₹{{ number_format($product->mrp) }}</span><span class="pdp-off-pill" data-pdp-off-pill>{{ $off }}% OFF</span></div>
@@ -154,6 +157,7 @@ $images = $product->images->pluck('url')->filter()->values();
       @if($variants->isNotEmpty())
       <script type="application/json" id="pdp-variants-data">{!! json_encode([
         'unit' => $product->unit,
+        'gst_rate' => $gstRate,
         'apply_bulk_pricing_to_all_variants' => (bool) $product->apply_bulk_pricing_to_all_variants,
         'product_price_tiers' => $priceTiers->map(fn ($t) => ['min_qty' => $t->min_qty, 'price' => (float) $t->price])->values(),
         'variants' => $variants->map(fn ($v) => [

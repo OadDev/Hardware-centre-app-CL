@@ -949,6 +949,8 @@
 
   if (pdpAddBtn && pdpData && pdpData.variants && pdpData.variants.length) {
     var priceEl = document.querySelector("[data-pdp-price-value]");
+    var inclNoteEl = document.querySelector("[data-pdp-incl-note]");
+    var gstRate = pdpData.gst_rate || 0;
     var stockTitleEl = document.querySelector("[data-pdp-stock-title]");
     var stockSubEl = document.querySelector("[data-pdp-stock-sub]");
     var stockCardEl = document.querySelector("[data-pdp-stock-card]");
@@ -1002,6 +1004,7 @@
 
       pdpAddBtn.setAttribute("data-variant", variant.id);
       if (priceEl) priceEl.textContent = "₹" + Math.round(variant.price).toLocaleString("en-IN");
+      if (inclNoteEl && gstRate > 0) inclNoteEl.textContent = "₹" + Math.round(variant.price * (1 + gstRate / 100)).toLocaleString("en-IN") + " (Incl. of all taxes)";
       var inStock = variant.stock > 0;
       setBtnBlocked(pdpAddBtn, inStock ? null : "out-of-stock");
       if (pdpBuyBtn) { pdpBuyBtn.setAttribute("data-variant", variant.id); setBtnBlocked(pdpBuyBtn, inStock ? null : "out-of-stock"); }
