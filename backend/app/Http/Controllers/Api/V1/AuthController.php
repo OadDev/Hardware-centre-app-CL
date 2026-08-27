@@ -28,7 +28,7 @@ class AuthController extends Controller
 
         if ($channel === 'sms') {
             $data = $request->validate(['phone' => ['required', 'string', 'min:8', 'max:15']]);
-            $contact = preg_replace('/\D/', '', $data['phone']);
+            $contact = OtpService::normalizeIndianMobile($data['phone']);
         } else {
             $data = $request->validate(['email' => ['required', 'email']]);
             $contact = strtolower($data['email']);
@@ -60,7 +60,7 @@ class AuthController extends Controller
                 'phone' => ['required', 'string'],
                 'otp' => ['required', 'digits:6'],
             ]);
-            $contact = preg_replace('/\D/', '', $data['phone']);
+            $contact = OtpService::normalizeIndianMobile($data['phone']);
         } else {
             $data = $request->validate([
                 'email' => ['required', 'email'],

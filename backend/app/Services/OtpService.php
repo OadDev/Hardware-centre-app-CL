@@ -81,9 +81,18 @@ class OtpService
         return true;
     }
 
+    /**
+     * Matches regardless of whether the phone test contact was typed/sent
+     * with or without the +91 country code — callers only strip non-digit
+     * characters before this point, they don't drop the country code.
+     */
     private function isTestContact(string $contact): bool
     {
-        return in_array(strtolower($contact), self::TEST_CONTACTS, true);
+        if (strtolower($contact) === 'test@hardwarecentre.in') {
+            return true;
+        }
+
+        return self::normalizeIndianMobile($contact) === '9999999999';
     }
 
     protected function cacheKey(string $channel, string $contact): string

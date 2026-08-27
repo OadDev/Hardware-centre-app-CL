@@ -92,7 +92,13 @@ export default function LoginScreen({ navigation, route }: Props) {
             <TextInput
               value={phone}
               onChangeText={(v) => {
-                setPhone(v.replace(/\D/g, '').slice(0, 10));
+                let digits = v.replace(/\D/g, '');
+                // Someone pasting/typing "+91 98765 43210" leaves 12 digits
+                // starting with the country code — drop it before capping to
+                // 10, otherwise the leading "91" gets kept and the real
+                // number gets cut short instead.
+                if (digits.length > 10 && digits.startsWith('91')) digits = digits.slice(2);
+                setPhone(digits.slice(0, 10));
                 setError('');
               }}
               placeholder="98765 43210"
