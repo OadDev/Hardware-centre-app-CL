@@ -1018,6 +1018,8 @@
     var priceEl = document.querySelector("[data-pdp-price-value]");
     var inclNoteEl = document.querySelector("[data-pdp-incl-note]");
     var offPillEl = document.querySelector("[data-pdp-off-pill]");
+    var totalQtyEl = document.querySelector("[data-pdp-total-qty]");
+    var totalValueEl = document.querySelector("[data-pdp-total-value]");
     var gstRate = pdpData.gst_rate || 0;
     var stockTitleEl = document.querySelector("[data-pdp-stock-title]");
     var stockSubEl = document.querySelector("[data-pdp-stock-sub]");
@@ -1064,6 +1066,8 @@
         var off = Math.round((1 - price / pdpData.mrp) * 100);
         offPillEl.textContent = (off > 0 ? off : 0) + "% OFF";
       }
+      if (totalQtyEl) totalQtyEl.textContent = qty;
+      if (totalValueEl) totalValueEl.textContent = "₹" + Math.round(price * qty).toLocaleString("en-IN");
     };
 
     var renderTierBox = function (variant) {

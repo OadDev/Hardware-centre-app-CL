@@ -110,6 +110,7 @@ $images = $product->images->pluck('url')->filter()->values();
         </div>
         <span class="pdp-qty-label">Minimum Order Quantity – 1</span>
       </div>
+      <div class="pdp-total-row" data-pdp-total-row><span>Total for <span data-pdp-total-qty>1</span> {{ $product->unit }}</span><span class="val" data-pdp-total-value>₹{{ number_format($product->price) }}</span></div>
 
       @if($variants->isNotEmpty())
       <div class="pdp-variant-group">
@@ -157,7 +158,6 @@ $images = $product->images->pluck('url')->filter()->values();
       </div>
       <div class="pdp-actions-spacer"></div>
 
-      @if($variants->isNotEmpty() || $priceTiers->isNotEmpty())
       <script type="application/json" id="pdp-variants-data">{!! json_encode([
         'unit' => $product->unit,
         'gst_rate' => $gstRate,
@@ -174,7 +174,6 @@ $images = $product->images->pluck('url')->filter()->values();
           'price_tiers' => $v->priceTiers->map(fn ($t) => ['min_qty' => $t->min_qty, 'price' => (float) $t->price])->values(),
         ])->values(),
       ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) !!}</script>
-      @endif
     </div>
   </div>
 </section>
