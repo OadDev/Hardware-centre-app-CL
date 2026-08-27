@@ -20,6 +20,7 @@ use App\Http\Controllers\Web\ContactController;
 use App\Http\Controllers\Web\DownloadAppController;
 use App\Http\Controllers\Web\HomeController;
 use App\Http\Controllers\Web\OrdersController;
+use App\Http\Controllers\Web\PolicyController;
 use App\Http\Controllers\Web\ProductController;
 use App\Http\Controllers\Web\SearchController;
 use App\Http\Controllers\Web\SellController;
@@ -51,6 +52,10 @@ Route::name('web.')->group(function () {
     Route::get('/download-app', [DownloadAppController::class, 'index'])->name('download-app');
     Route::get('/blog', [BlogController::class, 'index'])->name('blog');
     Route::get('/blog/{post:slug}', [BlogController::class, 'show'])->name('blog.show');
+    Route::get('/privacy-policy', [PolicyController::class, 'privacy'])->name('policy.privacy');
+    Route::get('/terms-of-service', [PolicyController::class, 'terms'])->name('policy.terms');
+    Route::get('/returns-refund-policy', [PolicyController::class, 'returns'])->name('policy.returns');
+    Route::get('/shipping-policy', [PolicyController::class, 'shipping'])->name('policy.shipping');
 });
 
 Route::prefix('admin')->name('admin.')->group(function () {

@@ -113,7 +113,8 @@
         <li><a href="{{ route('web.support') }}">Help &amp; Support</a></li>
         <li><a href="{{ route('web.track-order') }}">Track Order</a></li>
         <li><a href="{{ route('web.orders') }}">Order History</a></li>
-        <li><a href="{{ route('web.contact') }}">Returns &amp; Refunds</a></li>
+        <li><a href="{{ route('web.policy.returns') }}">Returns &amp; Refunds</a></li>
+        <li><a href="{{ route('web.policy.shipping') }}">Shipping Policy</a></li>
       </ul>
     </div>
     <div class="footer-col">
@@ -134,7 +135,7 @@
   </div>
   <div class="container footer-bottom">
     <span>© {{ date('Y') }} Hardware Centers. All rights reserved.</span>
-    <div class="footer-legal"><a href="#">Privacy Policy</a><a href="#">Terms of Service</a><a href="{{ route('web.contact') }}">Sitemap</a></div>
+    <div class="footer-legal"><a href="{{ route('web.policy.privacy') }}">Privacy Policy</a><a href="{{ route('web.policy.terms') }}">Terms of Service</a><a href="{{ route('web.contact') }}">Sitemap</a></div>
   </div>
 </footer>
 <div class="toast" data-toast><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> <span data-toast-text>Thanks! We'll be in touch shortly.</span></div>

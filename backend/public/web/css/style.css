@@ -233,6 +233,26 @@ p{ margin:0; }
 .page-hero .crumb a:hover{ color:#fff; }
 .page-hero h1{ color:#fff; font-size:36px; font-weight:800; letter-spacing:-.6px; }
 .page-hero p{ color:#cbd5e1; margin-top:12px; font-size:15px; max-width:560px; }
+.page-hero .policy-updated{ color:#9CA3AF; margin-top:10px; font-size:12.5px; }
+
+/* ---------- Policy / legal pages ---------- */
+.policy-body{ font-size:15px; line-height:1.85; color:#374151; }
+.policy-body h2{ font-size:20px; font-weight:800; color:var(--ink); margin:34px 0 12px; letter-spacing:-.2px; }
+.policy-body h2:first-child{ margin-top:0; }
+.policy-body h3{ font-size:15.5px; font-weight:700; color:var(--ink); margin:20px 0 8px; }
+.policy-body p{ margin:0 0 14px; }
+.policy-body ul, .policy-body ol{ margin:0 0 14px; padding-left:22px; }
+.policy-body li{ margin-bottom:6px; }
+.policy-body a{ color:var(--orange-dark); font-weight:600; text-decoration:none; }
+.policy-body a:hover{ text-decoration:underline; }
+.policy-body strong{ color:var(--ink); }
+.policy-toc{ border:1px solid var(--border-soft); border-radius:var(--radius-lg); padding:18px 20px; margin-bottom:32px; background:var(--surface); }
+.policy-toc .t{ font-size:12px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
+.policy-toc ol{ margin:0; padding-left:18px; columns:2; column-gap:24px; }
+.policy-toc li{ font-size:13.5px; margin-bottom:6px; break-inside:avoid; }
+.policy-toc a{ color:var(--ink); font-weight:600; text-decoration:none; }
+.policy-toc a:hover{ color:var(--orange-dark); }
+@media (max-width:640px){ .policy-toc ol{ columns:1; } }
 
 /* ---------- Category chips / grid ---------- */
 .cat-row{ display:flex; gap:16px; overflow-x:auto; padding:4px 2px 12px; scrollbar-width:none; }
