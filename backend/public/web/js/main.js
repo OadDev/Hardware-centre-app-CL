@@ -518,6 +518,9 @@
 
   if (searchResults && searchInput) {
     var searchDebounce = null;
+    var loadMoreBtn = document.getElementById("search-load-more");
+    var searchPage = 1;
+    var searchLastPage = 1;
     var urlCategory = new URLSearchParams(window.location.search).get("category");
     var urlBrand = new URLSearchParams(window.location.search).get("brand");
     if (urlBrand) {
@@ -525,7 +528,16 @@
         if (c.getAttribute("data-brand-filter") === urlBrand) c.checked = true;
       });
     }
-    var runSearch = function () {
+
+    var syncLoadMore = function () {
+      if (!loadMoreBtn) return;
+      loadMoreBtn.style.display = searchPage < searchLastPage ? "" : "none";
+      loadMoreBtn.disabled = false;
+      loadMoreBtn.textContent = "Load More";
+    };
+
+    var runSearch = function (page) {
+      page = page || 1;
       var q = searchInput.value.trim();
       var brands = Array.prototype.filter.call(brandChecks, function (c) { return c.checked; })
         .map(function (c) { return c.getAttribute("data-brand-filter"); });
@@ -535,31 +547,45 @@
       if (urlCategory) params.set("category", urlCategory);
       if (brands.length) params.set("brands", brands.join(","));
       params.set("per_page", "24");
+      params.set("page", page);
+
+      if (loadMoreBtn && page > 1) { loadMoreBtn.disabled = true; loadMoreBtn.textContent = "Loading…"; }
 
       fetch(API_BASE + "/products?" + params.toString())
         .then(function (r) { return r.json(); })
         .then(function (data) {
           var items = data.data || [];
+          var meta = data.meta || {};
+          searchPage = meta.current_page || page;
+          searchLastPage = meta.last_page || 1;
+
           var countEl = document.querySelector("[data-result-count]");
           var titleEl = document.getElementById("search-results-title");
-          if (countEl) countEl.textContent = items.length + " products found";
+          if (countEl) countEl.textContent = (meta.total != null ? meta.total : items.length) + " products found";
           if (titleEl) titleEl.textContent = q ? ('Results for "' + q + '"') : (brands.length ? brands.join(", ") + " Products" : (urlCategory ? "Category Results" : "Trending Products"));
-          searchResults.innerHTML = items.length
+
+          var html = items.length
             ? items.map(productCardHTML).join("")
             : '<p style="color:var(--muted);grid-column:1/-1;">No products matched your search.</p>';
+          if (page > 1) searchResults.insertAdjacentHTML("beforeend", html);
+          else searchResults.innerHTML = html;
           bindWishButtons(searchResults);
+          syncLoadMore();
         })
         .catch(function () {
           showToast("Could not load search results. Try again.");
+          if (loadMoreBtn) { loadMoreBtn.disabled = false; loadMoreBtn.textContent = "Load More"; }
         });
     };
 
-    if (urlCategory || urlBrand) runSearch();
+    if (loadMoreBtn) loadMoreBtn.addEventListener("click", function () { runSearch(searchPage + 1); });
+
+    if (urlCategory || urlBrand) runSearch(1);
     searchInput.addEventListener("input", function () {
       clearTimeout(searchDebounce);
-      searchDebounce = setTimeout(runSearch, 300);
+      searchDebounce = setTimeout(function () { runSearch(1); }, 300);
     });
-    brandChecks.forEach(function (c) { c.addEventListener("change", runSearch); });
+    brandChecks.forEach(function (c) { c.addEventListener("change", function () { runSearch(1); }); });
   } else if (searchInput) {
     // categories.html / other pages: plain client-side name filter, no live results container
     searchInput.addEventListener("input", function () {

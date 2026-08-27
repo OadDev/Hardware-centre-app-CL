@@ -12,7 +12,9 @@ class SearchController extends Controller
     {
         return view('web.search', [
             'trending' => Product::query()->approved()->with(['brand', 'category', 'images'])->orderByDesc('sold_count')->limit(12)->get(),
-            'brands' => Brand::where('status', 'Active')->orderBy('name')->withCount('products')->get(),
+            'brands' => Brand::where('status', 'Active')->orderBy('name')
+                ->withCount(['products' => fn ($q) => $q->approved()])
+                ->get(),
         ]);
     }
 }

@@ -56,6 +56,9 @@
           <x-web.product-card :product="$p" />
         @endforeach
       </div>
+      <div style="text-align:center;margin-top:24px;">
+        <button type="button" class="btn btn-outline" id="search-load-more" style="display:none;">Load More</button>
+      </div>
     </div>
   </div>
 </section>
