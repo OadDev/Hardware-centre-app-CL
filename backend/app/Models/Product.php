@@ -67,6 +67,11 @@ class Product extends Model
         return $this->belongsTo(HsnCode::class);
     }
 
+    public function effectiveGstRate(): float
+    {
+        return (float) ($this->hsnCode?->gst_rate ?? AppSetting::current()->default_gst_rate);
+    }
+
     public function images(): HasMany
     {
         return $this->hasMany(ProductImage::class)->orderBy('sort_order');

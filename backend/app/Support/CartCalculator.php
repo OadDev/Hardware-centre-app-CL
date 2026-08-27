@@ -24,8 +24,23 @@ class CartCalculator
         }
 
         $taxable = $subtotal - $discount;
-        $gstRate = (float) AppSetting::current()->default_gst_rate;
-        $gst = round($taxable * ($gstRate / 100), 2);
+
+        // Each product's GST rate is its HSN code's rate where one is set,
+        // falling back to the store-wide default — so a coupon discount is
+        // prorated across items by revenue share before each item's own
+        // rate is applied, rather than taxing the whole cart at one rate.
+        $items->loadMissing('product.hsnCode');
+        $defaultGstRate = (float) AppSetting::current()->default_gst_rate;
+        $gst = 0.0;
+        if ($subtotal > 0) {
+            foreach ($items as $item) {
+                $lineTotal = $item->unit_price * $item->quantity;
+                $lineTaxable = ($lineTotal / $subtotal) * $taxable;
+                $rate = (float) ($item->product->hsnCode->gst_rate ?? $defaultGstRate);
+                $gst += $lineTaxable * ($rate / 100);
+            }
+        }
+        $gst = round($gst, 2);
 
         $shippingConfig = ShippingConfig::current();
         $shippingMethod = $shippingMethod ?: 'standard';

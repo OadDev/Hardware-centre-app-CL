@@ -16,7 +16,7 @@ class ProductController extends Controller
     {
         abort_unless($product->approval_status === 'Approved', 404);
 
-        $product->load(['brand', 'category', 'seller', 'specs', 'images', 'variants.priceTiers', 'priceTiers']);
+        $product->load(['brand', 'category', 'seller', 'specs', 'images', 'variants.priceTiers', 'priceTiers', 'hsnCode']);
 
         $related = Product::query()->approved()
             ->where('category_id', $product->category_id)
@@ -42,7 +42,7 @@ class ProductController extends Controller
             'reviews' => $reviews,
             'ratingBreakdown' => ReviewAggregator::breakdown($product),
             'contactNumber' => AppSetting::current()->contact_number,
-            'gstRate' => (float) AppSetting::current()->default_gst_rate,
+            'gstRate' => $product->effectiveGstRate(),
             'offers' => $offers,
         ]);
     }
