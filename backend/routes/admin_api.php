@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GstController;
+use App\Http\Controllers\Admin\InvoiceController;
 use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Admin\OnboardingSlideController;
 use App\Http\Controllers\Admin\OrderController;
@@ -50,6 +51,9 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::post('brands/{brand}/logo', [BrandController::class, 'uploadLogo']);
     Route::delete('brands/{brand}/logo', [BrandController::class, 'destroyLogo']);
     Route::apiResource('orders', OrderController::class)->only(['index', 'show', 'update']);
+    Route::post('orders/{order}/invoice', [InvoiceController::class, 'store']);
+    Route::apiResource('invoices', InvoiceController::class)->only(['index', 'show']);
+    Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'pdf']);
     Route::apiResource('returns', ReturnController::class)->only(['index', 'update']);
     Route::apiResource('reviews', ReviewController::class)->only(['index', 'update', 'destroy']);
     Route::apiResource('coupons', CouponController::class)->only(['index', 'store', 'update', 'destroy']);

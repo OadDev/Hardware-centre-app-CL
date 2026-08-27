@@ -172,6 +172,7 @@ async function refreshProducts() { DATA.products = unwrap(await api('GET', '/pro
 async function refreshCategories() { DATA.categories = await api('GET', '/categories'); }
 async function refreshBrands() { DATA.brands = await api('GET', '/brands'); }
 async function refreshOrders() { DATA.orders = unwrap(await api('GET', '/orders?per_page=250')); }
+async function refreshInvoices() { DATA.invoices = unwrap(await api('GET', '/invoices?per_page=250')); }
 async function refreshReturns() { DATA.returns = unwrap(await api('GET', '/returns?per_page=250')); }
 async function refreshCoupons() { DATA.coupons = await api('GET', '/coupons'); }
 async function refreshBanners() { DATA.banners = await api('GET', '/banners'); }
@@ -221,7 +222,7 @@ async function runLimited(tasks, limit) {
 const LOAD_TASKS = [
   ['Dashboard', refreshDashboard], ['Sellers', refreshSellers], ['Customers', refreshCustomers],
   ['Products', refreshProducts], ['Categories', refreshCategories], ['Brands', refreshBrands],
-  ['Orders', refreshOrders], ['Returns', refreshReturns], ['Coupons', refreshCoupons],
+  ['Orders', refreshOrders], ['Invoices', refreshInvoices], ['Returns', refreshReturns], ['Coupons', refreshCoupons],
   ['Banners', refreshBanners], ['Onboarding Slides', refreshOnboardingSlides], ['Settlements', refreshSettlements], ['Commission', refreshCommission],
   ['GST', refreshGst], ['Shipping', refreshShipping], ['Payments', refreshPayments],
   ['Abandoned Carts', refreshAbandonedCarts], ['Reviews', refreshReviews],
@@ -290,6 +291,7 @@ const NAV_GROUPS = [
   ]},
   { title:'Sales', items: [
     { key:'orders', label:'Orders', icon:'shopping-cart' },
+    { key:'invoices', label:'Billing / Invoices', icon:'file-text' },
     { key:'abandoned-carts', label:'Abandoned Carts', icon:'shopping-basket' },
     { key:'reviews', label:'Reviews', icon:'star' },
     { key:'returns', label:'Returns & Refunds', icon:'undo-2' },
@@ -324,6 +326,7 @@ const SECTION_TITLES = {
   categories: ['Categories', 'Organize products into categories'],
   brands: ['Brands', 'Manage brand listings shown on the storefront'],
   orders: ['Orders', 'Track and fulfil orders across all sellers'],
+  invoices: ['Billing / Invoices', 'Generate and download GST invoices for orders'],
   'abandoned-carts': ['Abandoned Carts', 'Customers who added a product but didn\'t check out'],
   reviews: ['Reviews', 'Moderate product ratings and reviews left by customers'],
   returns: ['Returns & Refunds', 'Review and action return and refund requests'],

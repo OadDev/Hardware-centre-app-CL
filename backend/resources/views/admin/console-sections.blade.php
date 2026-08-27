@@ -844,6 +844,7 @@ function openOrderProfile(o) {
     ${drawerSection('Details', `${drawerRow('Customer', o.customerName)}<div id="order-customer-phone"></div>${drawerRow('Payment', statusBadge(o.payment))}${drawerRow('Placed', new Date(o.date).toLocaleDateString('en-IN'))}`)}
     ${drawerSection('Delivery Address', `<div id="order-address-loading" class="text-xs text-ink-400">Loading address…</div><div id="order-address"></div>`)}
     ${drawerSection('Products & Sellers', `<div id="order-items-loading" class="text-xs text-ink-400">Loading order items…</div><div id="order-items-list" class="space-y-2"></div>`)}
+    ${drawerSection('Billing', `<div id="order-invoice-box" class="text-xs text-ink-400">Loading invoice status…</div>`)}
     <div class="mt-4">${formSelect('Update Status', ORDER_STATUSES, ORDER_STATUSES.indexOf(o.status), 'order-status-select')}</div>
     <div class="flex gap-2.5 mt-6 pt-5 border-t border-ink-100 dark:border-ink-800">
       <button id="save-order-status-btn" class="flex-1 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-xl">Save Status</button>
@@ -882,14 +883,57 @@ function openOrderProfile(o) {
             <div class="text-xs text-ink-400">Sold by ${it.seller} · Qty ${it.quantity} · ${fmtINR(it.unit_price)} each · ${fmtINR(it.line_total)} total</div>
           </div>`).join('') || `<p class="text-xs text-ink-400">No items found.</p>`;
       }
+
+      renderOrderInvoiceBox(o, full.invoice);
     } catch (e) {
       const loading = document.getElementById('order-items-loading');
       if (loading) loading.textContent = 'Could not load order items.';
       const addrLoading = document.getElementById('order-address-loading');
       if (addrLoading) addrLoading.textContent = 'Could not load address.';
+      const invoiceBox = document.getElementById('order-invoice-box');
+      if (invoiceBox) invoiceBox.textContent = 'Could not load invoice status.';
     }
   })();
 }
+
+function renderOrderInvoiceBox(o, invoice) {
+  const box = document.getElementById('order-invoice-box');
+  if (!box) return;
+  if (invoice) {
+    box.innerHTML = `
+      ${drawerRow('Invoice #', invoice.invoiceNumber)}
+      <a href="/admin/api/invoices/${invoice.id}/pdf" target="_blank" class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-100 dark:bg-ink-700 hover:bg-ink-200 dark:hover:bg-ink-600 text-xs font-medium text-ink-700 dark:text-ink-200">${icon('download','w-3.5 h-3.5')} Download PDF</a>`;
+    refreshIcons();
+    return;
+  }
+  box.innerHTML = `
+    <p class="text-xs text-ink-400 mb-2">No invoice generated yet for this order.</p>
+    <button id="generate-invoice-btn" class="px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium">Generate Invoice</button>`;
+  document.getElementById('generate-invoice-btn').addEventListener('click', withErr(async () => {
+    const inv = await api('POST', '/orders/'+o.id+'/invoice');
+    toast('Invoice generated'); await refreshInvoices();
+    renderOrderInvoiceBox(o, inv);
+  }));
+}
+
+/* ===== INVOICES ===== */
+SECTION_RENDERERS.invoices = async function(main) {
+  main.innerHTML = `
+    ${pageHeader('Billing / Invoices', 'GST invoices generated from orders')}
+    ${tableCard('invoices-table-inner')}
+  `;
+  renderDataTable('invoices-table-inner', {
+    title:'All Invoices', subtitle:`${DATA.invoices.length} invoices`, data: DATA.invoices, searchKeys:['invoiceNumber','orderNo','customerName'],
+    columns: [
+      { label:'Invoice #', render: i => `<span class="font-medium text-ink-800 dark:text-ink-100">${i.invoiceNumber}</span>` },
+      { label:'Order #', key:'orderNo' },
+      { label:'Customer', key:'customerName' },
+      { label:'Date', render: i => new Date(i.issuedAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) },
+      { label:'Total', render: i => fmtINR(i.total) },
+      { label:'', render: i => `<a href="/admin/api/invoices/${i.id}/pdf" target="_blank" data-stop-row-click class="inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700">${icon('download','w-3.5 h-3.5')} PDF</a>` },
+    ],
+  });
+};
 
 /* ===== ABANDONED CARTS ===== */
 SECTION_RENDERERS['abandoned-carts'] = async function(main) {

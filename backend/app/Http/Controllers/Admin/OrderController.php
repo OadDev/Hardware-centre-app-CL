@@ -39,11 +39,15 @@ class OrderController extends Controller
 
     public function show(Order $order)
     {
-        $order->load(['customer', 'address', 'items.product', 'items.seller']);
+        $order->load(['customer', 'address', 'items.product', 'items.seller', 'invoice']);
 
         return response()->json([
             ...$this->transform($order),
             'customerPhone' => $order->customer->phone,
+            'invoice' => $order->invoice ? [
+                'id' => $order->invoice->id,
+                'invoiceNumber' => $order->invoice->invoice_number,
+            ] : null,
             'address' => $order->address ? [
                 'contactName' => $order->address->contact_name,
                 'line' => $order->address->line,
