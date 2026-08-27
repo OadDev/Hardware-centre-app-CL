@@ -948,7 +948,7 @@
   }
 
   if (pdpAddBtn && pdpData && pdpData.variants && pdpData.variants.length) {
-    var priceEl = document.querySelector(".pdp-price");
+    var priceEl = document.querySelector("[data-pdp-price-value]");
     var stockTitleEl = document.querySelector("[data-pdp-stock-title]");
     var stockSubEl = document.querySelector("[data-pdp-stock-sub]");
     var stockCardEl = document.querySelector("[data-pdp-stock-card]");

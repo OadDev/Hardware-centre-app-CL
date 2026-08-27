@@ -42,6 +42,7 @@ class ProductController extends Controller
             'reviews' => $reviews,
             'ratingBreakdown' => ReviewAggregator::breakdown($product),
             'contactNumber' => AppSetting::current()->contact_number,
+            'gstRate' => (float) AppSetting::current()->default_gst_rate,
             'offers' => $offers,
         ]);
     }
