@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Seller;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Order;
+use App\Models\OrderShipment;
+use App\Services\ShiprocketService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Throwable;
 
 class OrderController extends Controller
 {
@@ -32,7 +35,27 @@ class OrderController extends Controller
             'order' => $order->load(['customer', 'address']),
             'items' => $myItems,
             'isSoleSeller' => $order->items()->where('seller_id', '!=', $seller->id)->doesntExist(),
+            'shipment' => OrderShipment::where('order_id', $order->id)->where('seller_id', $seller->id)->first(),
         ]);
+    }
+
+    /**
+     * Creates (or completes) this seller's own Shiprocket shipment for the
+     * order — a separate parcel/pickup-location per seller, so this never
+     * touches or needs the rest of the order to be theirs.
+     */
+    public function shipViaShiprocket(Request $request, Order $order, ShiprocketService $shiprocket)
+    {
+        $seller = $request->user()->seller;
+        $myItems = $this->authorizeAndLoadItems($request, $order);
+
+        try {
+            $shiprocket->createShipmentForSeller($order, $seller, $myItems);
+
+            return back()->with('status', 'Shipment created via Shiprocket.');
+        } catch (Throwable $e) {
+            return back()->withErrors(['shiprocket' => $e->getMessage()]);
+        }
     }
 
     /**

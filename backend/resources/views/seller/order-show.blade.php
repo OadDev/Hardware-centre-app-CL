@@ -62,6 +62,29 @@
   </div>
 </div>
 
+<div class="bg-white rounded-2xl border border-ink-200/70 p-5 mb-6">
+  <div class="font-bold text-ink-900 mb-1">Ship via Shiprocket</div>
+
+  @if($shipment && $shipment->awb)
+  <p class="text-xs text-ink-400 mb-3">Courier assigned — print the label below and hand the parcel over.</p>
+  <div class="flex flex-wrap items-center gap-3">
+    <div class="px-3 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-medium">{{ $shipment->courier }} · AWB {{ $shipment->awb }}</div>
+    @if($shipment->label_url)
+    <a href="{{ $shipment->label_url }}" target="_blank" class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold">Download Shipping Label</a>
+    @endif
+  </div>
+  @else
+  <p class="text-xs text-ink-400 mb-3">Creates a Shiprocket order for just your items in this order, assigns a courier and AWB, and generates a printable shipping label.</p>
+  @if($shipment?->last_error)
+  <p class="text-xs text-rose-600 mb-3">Last attempt failed: {{ $shipment->last_error }}</p>
+  @endif
+  <form method="POST" action="{{ route('seller.orders.shiprocket.store', $order->order_no) }}">
+    @csrf
+    <button type="submit" class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold">{{ $shipment ? 'Retry Shiprocket Shipment' : 'Ship via Shiprocket' }}</button>
+  </form>
+  @endif
+</div>
+
 <div class="bg-white rounded-2xl border border-ink-200/70 p-5">
   <div class="font-bold text-ink-900 mb-1">Shipping &amp; Billing Documents</div>
   <p class="text-xs text-ink-400 mb-4">Print the packing slip to attach to the parcel when you hand it to the courier.</p>

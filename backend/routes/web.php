@@ -96,6 +96,7 @@ Route::prefix('seller')->name('seller.')->group(function () {
         Route::get('orders/{order}/packing-slip', [SellerOrderController::class, 'packingSlip'])->name('orders.packing-slip');
         Route::post('orders/{order}/invoice', [SellerOrderController::class, 'generateInvoice'])->name('orders.invoice.store');
         Route::get('orders/{order}/invoice', [SellerOrderController::class, 'invoicePdf'])->name('orders.invoice.pdf');
+        Route::post('orders/{order}/shiprocket', [SellerOrderController::class, 'shipViaShiprocket'])->name('orders.shiprocket.store');
 
         Route::get('warehouse', [SellerWarehouseController::class, 'index'])->name('warehouse');
         Route::post('warehouse/shipments', [SellerWarehouseController::class, 'storeShipment'])->name('warehouse.shipments.store');
