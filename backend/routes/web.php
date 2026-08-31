@@ -92,6 +92,10 @@ Route::prefix('seller')->name('seller.')->group(function () {
         Route::delete('products/{product:product_code}/specs/{spec}', [SellerProductController::class, 'destroySpec'])->name('products.specs.destroy');
 
         Route::get('orders', [SellerOrderController::class, 'index'])->name('orders');
+        Route::get('orders/{order}', [SellerOrderController::class, 'show'])->name('orders.show');
+        Route::get('orders/{order}/packing-slip', [SellerOrderController::class, 'packingSlip'])->name('orders.packing-slip');
+        Route::post('orders/{order}/invoice', [SellerOrderController::class, 'generateInvoice'])->name('orders.invoice.store');
+        Route::get('orders/{order}/invoice', [SellerOrderController::class, 'invoicePdf'])->name('orders.invoice.pdf');
 
         Route::get('warehouse', [SellerWarehouseController::class, 'index'])->name('warehouse');
         Route::post('warehouse/shipments', [SellerWarehouseController::class, 'storeShipment'])->name('warehouse.shipments.store');

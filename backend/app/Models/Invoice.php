@@ -61,4 +61,81 @@ class Invoice extends Model
             return sprintf('%s/%s/%05d', $prefix, $year, $count + 1);
         });
     }
+
+    /**
+     * Generates the invoice for an order, or simply returns the one that
+     * already exists — invoice numbers are sequential and must never be
+     * reused or skipped, so re-generating on every click would be wrong.
+     * Shared by the admin console and the seller panel (for single-seller
+     * orders) so both call the exact same snapshot logic.
+     */
+    public static function generateForOrder(Order $order, ?int $createdByUserId = null): self
+    {
+        if ($order->invoice) {
+            return $order->invoice;
+        }
+
+        $order->loadMissing(['customer', 'address']);
+        $settings = AppSetting::current();
+        $address = $order->address;
+
+        return static::create([
+            'invoice_number' => static::nextNumber(),
+            'order_id' => $order->id,
+            'customer_id' => $order->customer_id,
+            'created_by_user_id' => $createdByUserId,
+
+            'business_name' => $settings->business_name,
+            'business_gst_number' => $settings->gst_number,
+            'business_address' => $settings->registered_address,
+
+            'billing_name' => $address?->contact_name ?: $order->customer->name,
+            'billing_gst_number' => $order->gst_number ?: $address?->gst_number,
+            'billing_address' => $address ? "{$address->line}, {$address->city}, {$address->state} - {$address->pincode}" : null,
+            'billing_email' => $order->customer_email ?: $order->customer->email,
+            'billing_phone' => $order->customer->phone,
+
+            'subtotal' => $order->subtotal,
+            'discount' => $order->discount,
+            'gst_amount' => $order->gst_amount,
+            'delivery_charge' => $order->delivery_charge,
+            'total' => $order->total,
+
+            'issued_at' => now(),
+        ]);
+    }
+
+    /**
+     * Per-line breakdown for the PDF/API: each order item's share of the
+     * order-level discount (prorated by revenue, matching CartCalculator),
+     * taxed at that specific product's own effective GST rate.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function lineItems(): array
+    {
+        $order = $this->order;
+        $order->loadMissing(['items.product.hsnCode', 'items.productVariant']);
+        $taxableBase = (float) $order->subtotal - (float) $order->discount;
+
+        return $order->items->map(function (OrderItem $item) use ($order, $taxableBase) {
+            $lineTotal = (float) $item->line_total;
+            $lineShare = (float) $order->subtotal > 0 ? $lineTotal / (float) $order->subtotal : 0;
+            $lineTaxable = round($lineShare * $taxableBase, 2);
+            $gstRate = $item->product?->effectiveGstRate() ?? 0;
+            $lineGst = round($lineTaxable * ($gstRate / 100), 2);
+
+            return [
+                'product' => $item->product->name ?? 'Product removed',
+                'variant' => $item->variant_label,
+                'hsnCode' => $item->product?->hsnCode?->code,
+                'quantity' => $item->quantity,
+                'unitPrice' => (float) $item->unit_price,
+                'taxableValue' => $lineTaxable,
+                'gstRate' => (float) $gstRate,
+                'gstAmount' => $lineGst,
+                'lineTotal' => round($lineTaxable + $lineGst, 2),
+            ];
+        })->all();
+    }
 }

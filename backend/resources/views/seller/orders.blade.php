@@ -15,8 +15,8 @@
     </tr></thead>
     <tbody>
       @foreach($items as $item)
-      <tr class="border-b border-ink-100 last:border-0">
-        <td class="py-2.5">{{ $item->order->order_no }}</td>
+      <tr class="border-b border-ink-100 last:border-0 hover:bg-ink-50 cursor-pointer" onclick="window.location='{{ route('seller.orders.show', $item->order->order_no) }}'">
+        <td class="py-2.5 text-brand-700 font-medium">{{ $item->order->order_no }}</td>
         <td>
           <div class="font-medium text-ink-900">{{ $item->order->address->contact_name ?? $item->order->customer->name ?? 'Guest' }}</div>
           <div class="text-xs text-ink-400">{{ $item->order->customer->phone ?? $item->order->customer->email ?? '' }}</div>
