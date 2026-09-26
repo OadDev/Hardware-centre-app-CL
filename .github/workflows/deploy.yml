@@ -9,6 +9,10 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # The repo is private, so the server authenticates its fetch with this
+    # job's short-lived GITHUB_TOKEN (read-only, expires when the job ends).
+    permissions:
+      contents: read
     steps:
       - name: Install sshpass
         run: sudo apt-get update -y && sudo apt-get install -y sshpass
@@ -32,10 +36,14 @@ jobs:
             APP_DIR="$HOME/domains/hardwarecenters.com/app"
             BRANCH="claude/android-ios-app-functional-q69j7k"
             REPO_URL="https://github.com/OadDev/Hardware-centre-app-CL.git"
+            AUTH_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/OadDev/Hardware-centre-app-CL.git"
+            # Fetch via the authenticated URL directly so the token is never
+            # saved into the checkout'\''s git config.
+            fetch_branch() { git fetch "$AUTH_URL" "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"; }
 
             if [ -d "$APP_DIR/.git" ]; then
               cd "$APP_DIR"
-              git fetch origin "$BRANCH"
+              fetch_branch
               git reset --hard "origin/$BRANCH"
             elif [ -d "$APP_DIR" ]; then
               # $APP_DIR exists but isn'\''t a git checkout (e.g. its .git got
@@ -48,11 +56,12 @@ jobs:
               cd "$APP_DIR"
               git init
               git remote add origin "$REPO_URL" 2>/dev/null || git remote set-url origin "$REPO_URL"
-              git fetch origin "$BRANCH"
+              fetch_branch
               git symbolic-ref HEAD "refs/heads/$BRANCH"
               git reset --hard "origin/$BRANCH"
             else
-              git clone --branch "$BRANCH" --single-branch "$REPO_URL" "$APP_DIR"
+              git clone --branch "$BRANCH" --single-branch "$AUTH_URL" "$APP_DIR"
+              git -C "$APP_DIR" remote set-url origin "$REPO_URL"
             fi
 
             bash "$APP_DIR/scripts/deploy.sh"
