@@ -58,6 +58,7 @@ type AppContextValue = {
   verifyOtp: (contact: string, otp: string, channel: OtpChannel) => Promise<boolean>;
   enterAsGuest: () => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<boolean>;
   updateProfile: (payload: { name: string; business_name?: string; city?: string; state?: string }) => Promise<boolean>;
 
   addToCart: (id: string, q?: number, variantId?: string) => Promise<void>;
@@ -292,17 +293,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [loadUserData, showToast, registerPush]);
 
-  const logout = useCallback(async () => {
-    try {
-      await PushApi.unregister();
-    } catch {
-      // best-effort
-    }
-    try {
-      await AuthApi.logout();
-    } catch {
-      // best-effort; proceed to clear local session regardless
-    }
+  const clearSession = useCallback(async () => {
     await setToken(null);
     setCustomer(null);
     setSession(null);
@@ -317,6 +308,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setCouponCodeState('');
     setCouponTotals(null);
   }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await PushApi.unregister();
+    } catch {
+      // best-effort
+    }
+    try {
+      await AuthApi.logout();
+    } catch {
+      // best-effort; proceed to clear local session regardless
+    }
+    await clearSession();
+  }, [clearSession]);
+
+  const deleteAccount = useCallback(async (): Promise<boolean> => {
+    try {
+      await AuthApi.deleteAccount();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not delete your account');
+      return false;
+    }
+    // The server already revoked every token and cleared the push player id.
+    await clearSession();
+    return true;
+  }, [clearSession, showToast]);
 
   const resetCoupon = useCallback(() => {
     setCouponApplied(false);
@@ -569,6 +586,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     verifyOtp,
     enterAsGuest,
     logout,
+    deleteAccount,
     updateProfile,
     addToCart,
     incCart,

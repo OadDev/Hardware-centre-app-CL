@@ -1,0 +1,48 @@
+name: iOS App Store release
+
+# Builds the iOS app on EAS (Expo's cloud Macs) and submits it to App Store
+# Connect / TestFlight. Run it manually from the Actions tab.
+#
+# One-time setup (see the release instructions): run
+# `eas build -p ios --profile production --auto-submit` interactively once so
+# EAS creates and stores the signing certificate, provisioning profiles and an
+# App Store Connect API key, then add:
+#   - secret   EXPO_TOKEN  (expo.dev > Account settings > Access tokens)
+#   - variable ASC_APP_ID  (App Store Connect > App > App Information > Apple ID)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  build-and-submit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci
+
+      - name: Point submit profile at the App Store Connect app
+        env:
+          ASC_APP_ID: ${{ vars.ASC_APP_ID }}
+        run: |
+          if [ -z "$ASC_APP_ID" ]; then
+            echo "::error::Set the ASC_APP_ID repository variable (Settings > Secrets and variables > Actions > Variables)."
+            exit 1
+          fi
+          jq --arg id "$ASC_APP_ID" '.submit.production.ios.ascAppId = $id' eas.json > eas.tmp.json
+          mv eas.tmp.json eas.json
+
+      # --no-wait: the build and submission continue on Expo's servers, so
+      # this job finishes in about a minute. Progress is shown on expo.dev.
+      - name: Build and submit
+        run: eas build --platform ios --profile production --non-interactive --auto-submit --no-wait

@@ -9,9 +9,12 @@
     "userInterfaceStyle": "light",
     "backgroundColor": "#1F2937",
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "in.hardwarecentre.app",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "in.hardwarecentre.app",

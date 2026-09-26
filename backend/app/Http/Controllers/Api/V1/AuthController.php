@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Services\NotificationService;
 use App\Services\OtpService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
@@ -154,5 +155,60 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(['message' => 'Logged out.']);
+    }
+
+    /**
+     * In-app account deletion (required by App Store guideline 5.1.1(v)).
+     *
+     * Customers with no order history are removed outright. Orders, returns
+     * and GST invoices must be kept for tax/accounting records (and orders
+     * restrict deletion of their customer), so a customer who has ordered is
+     * anonymised instead: personal details are scrubbed, every login token is
+     * revoked, and wishlist/cart/reviews/unused addresses are deleted. The
+     * freed phone/email can be used to sign up again as a brand-new account.
+     */
+    public function destroyMe(Request $request)
+    {
+        /** @var Customer $customer */
+        $customer = $request->user();
+
+        DB::transaction(function () use ($customer) {
+            $customer->tokens()->delete();
+
+            if (! $customer->orders()->exists() && ! DB::table('returns')->where('customer_id', $customer->id)->exists()) {
+                $customer->delete();
+
+                return;
+            }
+
+            $customer->wishlist()->delete();
+            $customer->cartItems()->delete();
+            $customer->reviews()->delete();
+            DB::table('abandoned_carts')->where('customer_id', $customer->id)->delete();
+
+            // Addresses referenced by an order are still needed to ship and
+            // invoice it, so only the unused ones are removed.
+            $customer->addresses()
+                ->whereNotIn('id', $customer->orders()->whereNotNull('address_id')->select('address_id'))
+                ->delete();
+
+            $customer->forceFill([
+                'name' => 'Deleted Customer',
+                'email' => 'deleted_'.$customer->id.'@deleted.hardwarecentre.in',
+                'phone' => null,
+                'password' => null,
+                'business_name' => null,
+                'gst_number' => null,
+                'city' => null,
+                'state' => null,
+                'onesignal_player_id' => null,
+                'status' => 'Blocked',
+                'email_verified_at' => null,
+                'phone_verified_at' => null,
+                'remember_token' => null,
+            ])->save();
+        });
+
+        return response()->json(['message' => 'Your account has been deleted.']);
     }
 }

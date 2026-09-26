@@ -40,6 +40,7 @@ export const AuthApi = {
   updateMe: async (payload: { name: string; business_name?: string; city?: string; state?: string }) =>
     (await http.patch<{ data: Customer }>('/me', payload)).data,
   logout: () => http.post<{ message: string }>('/logout'),
+  deleteAccount: () => http.delete<{ message: string }>('/me'),
 };
 
 export const PushApi = {
