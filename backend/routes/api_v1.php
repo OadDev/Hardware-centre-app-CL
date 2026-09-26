@@ -46,6 +46,7 @@ Route::middleware('customer.optional')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('me', [AuthController::class, 'me']);
     Route::patch('me', [AuthController::class, 'updateMe']);
+    Route::delete('me', [AuthController::class, 'destroyMe']);
     Route::post('logout', [AuthController::class, 'logout']);
 
     Route::post('push/register', [PushController::class, 'register']);

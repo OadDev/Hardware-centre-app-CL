@@ -89,6 +89,7 @@ $address = $settings->registered_address;
       <ul>
         <li>You can review and update your account details (name, addresses, business details) at any time from your profile.</li>
         <li>You can opt out of promotional SMS/email/push notifications while continuing to receive essential order and delivery updates.</li>
+        <li>You can delete your account at any time from the Hardware Centers app under Profile &rarr; Delete Account. This removes your profile details, saved addresses, wishlist, cart and reviews; past orders and invoices are kept in anonymised form where Indian tax law requires it.</li>
         <li>You can request a copy of the personal data we hold about you, or request that your account be deleted, by contacting us using the details below.</li>
       </ul>
 

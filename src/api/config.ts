@@ -12,3 +12,9 @@ const DEV_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 const DEFAULT_DEV_URL = `http://${DEV_HOST}:8000/api/v1`;
 
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || DEFAULT_DEV_URL;
+
+// Public website pages linked from the Profile screen (required for App Store
+// review). Derived from the API URL so they follow the deployed backend.
+const WEB_BASE_URL = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
+export const PRIVACY_POLICY_URL = `${WEB_BASE_URL}/privacy-policy`;
+export const TERMS_URL = `${WEB_BASE_URL}/terms-of-service`;

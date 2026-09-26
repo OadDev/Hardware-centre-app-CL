@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { useApp } from '../context/AppContext';
 import { colors, fonts, radii } from '../theme/theme';
 import { inr } from '../utils/format';
 import { PrimaryButton } from '../components/UI';
+import { PRIVACY_POLICY_URL, TERMS_URL } from '../api/config';
 import {
   IconAddress,
   IconChevronRight,
@@ -24,7 +25,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ProfileScreen() {
   const navigation = useNavigation<Nav>();
-  const { user, orders, wishlist, logout, showToast, updateProfile } = useApp();
+  const { user, orders, wishlist, logout, deleteAccount, showToast, updateProfile } = useApp();
   const [showEdit, setShowEdit] = useState(false);
   const [form, setForm] = useState({ name: user.name, business_name: user.businessName, city: user.city, state: user.state });
   const [saving, setSaving] = useState(false);
@@ -34,6 +35,26 @@ export default function ProfileScreen() {
   const onLogout = async () => {
     await logout();
     navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
+  };
+
+  const onDeleteAccount = () => {
+    Alert.alert(
+      'Delete account?',
+      'This permanently deletes your account, saved addresses, wishlist and cart. Past orders and invoices are kept anonymised for tax records. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (await deleteAccount()) {
+              showToast('Your account has been deleted');
+              navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
+            }
+          },
+        },
+      ],
+    );
   };
 
   const openEdit = () => {
@@ -67,6 +88,8 @@ export default function ProfileScreen() {
   const menuSecondary = [
     { icon: <IconOrders size={19} />, label: 'Notifications', onPress: () => showToast('No new notifications') },
     { icon: <IconHelp />, label: 'Help & Support', onPress: () => Linking.openURL('mailto:help@hardwarecentre.in') },
+    { icon: <IconHelp />, label: 'Privacy Policy', onPress: () => Linking.openURL(PRIVACY_POLICY_URL) },
+    { icon: <IconHelp />, label: 'Terms of Service', onPress: () => Linking.openURL(TERMS_URL) },
   ];
 
   return (
@@ -133,6 +156,11 @@ export default function ProfileScreen() {
           <IconLogout />
           <Text style={styles.logoutText}>Logout</Text>
         </Pressable>
+        {!user.isGuest && (
+          <Pressable style={styles.deleteBtn} onPress={onDeleteAccount}>
+            <Text style={styles.deleteText}>Delete Account</Text>
+          </Pressable>
+        )}
         <Text style={styles.version}>Hardware Centers · Version 1.0.0</Text>
       </ScrollView>
 
@@ -234,6 +262,8 @@ const styles = StyleSheet.create({
     gap: 9,
   },
   logoutText: { fontSize: 14.5, fontFamily: fonts.bodyBold, color: colors.danger },
+  deleteBtn: { marginHorizontal: 20, marginTop: 10, height: 44, alignItems: 'center', justifyContent: 'center' },
+  deleteText: { fontSize: 13, fontFamily: fonts.bodySemibold, color: colors.textMuted, textDecorationLine: 'underline' },
   version: { textAlign: 'center', marginTop: 18, fontSize: 11, color: colors.textFaint },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(15,20,28,0.5)', justifyContent: 'flex-end' },
   modalSheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
