@@ -39,10 +39,15 @@ class ProductController extends Controller
             $query->whereHas('seller', fn ($s) => $s->where('store_name', $supplier));
         }
 
+        if ($tag = $request->query('tag')) {
+            $query->where('tag', $tag);
+        }
+
         match ($request->query('sort', 'pop')) {
             'low' => $query->orderBy('price'),
             'high' => $query->orderByDesc('price'),
             'rating' => $query->orderByDesc('rating'),
+            'trending' => $query->orderByDesc('sold_count'),
             default => $query->orderByDesc('reviews_count'),
         };
 

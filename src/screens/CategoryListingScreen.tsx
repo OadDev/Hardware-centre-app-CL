@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/types';
@@ -165,7 +165,11 @@ export default function CategoryListingScreen({ navigation, route }: Props) {
               const off = discountPct(p.price, p.mrp);
               return (
                 <Pressable key={p.id} style={styles.listRow} onPress={() => navigation.navigate('ProductDetail', { id: p.id })}>
-                  <PlaceholderImage seed={p.id} label={p.brand} radius={12} style={styles.listImage} />
+                  {p.images?.[0] ? (
+                    <Image source={{ uri: p.images[0] }} style={styles.listImage} resizeMode="cover" />
+                  ) : (
+                    <PlaceholderImage seed={p.id} label={p.brand} radius={12} style={styles.listImage} />
+                  )}
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={styles.listBrand}>{p.brand.toUpperCase()}</Text>
                     <Text style={styles.listName} numberOfLines={1}>{p.name}</Text>
@@ -249,7 +253,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     ...shadow.card,
   },
-  listImage: { width: 96, height: 96 },
+  listImage: { width: 96, height: 96, borderRadius: 12 },
   listBrand: { fontSize: 10, fontFamily: fonts.bodyBold, color: colors.textFaint, letterSpacing: 0.5 },
   listName: { fontSize: 13.5, fontFamily: fonts.bodySemibold, color: colors.text, marginTop: 2 },
   listRatingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5 },

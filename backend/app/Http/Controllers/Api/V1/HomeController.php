@@ -28,7 +28,12 @@ class HomeController extends Controller
             'trending' => ProductResource::collection((clone $base)->orderByDesc('sold_count')->limit(4)->get()),
             'recommended' => ProductResource::collection((clone $base)->orderByDesc('rating')->limit(4)->get()),
             'suppliers' => SellerResource::collection(Seller::where('account_status', 'Active')->orderByDesc('rating')->limit(3)->get()),
-            'brands' => Brand::where('status', 'Active')->orderByDesc('featured')->orderBy('name')->limit(8)->pluck('name'),
+            'brands' => Brand::where('status', 'Active')->orderByDesc('featured')->orderBy('name')->limit(8)->get()
+                ->map(fn (Brand $b) => [
+                    'id' => $b->brand_code,
+                    'name' => $b->name,
+                    'logo_url' => $b->logo_url,
+                ]),
         ]);
     }
 }

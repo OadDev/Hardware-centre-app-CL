@@ -56,9 +56,9 @@ export type Category = {
 
 export type Banner = {
   id: number;
-  badge: string;
-  title: string;
-  sub: string;
+  badge: string | null;
+  title: string | null;
+  sub: string | null;
   bg: string;
   image_url: string | null;
   type: string;
@@ -161,6 +161,7 @@ export type ShippingOptions = {
 export type CartItemVariant = {
   id: string;
   label: string;
+  image: string | null;
   price: number;
   stock: number;
 };
@@ -200,6 +201,12 @@ export type ProductDetail = {
   contact_number: string | null;
 };
 
+export type FeaturedBrand = {
+  id: string;
+  name: string;
+  logo_url: string | null;
+};
+
 export type HomeData = {
   banners: Banner[];
   categories: Category[];
@@ -208,7 +215,7 @@ export type HomeData = {
   trending: Product[];
   recommended: Product[];
   suppliers: Supplier[];
-  brands: string[];
+  brands: FeaturedBrand[];
 };
 
 export type CategoryProducts = {

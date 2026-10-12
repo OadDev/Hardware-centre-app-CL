@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/types';
@@ -9,6 +9,7 @@ import { inr } from '../utils/format';
 import { BackButton } from '../components/UI';
 import { IconPlus } from '../components/Icons';
 import AddressFormModal from '../components/AddressFormModal';
+import PlaceholderImage from '../components/PlaceholderImage';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Checkout'>;
 
@@ -164,6 +165,27 @@ export default function CheckoutScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.h2}>Items ({cart.items.length})</Text>
+          <View style={{ gap: 11 }}>
+            {cart.items.map(({ product, variant, quantity, line_total }) => (
+              <View key={product.id + (variant?.id ?? '')} style={styles.itemRow}>
+                {(variant?.image ?? product.images?.[0]) ? (
+                  <Image source={{ uri: variant?.image ?? product.images[0] }} style={styles.itemImage} resizeMode="cover" />
+                ) : (
+                  <PlaceholderImage seed={product.id} label={product.brand} radius={10} style={styles.itemImage} />
+                )}
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.itemName} numberOfLines={2}>{product.name}</Text>
+                  {!!variant && <Text style={styles.itemVariant}>{variant.label}</Text>}
+                  <Text style={styles.itemQty}>Qty {quantity}</Text>
+                </View>
+                <Text style={styles.itemPrice}>{inr(line_total)}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.h2}>Order Summary</Text>
           <View style={styles.summaryBox}>
             <View style={styles.summaryRow}>
@@ -236,6 +258,21 @@ const styles = StyleSheet.create({
   topTitle: { fontSize: 18, fontFamily: fonts.bodyBold, color: colors.text, letterSpacing: -0.2 },
   section: { paddingHorizontal: 20, paddingTop: 24 },
   h2: { fontSize: 15, fontFamily: fonts.displayExtra, color: colors.text, marginBottom: 12 },
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    padding: 11,
+    backgroundColor: '#fff',
+  },
+  itemImage: { width: 56, height: 56, borderRadius: 10 },
+  itemName: { fontSize: 13, fontFamily: fonts.bodySemibold, color: colors.text },
+  itemVariant: { fontSize: 11.5, color: colors.textMuted, marginTop: 2 },
+  itemQty: { fontSize: 11.5, color: colors.textFaint, marginTop: 2 },
+  itemPrice: { fontSize: 13.5, fontFamily: fonts.bodyBold, color: colors.text },
   addressCard: { borderWidth: 1.5, borderRadius: radii.lg, padding: 14, flexDirection: 'row', gap: 12 },
   addressTopRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   addressName: { fontSize: 14, fontFamily: fonts.bodyBold, color: colors.text },

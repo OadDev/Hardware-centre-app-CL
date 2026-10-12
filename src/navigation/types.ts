@@ -10,7 +10,8 @@ export type MainTabParamList = {
 
 export type ProductListParams =
   | { title: string; source: 'popular' | 'trending' | 'recommended' | 'deals' }
-  | { title: string; supplier: string };
+  | { title: string; supplier: string }
+  | { title: string; brand: string };
 
 export type RootStackParamList = {
   Splash: undefined;

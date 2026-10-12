@@ -59,18 +59,22 @@ export const OnboardingApi = {
 export const CategoryApi = {
   list: async () => (await http.get<{ data: Category[] }>('/categories')).data,
   products: (icon: string, sort: string = 'pop') =>
-    http.get<CategoryProducts>(`/categories/${encodeURIComponent(icon)}/products?sort=${sort}`),
+    http.get<CategoryProducts>(`/categories/${encodeURIComponent(icon)}/products?sort=${sort}&per_page=50`),
 };
 
 export const ProductApi = {
-  list: async (params: { q?: string; category?: string; sort?: string; supplier?: string } = {}) => {
+  list: async (
+    params: { q?: string; category?: string; sort?: string; supplier?: string; brands?: string; tag?: string; per_page?: number } = {}
+  ) => {
     const qs = new URLSearchParams();
     if (params.q) qs.set('q', params.q);
     if (params.category) qs.set('category', params.category);
     if (params.sort) qs.set('sort', params.sort);
     if (params.supplier) qs.set('supplier', params.supplier);
-    const suffix = qs.toString() ? `?${qs.toString()}` : '';
-    return (await http.get<{ data: Product[] }>(`/products${suffix}`)).data;
+    if (params.brands) qs.set('brands', params.brands);
+    if (params.tag) qs.set('tag', params.tag);
+    qs.set('per_page', String(params.per_page ?? 50));
+    return (await http.get<{ data: Product[] }>(`/products?${qs.toString()}`)).data;
   },
   show: (code: string) => http.get<ProductDetail>(`/products/${encodeURIComponent(code)}`),
 };

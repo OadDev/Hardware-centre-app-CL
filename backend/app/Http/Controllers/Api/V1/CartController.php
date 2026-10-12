@@ -107,6 +107,7 @@ class CartController extends Controller
                 'variant' => $item->productVariant ? [
                     'id' => $item->productVariant->variant_code,
                     'label' => $item->productVariant->label,
+                    'image' => $item->productVariant->image_url,
                     'price' => $item->productVariant->effective_price,
                     'stock' => $item->productVariant->stock,
                 ] : null,

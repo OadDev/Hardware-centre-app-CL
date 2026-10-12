@@ -144,18 +144,31 @@ export default function HomeScreen() {
                 const i = Math.round(e.nativeEvent.contentOffset.x / (SCREEN_W - 40));
                 setBannerIdx(i);
               }}
-              renderItem={({ item }) => (
-                <View style={[styles.banner, { width: SCREEN_W - 40, backgroundColor: item.bg }]}>
-                  {item.image_url && (
-                    <Image source={{ uri: item.image_url }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-                  )}
-                  <View style={styles.bannerOverlay}>
-                    <Text style={styles.bannerBadge}>{item.badge}</Text>
-                    <Text style={styles.bannerTitle}>{item.title}</Text>
-                    <Text style={styles.bannerSub}>{item.sub}</Text>
+              renderItem={({ item }) => {
+                // A "Slider Image" banner (or any banner with no badge/title/
+                // subtitle configured) is meant to stand on its own as a
+                // finished graphic — don't crop it to fill the box and don't
+                // darken it with a text-readability scrim it doesn't need.
+                const hasText = !!(item.badge || item.title || item.sub);
+                return (
+                  <View style={[styles.banner, { width: SCREEN_W - 40, backgroundColor: item.bg }]}>
+                    {item.image_url && (
+                      <Image
+                        source={{ uri: item.image_url }}
+                        style={StyleSheet.absoluteFill}
+                        resizeMode={hasText ? 'cover' : 'contain'}
+                      />
+                    )}
+                    {hasText && (
+                      <View style={styles.bannerOverlay}>
+                        {!!item.badge && <Text style={styles.bannerBadge}>{item.badge}</Text>}
+                        {!!item.title && <Text style={styles.bannerTitle}>{item.title}</Text>}
+                        {!!item.sub && <Text style={styles.bannerSub}>{item.sub}</Text>}
+                      </View>
+                    )}
                   </View>
-                </View>
-              )}
+                );
+              }}
             />
             <View style={styles.bannerDots}>
               {banners.map((_, i) => (
@@ -196,12 +209,20 @@ export default function HomeScreen() {
         <SectionHeader title="Featured Brands" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingLeft: 20 }} contentContainerStyle={{ paddingRight: 20, gap: 11 }}>
           {brands.map((b) => (
-            <View key={b} style={styles.brandCard}>
-              <View style={styles.brandIcon}>
-                <Text style={styles.brandIconText}>{initials(b)}</Text>
-              </View>
-              <Text style={styles.brandName}>{b}</Text>
-            </View>
+            <Pressable
+              key={b.id}
+              style={styles.brandCard}
+              onPress={() => navigation.navigate('ProductList', { title: b.name, brand: b.name })}
+            >
+              {b.logo_url ? (
+                <Image source={{ uri: b.logo_url }} style={styles.brandIcon} resizeMode="contain" />
+              ) : (
+                <View style={[styles.brandIcon, { backgroundColor: colors.bgDark }]}>
+                  <Text style={styles.brandIconText}>{initials(b.name)}</Text>
+                </View>
+              )}
+              <Text style={styles.brandName} numberOfLines={1}>{b.name}</Text>
+            </Pressable>
           ))}
         </ScrollView>
 
@@ -437,7 +458,7 @@ const styles = StyleSheet.create({
     gap: 7,
     ...shadow.card,
   },
-  brandIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: colors.bgDark, alignItems: 'center', justifyContent: 'center' },
+  brandIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   brandIconText: { color: '#fff', fontFamily: fonts.displayExtra, fontSize: 12 },
   brandName: { fontSize: 10, fontFamily: fonts.bodySemibold, color: colors.textMuted },
   dealsCard: {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -48,7 +48,11 @@ export default function CartScreen() {
           <View style={styles.itemsWrap}>
             {items.map(({ product, variant, id, variantId, q, lineTotal }) => (
               <View key={id + (variantId ?? '')} style={styles.itemRow}>
-                <PlaceholderImage seed={product.id} label={product.brand} radius={12} style={styles.itemImage} />
+                {(variant?.image ?? product.images?.[0]) ? (
+                  <Image source={{ uri: variant?.image ?? product.images[0] }} style={styles.itemImage} resizeMode="cover" />
+                ) : (
+                  <PlaceholderImage seed={product.id} label={product.brand} radius={12} style={styles.itemImage} />
+                )}
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={styles.itemTopRow}>
                     <View style={{ minWidth: 0, flex: 1 }}>
@@ -158,7 +162,7 @@ const styles = StyleSheet.create({
   emptySub: { fontSize: 13.5, color: colors.textMuted, marginTop: 8, textAlign: 'center', lineHeight: 20 },
   itemsWrap: { padding: 20, paddingBottom: 8, gap: 12 },
   itemRow: { flexDirection: 'row', gap: 12, borderWidth: 1, borderColor: colors.border, borderRadius: radii.xl, padding: 11, backgroundColor: '#fff' },
-  itemImage: { width: 82, height: 82 },
+  itemImage: { width: 82, height: 82, borderRadius: 12 },
   itemTopRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
   itemBrand: { fontSize: 10, fontFamily: fonts.bodyBold, color: colors.textFaint, letterSpacing: 0.5 },
   itemName: { fontSize: 13, fontFamily: fonts.bodySemibold, color: colors.text, lineHeight: 18, marginTop: 2 },
