@@ -1,0 +1,58 @@
+name: Android AAB build
+
+# Builds a Play Store-ready Android App Bundle (.aab) on EAS (Expo's cloud
+# build service) using the "production" profile (app-bundle, pointed at the
+# real production API — see eas.json), then downloads the finished AAB and
+# attaches it to this run as a downloadable artifact. Run it manually from
+# the Actions tab.
+#
+# One-time setup: add a repo secret EXPO_TOKEN (expo.dev > Account settings >
+# Access tokens). If this repo's Expo project hasn't been linked yet, the
+# `eas init` step below links/creates one automatically.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci
+
+      - name: Link EAS project if not already linked
+        run: eas init --non-interactive || true
+
+      - name: Build Android AAB
+        run: eas build --platform android --profile production --non-interactive --wait --json > build-result.json
+
+      - name: Extract AAB download URL
+        id: aab
+        run: |
+          URL=$(jq -r '.[0].artifacts.buildUrl' build-result.json)
+          if [ -z "$URL" ] || [ "$URL" = "null" ]; then
+            echo "::error::No buildUrl in EAS build result — check build-result.json for the failure reason."
+            cat build-result.json
+            exit 1
+          fi
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Download the AAB
+        run: curl -L -o hardware-centers.aab "${{ steps.aab.outputs.url }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hardware-centers-aab
+          path: hardware-centers.aab
+          retention-days: 14
