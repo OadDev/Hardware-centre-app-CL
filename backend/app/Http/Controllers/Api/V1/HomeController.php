@@ -19,6 +19,7 @@ class HomeController extends Controller
     public function __invoke(Request $request)
     {
         $base = Product::query()->approved()->with(['brand', 'category', 'seller', 'specs', 'images', 'variants.priceTiers']);
+        $featuredBrands = Brand::where('status', 'Active')->orderByDesc('featured')->orderBy('name')->limit(8)->get();
 
         return response()->json([
             'banners' => BannerResource::collection(Banner::where('status', 'Active')->orderBy('sort_order')->get()),
@@ -28,12 +29,17 @@ class HomeController extends Controller
             'trending' => ProductResource::collection((clone $base)->orderByDesc('sold_count')->limit(4)->get()),
             'recommended' => ProductResource::collection((clone $base)->orderByDesc('rating')->limit(4)->get()),
             'suppliers' => SellerResource::collection(Seller::where('account_status', 'Active')->orderByDesc('rating')->limit(3)->get()),
-            'brands' => Brand::where('status', 'Active')->orderByDesc('featured')->orderBy('name')->limit(8)->get()
-                ->map(fn (Brand $b) => [
-                    'id' => $b->brand_code,
-                    'name' => $b->name,
-                    'logo_url' => $b->logo_url,
-                ]),
+            // 'brands' stays a plain string list — it's what every app build
+            // already installed on a real device expects (anything else
+            // crashes HomeScreen's initials() call, which assumes a string).
+            // 'featured_brands' is the richer shape (logo_url, tappable)
+            // added for an app build that hasn't shipped to a device yet.
+            'brands' => $featuredBrands->pluck('name'),
+            'featured_brands' => $featuredBrands->map(fn (Brand $b) => [
+                'id' => $b->brand_code,
+                'name' => $b->name,
+                'logo_url' => $b->logo_url,
+            ]),
         ]);
     }
 }

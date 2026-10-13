@@ -215,7 +215,10 @@ export type HomeData = {
   trending: Product[];
   recommended: Product[];
   suppliers: Supplier[];
-  brands: FeaturedBrand[];
+  // Plain brand names — kept string[] for compatibility with app builds
+  // already on a device. Use featured_brands for the tappable-logo UI.
+  brands: string[];
+  featured_brands: FeaturedBrand[];
 };
 
 export type CategoryProducts = {
