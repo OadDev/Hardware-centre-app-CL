@@ -46,6 +46,12 @@ jobs:
             echo "=== Redis server reachability (raw TCP, no redis-cli needed) ==="
             [ -n "$APP_PHP" ] && "$APP_PHP" -r "var_dump(@fsockopen(\"127.0.0.1\", 6379));"
 
+            echo "=== Outbound TCP on a non-standard port (8.8.8.8:53, sanity check for managed Redis reachability) ==="
+            [ -n "$APP_PHP" ] && "$APP_PHP" -r "var_dump(@fsockopen(\"8.8.8.8\", 53, \$e, \$s, 3));"
+
+            echo "=== Outbound TCP to Upstash default TLS port on a throwaway host (expect refused, not timeout) ==="
+            [ -n "$APP_PHP" ] && "$APP_PHP" -r "\$t0 = microtime(true); \$fp = @fsockopen(\"1.1.1.1\", 6379, \$e, \$s, 3); var_dump(\$fp); echo \"elapsed: \" . round(microtime(true) - \$t0, 2) . \"s\n\";"
+
             echo "=== Is predis installed in vendor? ==="
             ls "$BACKEND_DIR/vendor/predis" 2>&1 || echo "predis not in vendor"
 
