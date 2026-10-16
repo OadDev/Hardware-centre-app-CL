@@ -25,13 +25,32 @@ jobs:
             BACKEND_DIR="$APP_DIR/backend"
             PUBLIC_DIR="$HOME/domains/hardwarecenters.com/public_html"
 
-            echo "=== PHP version ==="
+            echo "=== PHP version (default CLI) ==="
             php -v
 
-            echo "=== Redis availability (extension + server) ==="
-            php -r "var_dump(extension_loaded(\"redis\"));" || true
-            command -v redis-cli >/dev/null 2>&1 && echo "redis-cli found" || echo "no redis-cli on PATH"
-            redis-cli -h 127.0.0.1 -p 6379 ping 2>&1 || echo "no redis server on 127.0.0.1:6379"
+            echo "=== Resolve actual app PHP binary (same logic as deploy.sh) ==="
+            APP_PHP=""
+            for v in 85 84 83 82; do
+              candidate="/opt/alt/php${v}/usr/bin/php"
+              if [ -x "$candidate" ]; then
+                APP_PHP="$candidate"
+                break
+              fi
+            done
+            echo "APP_PHP=$APP_PHP"
+            [ -n "$APP_PHP" ] && "$APP_PHP" -v
+
+            echo "=== Redis extension on app PHP ==="
+            [ -n "$APP_PHP" ] && "$APP_PHP" -r "var_dump(extension_loaded(\"redis\"));" || echo "no app php resolved"
+
+            echo "=== Redis server reachability (raw TCP, no redis-cli needed) ==="
+            [ -n "$APP_PHP" ] && "$APP_PHP" -r "var_dump(@fsockopen(\"127.0.0.1\", 6379));"
+
+            echo "=== Is predis installed in vendor? ==="
+            ls "$BACKEND_DIR/vendor/predis" 2>&1 || echo "predis not in vendor"
+
+            echo "=== Hostinger hPanel Redis hint (cagefs/jailshell check) ==="
+            command -v cagefsctl >/dev/null 2>&1 && echo "cagefsctl present (CageFS/CloudLinux jail active)" || echo "no cagefsctl"
 
             echo "=== public_html listing ==="
             ls -la "$PUBLIC_DIR" || true
