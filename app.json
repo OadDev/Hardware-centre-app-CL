@@ -30,6 +30,12 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "extra": {
+      "eas": {
+        "projectId": "c21924c0-681e-459b-b6df-e86b4682cbe2"
+      }
+    },
+    "owner": "dmdevdutt6",
     "plugins": [
       "expo-font",
       [

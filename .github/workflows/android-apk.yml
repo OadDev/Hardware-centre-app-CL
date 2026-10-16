@@ -6,8 +6,8 @@ name: Android APK build
 # this run as a downloadable artifact. Run it manually from the Actions tab.
 #
 # One-time setup: add a repo secret EXPO_TOKEN (expo.dev > Account settings >
-# Access tokens). If this repo's Expo project hasn't been linked yet, the
-# `eas init` step below links/creates one automatically.
+# Access tokens). The EAS project is linked via extra.eas.projectId in
+# app.json.
 
 on:
   workflow_dispatch: {}
@@ -29,9 +29,6 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - run: npm ci
-
-      - name: Link EAS project if not already linked
-        run: eas init --non-interactive || true
 
       - name: Build Android APK
         run: eas build --platform android --profile preview --non-interactive --wait --json > build-result.json
