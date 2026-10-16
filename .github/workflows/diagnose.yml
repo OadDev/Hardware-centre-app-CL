@@ -28,6 +28,11 @@ jobs:
             echo "=== PHP version ==="
             php -v
 
+            echo "=== Redis availability (extension + server) ==="
+            php -r "var_dump(extension_loaded(\"redis\"));" || true
+            command -v redis-cli >/dev/null 2>&1 && echo "redis-cli found" || echo "no redis-cli on PATH"
+            redis-cli -h 127.0.0.1 -p 6379 ping 2>&1 || echo "no redis server on 127.0.0.1:6379"
+
             echo "=== public_html listing ==="
             ls -la "$PUBLIC_DIR" || true
 
