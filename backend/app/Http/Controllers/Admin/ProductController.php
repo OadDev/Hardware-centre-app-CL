@@ -92,6 +92,41 @@ class ProductController extends Controller
         return response()->json(['message' => 'Product deleted']);
     }
 
+    public function bulkAction(Request $request)
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['string'],
+            'action' => ['required', Rule::in(['activate', 'deactivate', 'archive', 'delete', 'price'])],
+            'price_percent' => ['required_if:action,price', 'numeric'],
+        ]);
+
+        $products = Product::whereIn('product_code', $data['ids'])->get();
+
+        switch ($data['action']) {
+            case 'activate':
+                $products->each->update(['status' => 'Active']);
+                break;
+            case 'deactivate':
+                $products->each->update(['status' => 'Inactive']);
+                break;
+            case 'archive':
+                $products->each->update(['status' => 'Archived']);
+                break;
+            case 'delete':
+                $products->each->delete();
+                break;
+            case 'price':
+                $percent = (float) $data['price_percent'];
+                $products->each(fn (Product $p) => $p->update([
+                    'price' => round((float) $p->price * (1 + $percent / 100), 2),
+                ]));
+                break;
+        }
+
+        return response()->json(['message' => 'Done', 'count' => $products->count()]);
+    }
+
     public function storeImages(Request $request, Product $product)
     {
         $request->validate([
@@ -205,7 +240,10 @@ class ProductController extends Controller
             'stock' => [$required, 'integer', 'min:0'],
             'weight_kg' => ['sometimes', 'nullable', 'numeric', 'min:0.001', 'max:1000'],
             'approval_status' => ['sometimes', Rule::in(['Approved', 'Pending', 'Rejected'])],
+            'status' => ['sometimes', Rule::in(['Active', 'Inactive', 'Archived'])],
             'featured' => ['sometimes', 'boolean'],
+            'is_popular' => ['sometimes', 'boolean'],
+            'is_trending' => ['sometimes', 'boolean'],
             'description' => ['sometimes', 'nullable', 'string'],
             'video_url' => ['sometimes', 'nullable', 'url', 'max:255'],
             'apply_bulk_pricing_to_all_variants' => ['sometimes', 'boolean'],
@@ -249,7 +287,10 @@ class ProductController extends Controller
             'weightKg' => (float) $p->weight_kg,
             'stockStatus' => $p->stock_status,
             'approval' => $p->approval_status,
+            'status' => $p->status,
             'featured' => (bool) $p->featured,
+            'isPopular' => (bool) $p->is_popular,
+            'isTrending' => (bool) $p->is_trending,
             'rating' => (float) $p->rating,
             'sold' => $p->sold_count,
             'images' => $p->images->map(fn (ProductImage $img) => ['id' => $img->id, 'url' => $img->url])->all(),

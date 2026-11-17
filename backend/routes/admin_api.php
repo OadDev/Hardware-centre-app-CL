@@ -34,6 +34,7 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::post('sellers/{seller}/link-razorpay', [SellerController::class, 'linkRazorpay']);
     Route::apiResource('customers', CustomerController::class)->only(['index', 'update']);
     Route::apiResource('products', ProductController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::post('products/bulk-action', [ProductController::class, 'bulkAction']);
     Route::post('products/{product}/images', [ProductController::class, 'storeImages']);
     Route::delete('products/{product}/images/{image}', [ProductController::class, 'destroyImage']);
     Route::post('products/{product}/variants', [ProductController::class, 'storeVariant']);

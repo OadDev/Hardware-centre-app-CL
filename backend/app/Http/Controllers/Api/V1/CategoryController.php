@@ -13,9 +13,21 @@ class CategoryController extends Controller
 {
     public function index()
     {
-        return CategoryResource::collection(
-            Category::with('parent')->where('status', 'Active')->orderBy('sort_order')->get()
-        );
+        $categories = Category::with('parent')->where('status', 'Active')->orderBy('sort_order')
+            ->withCount(['products' => fn ($q) => $q->approved()])
+            ->get();
+
+        // A top-level category's own products_count only counts rows
+        // assigned directly to it, but products actually live under its
+        // subcategories — fold each category's children's counts into its
+        // own so "Electrical" doesn't show 0 while its subcategories have
+        // all the real products.
+        $categories->each(function (Category $cat) use ($categories) {
+            $children = $categories->where('parent_id', $cat->id);
+            $cat->products_count += $children->sum('products_count');
+        });
+
+        return CategoryResource::collection($categories);
     }
 
     public function products(Request $request, Category $category)
@@ -25,7 +37,7 @@ class CategoryController extends Controller
 
         $query = Product::query()->approved()
             ->with(['brand', 'category', 'seller', 'specs', 'images', 'variants.priceTiers'])
-            ->where('category_id', $category->id);
+            ->whereIn('category_id', $category->selfAndDescendantIds());
 
         match ($sort) {
             'low' => $query->orderBy('price'),

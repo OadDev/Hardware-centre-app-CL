@@ -14,11 +14,24 @@ class HomeController extends Controller
     {
         $base = Product::query()->approved()->with(['brand', 'category', 'images']);
 
+        // Popular/Trending are admin-curated via is_popular/is_trending
+        // (Admin > Product Management) — only falling back to the old
+        // auto-ranked order if the admin hasn't picked anything yet, so the
+        // homepage is never empty.
+        $popular = (clone $base)->where('is_popular', true)->limit(6)->get();
+        if ($popular->isEmpty()) {
+            $popular = (clone $base)->orderByDesc('reviews_count')->limit(6)->get();
+        }
+        $trending = (clone $base)->where('is_trending', true)->limit(8)->get();
+        if ($trending->isEmpty()) {
+            $trending = (clone $base)->orderByDesc('sold_count')->limit(8)->get();
+        }
+
         return view('web.home', [
             'banners' => Banner::where('status', 'Active')->orderBy('sort_order')->get(),
-            'popular' => (clone $base)->orderByDesc('reviews_count')->limit(6)->get(),
+            'popular' => $popular,
             'deals' => (clone $base)->where('tag', 'Deal')->orderByDesc('rating')->limit(4)->get(),
-            'trending' => (clone $base)->orderByDesc('sold_count')->limit(8)->get(),
+            'trending' => $trending,
             'suppliers' => Seller::where('account_status', 'Active')->orderByDesc('rating')->limit(3)->get(),
             'brands' => Brand::where('status', 'Active')->orderByDesc('featured')->orderBy('name')->limit(12)->get(),
         ]);

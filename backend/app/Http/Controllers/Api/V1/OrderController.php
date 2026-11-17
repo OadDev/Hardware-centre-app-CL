@@ -89,10 +89,10 @@ class OrderController extends Controller
 
         $subtotalPreview = $items->sum(fn ($item) => $item->unit_price * $item->quantity);
         $weightKg = ShippingCalculator::weightFor($items);
-        $shipping = ShippingCalculator::resolve($data['shipping_method'], $address?->state, $subtotalPreview, $weightKg, $items->sum('quantity'));
+        $shipping = ShippingCalculator::resolve($data['shipping_method'], $address?->state, $subtotalPreview, $weightKg, $items->sum('quantity'), null, $address?->city, $address?->pincode);
         abort_unless($shipping['available'], 422, ucfirst($data['shipping_method']).' delivery is not available for this address.');
 
-        $totals = CartCalculator::totals($items, $coupon, $data['payment_method'], $data['shipping_method'], $address?->state);
+        $totals = CartCalculator::totals($items, $coupon, $data['payment_method'], $data['shipping_method'], $address?->state, $address?->city, $address?->pincode);
 
         $order = Order::create([
             'order_no' => 'HC-'.now()->format('Y').'-'.str_pad((string) (Order::count() + 501), 5, '0', STR_PAD_LEFT),

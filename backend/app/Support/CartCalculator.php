@@ -13,7 +13,7 @@ class CartCalculator
     /**
      * @param  Collection<int, CartItem>  $items
      */
-    public static function totals(Collection $items, ?Coupon $coupon = null, ?string $paymentMethod = null, ?string $shippingMethod = 'standard', ?string $state = null): array
+    public static function totals(Collection $items, ?Coupon $coupon = null, ?string $paymentMethod = null, ?string $shippingMethod = 'standard', ?string $state = null, ?string $city = null, ?string $pincode = null): array
     {
         $subtotal = $items->sum(fn ($item) => $item->unit_price * $item->quantity);
         $count = $items->sum('quantity');
@@ -49,7 +49,7 @@ class CartCalculator
         if ($subtotal <= 0) {
             $shipping = ['charge' => 0.0, 'etaDays' => 0, 'available' => true];
         } else {
-            $shipping = ShippingCalculator::resolve($shippingMethod, $state, $subtotal, $weightKg, $count, $shippingConfig);
+            $shipping = ShippingCalculator::resolve($shippingMethod, $state, $subtotal, $weightKg, $count, $shippingConfig, $city, $pincode);
         }
         $delivery = $shipping['charge'];
 

@@ -606,7 +606,7 @@ function integrationCard({ name, logo, fields, sandboxToggle=true, enabled=true,
 
 /* ---------------- GENERIC DATA TABLE ---------------- */
 function renderDataTable(containerId, config) {
-  const state = { page: 1, search: '', filters: {} };
+  const state = { page: 1, search: '', filters: {}, selected: new Set() };
   config.filters?.forEach(f => state.filters[f.key] = 'All');
   const pageSize = config.pageSize || 8;
 
@@ -615,6 +615,17 @@ function renderDataTable(containerId, config) {
     if (state.search) { const q = state.search.toLowerCase(); rows = rows.filter(r => (config.searchKeys||[]).some(k => String(r[k]||'').toLowerCase().includes(q))); }
     config.filters?.forEach(f => { if (state.filters[f.key] !== 'All') rows = rows.filter(r => String(r[f.key]) === state.filters[f.key]); });
     return rows;
+  }
+
+  function renderBulkBar() {
+    if (!config.selectable) return '';
+    const n = state.selected.size;
+    return `<div class="px-5 pb-3 flex flex-wrap items-center gap-2 ${n ? '' : 'opacity-50 pointer-events-none'}">
+      <span class="text-xs font-semibold text-ink-500">${n} selected</span>
+      ${(config.bulkActions||[]).map(a => `<button data-bulk-action="${a.key}" class="px-3 py-1.5 text-xs font-medium rounded-lg border ${a.danger ? 'border-rose-200 text-rose-600 dark:border-rose-500/30' : 'border-ink-200 dark:border-ink-700 text-ink-600 dark:text-ink-300'}">${a.label}</button>`).join('')}
+      ${config.bulkActions?.some(a=>a.key==='price') ? `<input id="${containerId}-bulk-price-percent" type="number" step="0.1" placeholder="% e.g. 10 or -5" class="w-32 px-2.5 py-1.5 text-xs rounded-lg border border-ink-200 dark:border-ink-700 dark:bg-ink-800 dark:text-white">` : ''}
+      <button data-bulk-clear class="px-2 py-1.5 text-xs text-ink-400">Clear</button>
+    </div>`;
   }
 
   function renderTable() {
@@ -637,12 +648,19 @@ function renderDataTable(containerId, config) {
         </div>
         ${(config.filters||[]).map(f => `<select data-filter-key="${f.key}" class="px-3 py-2 text-sm rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-800 text-ink-600 dark:text-ink-300 focus-ring"><option value="All">${f.label}: All</option>${f.options.map(o => `<option value="${o}" ${state.filters[f.key]===o?'selected':''}>${o}</option>`).join('')}</select>`).join('')}
       </div>
+      ${renderBulkBar()}
       <div class="overflow-x-auto">
         <table class="w-full text-sm data-table">
-          <thead><tr class="text-left text-xs text-ink-400 border-t border-ink-100 dark:border-ink-800">${config.columns.map((c,i) => `<th class="font-medium py-2.5 ${i===0?'px-5':'px-3'} whitespace-nowrap">${c.label}</th>`).join('')}</tr></thead>
+          <thead><tr class="text-left text-xs text-ink-400 border-t border-ink-100 dark:border-ink-800">
+            ${config.selectable ? `<th class="py-2.5 px-5 w-8"><input type="checkbox" id="${containerId}-select-all"></th>` : ''}
+            ${config.columns.map((c,i) => `<th class="font-medium py-2.5 ${i===0 && !config.selectable?'px-5':'px-3'} whitespace-nowrap">${c.label}</th>`).join('')}
+          </tr></thead>
           <tbody>
-            ${pageRows.length === 0 ? `<tr><td colspan="${config.columns.length}" class="py-12 text-center"><div class="flex flex-col items-center gap-2 text-ink-400">${icon('search-x','w-8 h-8')}<p class="text-sm">No results match your search or filters</p></div></td></tr>` :
-              pageRows.map(row => `<tr class="border-t border-ink-100 dark:border-ink-800 hover:bg-ink-50/70 dark:hover:bg-ink-800/40 ${config.rowClick ? 'cursor-pointer' : ''}" data-row-id="${row.id}">${config.columns.map((c,i) => `<td class="py-3 ${i===0?'px-5':'px-3'}">${c.render ? c.render(row) : (row[c.key] ?? '')}</td>`).join('')}</tr>`).join('')}
+            ${pageRows.length === 0 ? `<tr><td colspan="${config.columns.length + (config.selectable?1:0)}" class="py-12 text-center"><div class="flex flex-col items-center gap-2 text-ink-400">${icon('search-x','w-8 h-8')}<p class="text-sm">No results match your search or filters</p></div></td></tr>` :
+              pageRows.map(row => `<tr class="border-t border-ink-100 dark:border-ink-800 hover:bg-ink-50/70 dark:hover:bg-ink-800/40 ${config.rowClick ? 'cursor-pointer' : ''}" data-row-id="${row.id}">
+                ${config.selectable ? `<td class="py-3 px-5" data-stop-row-click><input type="checkbox" data-row-select="${row.id}" ${state.selected.has(String(row.id))?'checked':''}></td>` : ''}
+                ${config.columns.map((c,i) => `<td class="py-3 ${i===0 && !config.selectable?'px-5':'px-3'}">${c.render ? c.render(row) : (row[c.key] ?? '')}</td>`).join('')}
+              </tr>`).join('')}
           </tbody>
         </table>
       </div>
@@ -660,6 +678,29 @@ function renderDataTable(containerId, config) {
     document.getElementById(`${containerId}-next`).addEventListener('click', () => { state.page++; renderTable(); });
     container.querySelectorAll('[data-filter-key]').forEach(sel => sel.addEventListener('change', (e) => { state.filters[sel.dataset.filterKey] = e.target.value; state.page=1; renderTable(); }));
     if (config.rowClick) container.querySelectorAll('tr[data-row-id]').forEach(tr => tr.addEventListener('click', (e) => { if (e.target.closest('[data-stop-row-click]')) return; const row = config.data.find(r => String(r.id) === tr.dataset.rowId); config.rowClick(row); }));
+    if (config.selectable) {
+      const selectAll = document.getElementById(`${containerId}-select-all`);
+      const pageIds = pageRows.map(r => String(r.id));
+      selectAll.checked = pageIds.length > 0 && pageIds.every(id => state.selected.has(id));
+      selectAll.addEventListener('change', (e) => {
+        pageIds.forEach(id => e.target.checked ? state.selected.add(id) : state.selected.delete(id));
+        renderTable();
+      });
+      container.querySelectorAll('[data-row-select]').forEach(cb => cb.addEventListener('change', (e) => {
+        const id = cb.dataset.rowSelect;
+        e.target.checked ? state.selected.add(id) : state.selected.delete(id);
+        renderTable();
+      }));
+      container.querySelectorAll('[data-bulk-action]').forEach(btn => btn.addEventListener('click', withErr(async () => {
+        if (!state.selected.size) return;
+        const actionDef = (config.bulkActions||[]).find(a => a.key === btn.dataset.bulkAction);
+        if (actionDef?.confirm && !confirm(actionDef.confirm.replace('{n}', state.selected.size))) return;
+        const extra = actionDef?.key === 'price' ? { price_percent: parseFloat(document.getElementById(`${containerId}-bulk-price-percent`)?.value || 0) } : {};
+        await config.onBulkAction(Array.from(state.selected), actionDef.key, extra);
+        state.selected.clear();
+      })));
+      container.querySelector('[data-bulk-clear]')?.addEventListener('click', () => { state.selected.clear(); renderTable(); });
+    }
     config.afterRender?.(container);
   }
   renderTable();

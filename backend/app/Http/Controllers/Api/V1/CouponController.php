@@ -35,7 +35,7 @@ class CouponController extends Controller
         }
 
         $address = ! empty($data['address_id']) ? Address::find($data['address_id']) : null;
-        $totals = CartCalculator::totals($items, $coupon, $data['payment_method'] ?? null, $data['shipping_method'] ?? 'standard', $address?->state);
+        $totals = CartCalculator::totals($items, $coupon, $data['payment_method'] ?? null, $data['shipping_method'] ?? 'standard', $address?->state, $address?->city, $address?->pincode);
 
         return response()->json([
             'message' => 'Coupon applied',

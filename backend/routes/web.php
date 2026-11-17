@@ -79,6 +79,7 @@ Route::prefix('seller')->name('seller.')->group(function () {
 
         Route::get('products', [SellerProductController::class, 'index'])->name('products');
         Route::post('products', [SellerProductController::class, 'store'])->name('products.store');
+        Route::post('products/bulk-action', [SellerProductController::class, 'bulkAction'])->name('products.bulk-action');
         Route::patch('products/{product:product_code}', [SellerProductController::class, 'update'])->name('products.update');
         Route::delete('products/{product:product_code}', [SellerProductController::class, 'destroy'])->name('products.destroy');
         Route::delete('products/{product:product_code}/images/{image}', [SellerProductController::class, 'destroyImage'])->name('products.images.destroy');

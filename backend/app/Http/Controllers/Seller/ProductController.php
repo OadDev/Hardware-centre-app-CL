@@ -122,6 +122,51 @@ class ProductController extends Controller
         return back()->with('status', 'Product removed.');
     }
 
+    public function bulkAction(Request $request)
+    {
+        $seller = $request->user()->seller;
+
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['string'],
+            'action' => ['required', Rule::in(['activate', 'deactivate', 'archive', 'delete', 'price'])],
+            'price_percent' => ['required_if:action,price', 'numeric'],
+        ]);
+
+        // Scoped to this seller's own products only, regardless of which
+        // ids were posted — a seller can never act on another seller's
+        // catalog via this endpoint.
+        $products = $seller->products()->whereIn('product_code', $data['ids'])->get();
+
+        switch ($data['action']) {
+            case 'activate':
+                $products->each->update(['status' => 'Active']);
+                $message = 'Products activated.';
+                break;
+            case 'deactivate':
+                $products->each->update(['status' => 'Inactive']);
+                $message = 'Products deactivated.';
+                break;
+            case 'archive':
+                $products->each->update(['status' => 'Archived']);
+                $message = 'Products archived.';
+                break;
+            case 'delete':
+                $products->each->delete();
+                $message = 'Products removed.';
+                break;
+            case 'price':
+                $percent = (float) $data['price_percent'];
+                $products->each(fn (Product $p) => $p->update([
+                    'price' => round((float) $p->price * (1 + $percent / 100), 2),
+                ]));
+                $message = 'Prices updated.';
+                break;
+        }
+
+        return back()->with('status', $message);
+    }
+
     public function destroyImage(Request $request, Product $product, ProductImage $image)
     {
         $this->authorizeOwnership($request, $product);

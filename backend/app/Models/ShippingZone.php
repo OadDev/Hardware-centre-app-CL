@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class ShippingZone extends Model
 {
     protected $fillable = [
-        'zone', 'state', 'method', 'weight_slab', 'charge', 'free_above',
+        'zone', 'state', 'city', 'pincode', 'method', 'weight_slab', 'charge', 'free_above',
         'min_order_value', 'max_weight_kg', 'min_qty', 'max_qty', 'eta_days',
         'is_active', 'sort_order',
     ];

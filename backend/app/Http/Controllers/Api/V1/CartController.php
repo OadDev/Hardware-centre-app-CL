@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductResource;
+use App\Models\Address;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Support\CartCalculator;
@@ -94,12 +95,12 @@ class CartController extends Controller
         $items = $request->user()->cartItems()
             ->with(['product.brand', 'product.category', 'product.seller', 'product.specs', 'product.priceTiers', 'productVariant.priceTiers'])
             ->get();
-        $state = $this->resolveState($request);
+        $address = $this->resolveAddress($request);
         $shippingMethod = $request->query('shipping_method', 'standard');
-        $totals = CartCalculator::totals($items, null, $request->query('payment_method'), $shippingMethod, $state);
+        $totals = CartCalculator::totals($items, null, $request->query('payment_method'), $shippingMethod, $address?->state, $address?->city, $address?->pincode);
         $subtotal = $items->sum(fn ($item) => $item->unit_price * $item->quantity);
         $weightKg = ShippingCalculator::weightFor($items);
-        $shippingOptions = $subtotal > 0 ? ShippingCalculator::resolveAll($state, $subtotal, $weightKg, $totals['count']) : [];
+        $shippingOptions = $subtotal > 0 ? ShippingCalculator::resolveAll($address?->state, $subtotal, $weightKg, $totals['count'], $address?->city, $address?->pincode) : [];
 
         return response()->json([
             'items' => $items->map(fn ($item) => [
@@ -126,7 +127,7 @@ class CartController extends Controller
      * default saved address so the cart page (which has no address step)
      * still quotes a realistic delivery charge.
      */
-    private function resolveState(Request $request): ?string
+    private function resolveAddress(Request $request): ?Address
     {
         $addressId = $request->query('address_id');
         $customer = $request->user();
@@ -134,11 +135,11 @@ class CartController extends Controller
         if ($addressId) {
             $address = $customer->addresses()->find($addressId);
             if ($address) {
-                return $address->state;
+                return $address;
             }
         }
 
-        return $customer->addresses()->where('is_default', true)->value('state')
-            ?? $customer->addresses()->value('state');
+        return $customer->addresses()->where('is_default', true)->first()
+            ?? $customer->addresses()->first();
     }
 }

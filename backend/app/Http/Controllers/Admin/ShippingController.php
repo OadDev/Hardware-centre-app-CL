@@ -62,6 +62,8 @@ class ShippingController extends Controller
         $data = $request->validate([
             'zone' => ['required', 'string', 'max:120'],
             'state' => ['nullable', 'string', Rule::in(IndianStates::ALL)],
+            'city' => ['nullable', 'string', 'max:120'],
+            'pincode' => ['nullable', 'string', 'max:10'],
             'method' => ['nullable', Rule::in(['standard', 'express'])],
             'weight_slab' => ['nullable', 'string', 'max:60'],
             'charge' => ['required', 'numeric', 'min:0'],

@@ -12,7 +12,7 @@ class Product extends Model
     protected $fillable = [
         'product_code', 'sku', 'name', 'slug', 'category_id', 'brand_id',
         'seller_id', 'hsn_code_id', 'description', 'video_url', 'price', 'mrp',
-        'unit', 'stock', 'approval_status', 'featured', 'rating', 'reviews_count',
+        'unit', 'stock', 'approval_status', 'status', 'featured', 'is_popular', 'is_trending', 'rating', 'reviews_count',
         'sold_count', 'eta_days', 'tag', 'apply_bulk_pricing_to_all_variants', 'weight_kg',
     ];
 
@@ -23,6 +23,8 @@ class Product extends Model
             'mrp' => 'decimal:2',
             'rating' => 'decimal:1',
             'featured' => 'boolean',
+            'is_popular' => 'boolean',
+            'is_trending' => 'boolean',
             'apply_bulk_pricing_to_all_variants' => 'boolean',
             'weight_kg' => 'decimal:3',
         ];
@@ -30,7 +32,7 @@ class Product extends Model
 
     public function scopeApproved($query)
     {
-        return $query->where('approval_status', 'Approved');
+        return $query->where('approval_status', 'Approved')->where('status', 'Active');
     }
 
     public static function nextProductCode(): string

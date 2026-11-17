@@ -329,9 +329,22 @@ SECTION_RENDERERS.products = async function(main) {
   renderDataTable('products-table-inner', {
     title: 'All Products', subtitle: `${DATA.products.length} products across your marketplace`,
     data: DATA.products, searchKeys: ['name','category','sellerName'],
+    selectable: true,
+    bulkActions: [
+      { key:'activate', label:'Activate' },
+      { key:'deactivate', label:'Deactivate' },
+      { key:'archive', label:'Archive' },
+      { key:'price', label:'Adjust price by %' },
+      { key:'delete', label:'Delete', danger:true, confirm:'Delete {n} product(s) permanently?' },
+    ],
+    onBulkAction: async (ids, action, extra) => {
+      await api('POST', '/products/bulk-action', { ids, action, ...extra });
+      toast('Bulk action applied'); await refreshProducts(); navigateTo('products');
+    },
     filters: [
       { key:'category', label:'Category', options:[...new Set(DATA.products.map(p=>p.category))] },
       { key:'stockStatus', label:'Stock', options:['In Stock','Low Stock','Out of Stock'] },
+      { key:'status', label:'Listing', options:['Active','Inactive','Archived'] },
       { key:'approval', label:'Approval', options:['Approved','Pending','Rejected'] },
     ],
     columns: [
@@ -340,7 +353,8 @@ SECTION_RENDERERS.products = async function(main) {
       { label:'Seller', render: p => `<span class="truncate max-w-[140px] inline-block">${p.sellerName}</span>` },
       { label:'Price', render: p => fmtINR(p.price) },
       { label:'Stock', render: p => `${p.stock} <span class="text-ink-400">units</span>` },
-      { label:'Status', render: p => statusBadge(p.stockStatus) },
+      { label:'Stock Status', render: p => statusBadge(p.stockStatus) },
+      { label:'Listing', render: p => statusBadge(p.status) },
       { label:'Approval', render: p => statusBadge(p.approval) },
       { label:'', render: p => `<button data-stop-row-click data-delete-product="${p.id}" class="p-1.5 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg text-rose-500">${icon('trash-2','w-4 h-4')}</button>` },
     ],
@@ -533,11 +547,16 @@ function openProductProfile(p) {
       </div>
       <button id="drawer-add-price-tier-btn" class="mt-2 w-full py-2 text-xs font-medium rounded-lg border border-ink-200 dark:border-ink-700">Add Tier</button>
     `)}
-    <div class="flex gap-2.5 mt-6 pt-5 border-t border-ink-100 dark:border-ink-800">
+    <div class="flex gap-2.5 mt-4">
       <button id="edit-product-btn" class="flex-1 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-xl">Edit Details</button>
       ${p.approval!=='Approved' ? `<button id="approve-product-btn" class="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl">Approve</button>` : ''}
-      <button id="toggle-featured-btn" class="flex-1 px-4 py-2.5 bg-white dark:bg-ink-800 border border-ink-200 dark:border-ink-700 text-sm font-medium rounded-xl">${p.featured?'Unfeature':'Feature'} Product</button>
     </div>
+    <div class="flex gap-2.5 mt-2.5 pt-5 border-t border-ink-100 dark:border-ink-800">
+      <button id="toggle-featured-btn" class="flex-1 px-3 py-2.5 bg-white dark:bg-ink-800 border border-ink-200 dark:border-ink-700 text-sm font-medium rounded-xl">${p.featured?'Unfeature':'Feature'}</button>
+      <button id="toggle-popular-btn" class="flex-1 px-3 py-2.5 ${p.isPopular?'bg-brand-50 dark:bg-brand-500/10 border-brand-300 dark:border-brand-500/40 text-brand-700 dark:text-brand-300':'bg-white dark:bg-ink-800 border-ink-200 dark:border-ink-700'} border text-sm font-medium rounded-xl">${p.isPopular?'✓ ':''}Popular</button>
+      <button id="toggle-trending-btn" class="flex-1 px-3 py-2.5 ${p.isTrending?'bg-brand-50 dark:bg-brand-500/10 border-brand-300 dark:border-brand-500/40 text-brand-700 dark:text-brand-300':'bg-white dark:bg-ink-800 border-ink-200 dark:border-ink-700'} border text-sm font-medium rounded-xl">${p.isTrending?'✓ ':''}Trending</button>
+    </div>
+    <p class="text-[11px] text-ink-400 mt-2">Popular/Trending control what shows in those sections on the homepage — pick products here instead of leaving it to automatic ranking.</p>
   `, true);
   document.getElementById('edit-product-btn')?.addEventListener('click', () => {
     openModal({
@@ -643,6 +662,14 @@ function openProductProfile(p) {
   document.getElementById('toggle-featured-btn')?.addEventListener('click', withErr(async () => {
     await api('PATCH', '/products/'+p.id, { featured: !p.featured });
     closeModal(); toast('Product updated'); await refreshProducts(); navigateTo('products');
+  }));
+  document.getElementById('toggle-popular-btn')?.addEventListener('click', withErr(async () => {
+    await api('PATCH', '/products/'+p.id, { is_popular: !p.isPopular });
+    closeModal(); toast(p.isPopular ? 'Removed from Popular' : 'Added to Popular'); await refreshProducts(); navigateTo('products');
+  }));
+  document.getElementById('toggle-trending-btn')?.addEventListener('click', withErr(async () => {
+    await api('PATCH', '/products/'+p.id, { is_trending: !p.isTrending });
+    closeModal(); toast(p.isTrending ? 'Removed from Trending' : 'Added to Trending'); await refreshProducts(); navigateTo('products');
   }));
 }
 
@@ -1511,8 +1538,8 @@ SECTION_RENDERERS.shipping = async function(main) {
     <div class="flex justify-end mb-6">${btnPrimary('Save Shipping Config','check','save-shipping-btn')}</div>
     ${card(`<div class="p-5 pb-3 flex items-center justify-between"><div><h3 class="font-semibold text-ink-900 dark:text-white">State &amp; Weight/Quantity Rules</h3><p class="text-xs text-ink-400 mt-0.5">Override the default charge above for a specific state, method, weight or order-value range — leave State/Method blank to apply broadly. Turn a rule off while scoping it to one state + method to block that delivery method there entirely.</p></div>${btnPrimary('Add Rule','plus','add-zone-btn')}</div>
       <div class="overflow-x-auto"><table class="w-full text-sm seller-table-wide">
-        <thead><tr class="text-left text-xs text-ink-400 border-t border-ink-100 dark:border-ink-800"><th class="font-medium py-2.5 px-5">Rule</th><th class="font-medium py-2.5 px-3">State</th><th class="font-medium py-2.5 px-3">Method</th><th class="font-medium py-2.5 px-3">Charge</th><th class="font-medium py-2.5 px-3">Free Above</th><th class="font-medium py-2.5 px-3">Min Order</th><th class="font-medium py-2.5 px-3">Max Weight</th><th class="font-medium py-2.5 px-3">ETA</th><th class="font-medium py-2.5 px-3">Status</th><th class="font-medium py-2.5 px-3"></th></tr></thead>
-        <tbody>${s.zones.map(z => `<tr class="border-t border-ink-100 dark:border-ink-800"><td class="py-3 px-5 font-medium text-ink-800 dark:text-ink-100">${z.zone}</td><td class="py-3 px-3 text-ink-500">${z.state || 'All States'}</td><td class="py-3 px-3 text-ink-500">${z.method ? (z.method === 'express' ? 'Express' : 'Standard') : 'Both'}</td><td class="py-3 px-3 tnum">${fmtINR(z.charge)}</td><td class="py-3 px-3 tnum">${z.free_above > 0 ? fmtINR(z.free_above) : '—'}</td><td class="py-3 px-3 tnum">${z.min_order_value > 0 ? fmtINR(z.min_order_value) : '—'}</td><td class="py-3 px-3 tnum">${z.max_weight_kg ? z.max_weight_kg+'kg' : '—'}</td><td class="py-3 px-3 tnum">${z.eta_days || '—'}</td><td class="py-3 px-3">${statusBadge(z.is_active ? 'Active' : 'Inactive')}</td><td class="py-3 px-3 text-right"><button data-edit-zone="${z.id}" class="text-xs font-medium text-brand-600 dark:text-brand-400">Edit</button></td></tr>`).join('') || `<tr><td colspan="10" class="py-6 px-5 text-center text-ink-400">No rules yet — Standard/Express defaults above apply everywhere.</td></tr>`}</tbody>
+        <thead><tr class="text-left text-xs text-ink-400 border-t border-ink-100 dark:border-ink-800"><th class="font-medium py-2.5 px-5">Rule</th><th class="font-medium py-2.5 px-3">Location</th><th class="font-medium py-2.5 px-3">Method</th><th class="font-medium py-2.5 px-3">Charge</th><th class="font-medium py-2.5 px-3">Free Above</th><th class="font-medium py-2.5 px-3">Min Order</th><th class="font-medium py-2.5 px-3">Max Weight</th><th class="font-medium py-2.5 px-3">ETA</th><th class="font-medium py-2.5 px-3">Status</th><th class="font-medium py-2.5 px-3"></th></tr></thead>
+        <tbody>${s.zones.map(z => `<tr class="border-t border-ink-100 dark:border-ink-800"><td class="py-3 px-5 font-medium text-ink-800 dark:text-ink-100">${z.zone}</td><td class="py-3 px-3 text-ink-500">${z.pincode ? 'PIN '+z.pincode : (z.city ? z.city+(z.state ? ', '+z.state : '') : (z.state || 'All Locations'))}</td><td class="py-3 px-3 text-ink-500">${z.method ? (z.method === 'express' ? 'Express' : 'Standard') : 'Both'}</td><td class="py-3 px-3 tnum">${fmtINR(z.charge)}</td><td class="py-3 px-3 tnum">${z.free_above > 0 ? fmtINR(z.free_above) : '—'}</td><td class="py-3 px-3 tnum">${z.min_order_value > 0 ? fmtINR(z.min_order_value) : '—'}</td><td class="py-3 px-3 tnum">${z.max_weight_kg ? z.max_weight_kg+'kg' : '—'}</td><td class="py-3 px-3 tnum">${z.eta_days || '—'}</td><td class="py-3 px-3">${statusBadge(z.is_active ? 'Active' : 'Inactive')}</td><td class="py-3 px-3 text-right"><button data-edit-zone="${z.id}" class="text-xs font-medium text-brand-600 dark:text-brand-400">Edit</button></td></tr>`).join('') || `<tr><td colspan="10" class="py-6 px-5 text-center text-ink-400">No rules yet — Standard/Express defaults above apply everywhere.</td></tr>`}</tbody>
       </table></div>`)}
   `;
   document.getElementById('save-shipping-btn').addEventListener('click', withErr(async () => {
@@ -1542,6 +1569,10 @@ SECTION_RENDERERS.shipping = async function(main) {
           ${formSelect('Method (blank = both)', ['Both','Standard','Express'], zone?.method === 'express' ? 2 : zone?.method === 'standard' ? 1 : 0, 'zone-method')}
         </div>
         <div class="grid grid-cols-2 gap-3">
+          ${formField('City (optional, more specific than State)','text','e.g. Kochi', zone?.city||'', 'zone-city')}
+          ${formField('Pincode (optional, most specific)','text','e.g. 682001', zone?.pincode||'', 'zone-pincode')}
+        </div>
+        <div class="grid grid-cols-2 gap-3">
           ${formField('Charge (₹)','number','', zone?.charge??'', 'zone-charge')}
           ${formField('Free Above (₹)','number','Optional', zone?.free_above??'', 'zone-free-above')}
         </div>
@@ -1567,6 +1598,8 @@ SECTION_RENDERERS.shipping = async function(main) {
         const payload = {
           zone: document.getElementById('zone-name').value,
           state: stateVal === 'All States' ? null : stateVal,
+          city: document.getElementById('zone-city').value || null,
+          pincode: document.getElementById('zone-pincode').value || null,
           method: methodVal === 'Both' ? null : methodVal.toLowerCase(),
           weight_slab: document.getElementById('zone-weight-label').value,
           charge: num('zone-charge') || 0,

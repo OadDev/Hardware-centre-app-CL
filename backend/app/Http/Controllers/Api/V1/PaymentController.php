@@ -35,7 +35,7 @@ class PaymentController extends Controller
         }
 
         $address = isset($data['address_id']) ? Address::find($data['address_id']) : null;
-        $totals = CartCalculator::totals($items, $coupon, null, $data['shipping_method'] ?? 'standard', $address?->state);
+        $totals = CartCalculator::totals($items, $coupon, null, $data['shipping_method'] ?? 'standard', $address?->state, $address?->city, $address?->pincode);
 
         try {
             $orderId = $razorpay->createOrder($totals['total'], 'cart_'.$customer->id.'_'.Str::random(8));
