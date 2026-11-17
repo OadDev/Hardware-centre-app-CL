@@ -168,7 +168,13 @@ async function apiForm(method, path, formData) {
 
 async function refreshSellers() { DATA.sellers = unwrap(await api('GET', '/sellers?per_page=250')); }
 async function refreshCustomers() { DATA.customers = unwrap(await api('GET', '/customers?per_page=250')); }
-async function refreshProducts() { DATA.products = unwrap(await api('GET', '/products?per_page=250')); }
+// Product Management fetches its own data page-by-page from the server
+// (see SECTION_RENDERERS.products) instead of loading everything into
+// DATA.products up front — the catalog can run into the thousands, and a
+// fixed-size snapshot silently hid anything past it. This is kept as a
+// no-op so the login-time load list and the many "await refreshProducts()"
+// call sites elsewhere don't need to change.
+async function refreshProducts() {}
 async function refreshCategories() { DATA.categories = await api('GET', '/categories'); }
 async function refreshBrands() { DATA.brands = await api('GET', '/brands'); }
 async function refreshOrders() { DATA.orders = unwrap(await api('GET', '/orders?per_page=250')); }
@@ -606,15 +612,35 @@ function integrationCard({ name, logo, fields, sandboxToggle=true, enabled=true,
 
 /* ---------------- GENERIC DATA TABLE ---------------- */
 function renderDataTable(containerId, config) {
-  const state = { page: 1, search: '', filters: {}, selected: new Set() };
+  const state = { page: 1, search: '', filters: {}, selected: new Set(), serverRows: [], serverTotal: 0, loading: false };
   config.filters?.forEach(f => state.filters[f.key] = 'All');
   const pageSize = config.pageSize || 8;
+  let searchDebounceTimer;
 
   function getFiltered() {
     let rows = config.data;
     if (state.search) { const q = state.search.toLowerCase(); rows = rows.filter(r => (config.searchKeys||[]).some(k => String(r[k]||'').toLowerCase().includes(q))); }
     config.filters?.forEach(f => { if (state.filters[f.key] !== 'All') rows = rows.filter(r => String(r[f.key]) === state.filters[f.key]); });
     return rows;
+  }
+
+  // Server-side mode (config.serverSide + config.fetchPage): the full
+  // dataset is never loaded into the browser at once, so searching,
+  // filtering and paging all go back to the server instead of slicing an
+  // in-memory array — needed for any list that can outgrow a single
+  // "load everything" fetch (see Product Management, which used to cap
+  // out at a fixed per_page and silently hide anything past it).
+  async function loadServerPage() {
+    state.loading = true;
+    paint();
+    const result = await config.fetchPage({
+      page: state.page, perPage: pageSize, search: state.search, filters: { ...state.filters },
+    });
+    state.serverRows = result.rows;
+    state.serverTotal = result.total;
+    state.loading = false;
+    config.onStats?.(result.stats);
+    paint();
   }
 
   function renderBulkBar() {
@@ -628,13 +654,26 @@ function renderDataTable(containerId, config) {
     </div>`;
   }
 
-  function renderTable() {
+  function refresh(resetPage) {
+    if (resetPage) state.page = 1;
+    if (config.serverSide) { loadServerPage(); } else { paint(); }
+  }
+
+  function paint() {
     const container = document.getElementById(containerId);
     if (!container) return;
-    const filtered = getFiltered();
-    const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-    state.page = Math.min(state.page, totalPages);
-    const pageRows = filtered.slice((state.page-1)*pageSize, state.page*pageSize);
+    let pageRows, totalCount;
+    if (config.serverSide) {
+      pageRows = state.serverRows;
+      totalCount = state.serverTotal;
+    } else {
+      const filtered = getFiltered();
+      totalCount = filtered.length;
+      const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+      state.page = Math.min(state.page, totalPages);
+      pageRows = filtered.slice((state.page-1)*pageSize, state.page*pageSize);
+    }
+    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
     container.innerHTML = `
       <div class="p-5 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -656,7 +695,8 @@ function renderDataTable(containerId, config) {
             ${config.columns.map((c,i) => `<th class="font-medium py-2.5 ${i===0 && !config.selectable?'px-5':'px-3'} whitespace-nowrap">${c.label}</th>`).join('')}
           </tr></thead>
           <tbody>
-            ${pageRows.length === 0 ? `<tr><td colspan="${config.columns.length + (config.selectable?1:0)}" class="py-12 text-center"><div class="flex flex-col items-center gap-2 text-ink-400">${icon('search-x','w-8 h-8')}<p class="text-sm">No results match your search or filters</p></div></td></tr>` :
+            ${state.loading ? `<tr><td colspan="${config.columns.length + (config.selectable?1:0)}" class="py-12 text-center text-ink-400 text-sm">Loading…</td></tr>` :
+              pageRows.length === 0 ? `<tr><td colspan="${config.columns.length + (config.selectable?1:0)}" class="py-12 text-center"><div class="flex flex-col items-center gap-2 text-ink-400">${icon('search-x','w-8 h-8')}<p class="text-sm">No results match your search or filters</p></div></td></tr>` :
               pageRows.map(row => `<tr class="border-t border-ink-100 dark:border-ink-800 hover:bg-ink-50/70 dark:hover:bg-ink-800/40 ${config.rowClick ? 'cursor-pointer' : ''}" data-row-id="${row.id}">
                 ${config.selectable ? `<td class="py-3 px-5" data-stop-row-click><input type="checkbox" data-row-select="${row.id}" ${state.selected.has(String(row.id))?'checked':''}></td>` : ''}
                 ${config.columns.map((c,i) => `<td class="py-3 ${i===0 && !config.selectable?'px-5':'px-3'}">${c.render ? c.render(row) : (row[c.key] ?? '')}</td>`).join('')}
@@ -665,7 +705,7 @@ function renderDataTable(containerId, config) {
         </table>
       </div>
       <div class="flex items-center justify-between px-5 py-3.5 border-t border-ink-100 dark:border-ink-800">
-        <p class="text-xs text-ink-400">Showing ${pageRows.length ? ((state.page-1)*pageSize+1) : 0}–${Math.min(state.page*pageSize, filtered.length)} of ${filtered.length}</p>
+        <p class="text-xs text-ink-400">Showing ${pageRows.length ? ((state.page-1)*pageSize+1) : 0}–${Math.min(state.page*pageSize, totalCount)} of ${totalCount}</p>
         <div class="flex items-center gap-1.5">
           <button id="${containerId}-prev" class="p-1.5 rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800 disabled:opacity-40 disabled:cursor-not-allowed" ${state.page===1?'disabled':''}>${icon('chevron-left','w-4 h-4')}</button>
           <span class="text-xs text-ink-500 px-2 tnum">Page ${state.page} of ${totalPages}</span>
@@ -673,23 +713,31 @@ function renderDataTable(containerId, config) {
         </div>
       </div>`;
     refreshIcons();
-    document.getElementById(`${containerId}-search`).addEventListener('input', (e) => { state.search = e.target.value; state.page=1; renderTable(); });
-    document.getElementById(`${containerId}-prev`).addEventListener('click', () => { state.page--; renderTable(); });
-    document.getElementById(`${containerId}-next`).addEventListener('click', () => { state.page++; renderTable(); });
-    container.querySelectorAll('[data-filter-key]').forEach(sel => sel.addEventListener('change', (e) => { state.filters[sel.dataset.filterKey] = e.target.value; state.page=1; renderTable(); }));
-    if (config.rowClick) container.querySelectorAll('tr[data-row-id]').forEach(tr => tr.addEventListener('click', (e) => { if (e.target.closest('[data-stop-row-click]')) return; const row = config.data.find(r => String(r.id) === tr.dataset.rowId); config.rowClick(row); }));
+    document.getElementById(`${containerId}-search`).addEventListener('input', (e) => {
+      state.search = e.target.value;
+      if (config.serverSide) {
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(() => refresh(true), 350);
+      } else {
+        refresh(true);
+      }
+    });
+    document.getElementById(`${containerId}-prev`).addEventListener('click', () => { state.page--; refresh(); });
+    document.getElementById(`${containerId}-next`).addEventListener('click', () => { state.page++; refresh(); });
+    container.querySelectorAll('[data-filter-key]').forEach(sel => sel.addEventListener('change', (e) => { state.filters[sel.dataset.filterKey] = e.target.value; refresh(true); }));
+    if (config.rowClick) container.querySelectorAll('tr[data-row-id]').forEach(tr => tr.addEventListener('click', (e) => { if (e.target.closest('[data-stop-row-click]')) return; const row = pageRows.find(r => String(r.id) === tr.dataset.rowId); config.rowClick(row); }));
     if (config.selectable) {
       const selectAll = document.getElementById(`${containerId}-select-all`);
       const pageIds = pageRows.map(r => String(r.id));
       selectAll.checked = pageIds.length > 0 && pageIds.every(id => state.selected.has(id));
       selectAll.addEventListener('change', (e) => {
         pageIds.forEach(id => e.target.checked ? state.selected.add(id) : state.selected.delete(id));
-        renderTable();
+        paint();
       });
       container.querySelectorAll('[data-row-select]').forEach(cb => cb.addEventListener('change', (e) => {
         const id = cb.dataset.rowSelect;
         e.target.checked ? state.selected.add(id) : state.selected.delete(id);
-        renderTable();
+        paint();
       }));
       container.querySelectorAll('[data-bulk-action]').forEach(btn => btn.addEventListener('click', withErr(async () => {
         if (!state.selected.size) return;
@@ -699,11 +747,11 @@ function renderDataTable(containerId, config) {
         await config.onBulkAction(Array.from(state.selected), actionDef.key, extra);
         state.selected.clear();
       })));
-      container.querySelector('[data-bulk-clear]')?.addEventListener('click', () => { state.selected.clear(); renderTable(); });
+      container.querySelector('[data-bulk-clear]')?.addEventListener('click', () => { state.selected.clear(); paint(); });
     }
     config.afterRender?.(container);
   }
-  renderTable();
+  refresh();
 }
 
 /* ---------------- 4. SECTION RENDERER (router) ---------------- */

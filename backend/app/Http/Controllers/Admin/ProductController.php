@@ -33,11 +33,33 @@ class ProductController extends Controller
         if ($approval = $request->query('approval')) {
             $query->where('approval_status', $approval);
         }
+        if ($status = $request->query('status')) {
+            $query->where('status', $status);
+        }
+        if ($stock = $request->query('stock')) {
+            match ($stock) {
+                'Out of Stock' => $query->where('stock', '<=', 0),
+                'Low Stock' => $query->where('stock', '>', 0)->where('stock', '<', 20),
+                'In Stock' => $query->where('stock', '>=', 20),
+                default => null,
+            };
+        }
 
         $products = $query->orderByDesc('id')->paginate($request->integer('per_page', 20));
         $products->getCollection()->transform(fn (Product $p) => $this->transform($p));
 
-        return response()->json($products);
+        // Catalog-wide counts (not affected by the filters above) for the
+        // summary cards — the admin panel only ever has one page of
+        // products loaded at a time, so these can't be derived client-side
+        // from whatever's currently on screen.
+        $stats = [
+            'total' => Product::count(),
+            'featured' => Product::where('featured', true)->count(),
+            'lowStock' => Product::where('stock', '>', 0)->where('stock', '<', 20)->count(),
+            'outOfStock' => Product::where('stock', '<=', 0)->count(),
+        ];
+
+        return response()->json(array_merge($products->toArray(), ['stats' => $stats]));
     }
 
     public function store(Request $request)

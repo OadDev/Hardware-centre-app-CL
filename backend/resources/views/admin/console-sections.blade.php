@@ -313,22 +313,45 @@ SECTION_RENDERERS.customers = async function(main) {
 
 /* ===== PRODUCT MANAGEMENT ===== */
 SECTION_RENDERERS.products = async function(main) {
-  const featuredCount = DATA.products.filter(p=>p.featured).length;
-  const lowStockCount = DATA.products.filter(p=>p.stockStatus==='Low Stock').length;
-  const outOfStockCount = DATA.products.filter(p=>p.stockStatus==='Out of Stock').length;
+  // Product Management no longer loads the whole catalog into the browser
+  // up front (that used to cap out at a fixed page size, silently hiding
+  // every product past it) — the table below fetches one page at a time
+  // from the server as you search, filter or page through it, and the
+  // summary cards use catalog-wide counts the server sends alongside each
+  // page rather than counting whatever happens to be loaded.
+  let stats = { total: 0, featured: 0, lowStock: 0, outOfStock: 0 };
+  const renderKpis = () => `
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      ${kpiCard({label:'Total Products', value: fmtNum(stats.total), icon:'package', accent:'brand'})}
+      ${kpiCard({label:'Featured', value: fmtNum(stats.featured), icon:'star', accent:'amber'})}
+      ${kpiCard({label:'Low Stock', value: fmtNum(stats.lowStock), icon:'alert-triangle', accent:'amber'})}
+      ${kpiCard({label:'Out of Stock', value: fmtNum(stats.outOfStock), icon:'package-x', accent:'rose'})}
+    </div>`;
+
   main.innerHTML = `
     ${pageHeader('Product Management', 'Manage your marketplace catalog', btnPrimary('Add Product','plus','add-product-btn'))}
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      ${kpiCard({label:'Total Products', value: fmtNum(DATA.products.length), icon:'package', accent:'brand'})}
-      ${kpiCard({label:'Featured', value: fmtNum(featuredCount), icon:'star', accent:'amber'})}
-      ${kpiCard({label:'Low Stock', value: fmtNum(lowStockCount), icon:'alert-triangle', accent:'amber'})}
-      ${kpiCard({label:'Out of Stock', value: fmtNum(outOfStockCount), icon:'package-x', accent:'rose'})}
-    </div>
+    <div id="products-kpis">${renderKpis()}</div>
     ${tableCard('products-table-inner')}
   `;
   renderDataTable('products-table-inner', {
-    title: 'All Products', subtitle: `${DATA.products.length} products across your marketplace`,
-    data: DATA.products, searchKeys: ['name','category','sellerName'],
+    title: 'All Products', subtitle: 'Search, filter and manage your full product catalog',
+    serverSide: true,
+    fetchPage: async ({ page, perPage, search, filters }) => {
+      const params = new URLSearchParams({ page, per_page: perPage });
+      if (search) params.set('q', search);
+      if (filters.category && filters.category !== 'All') params.set('category', filters.category);
+      if (filters.stockStatus && filters.stockStatus !== 'All') params.set('stock', filters.stockStatus);
+      if (filters.status && filters.status !== 'All') params.set('status', filters.status);
+      if (filters.approval && filters.approval !== 'All') params.set('approval', filters.approval);
+      const resp = await api('GET', '/products?' + params.toString());
+      return { rows: resp.data, total: resp.total, stats: resp.stats };
+    },
+    onStats: (s) => {
+      if (!s) return;
+      stats = s;
+      const el = document.getElementById('products-kpis');
+      if (el) el.innerHTML = renderKpis();
+    },
     selectable: true,
     bulkActions: [
       { key:'activate', label:'Activate' },
@@ -339,10 +362,10 @@ SECTION_RENDERERS.products = async function(main) {
     ],
     onBulkAction: async (ids, action, extra) => {
       await api('POST', '/products/bulk-action', { ids, action, ...extra });
-      toast('Bulk action applied'); await refreshProducts(); navigateTo('products');
+      toast('Bulk action applied'); navigateTo('products');
     },
     filters: [
-      { key:'category', label:'Category', options:[...new Set(DATA.products.map(p=>p.category))] },
+      { key:'category', label:'Category', options: DATA.categories.map(c=>c.name) },
       { key:'stockStatus', label:'Stock', options:['In Stock','Low Stock','Out of Stock'] },
       { key:'status', label:'Listing', options:['Active','Inactive','Archived'] },
       { key:'approval', label:'Approval', options:['Approved','Pending','Rejected'] },
@@ -363,7 +386,7 @@ SECTION_RENDERERS.products = async function(main) {
       container.querySelectorAll('[data-delete-product]').forEach(btn => btn.addEventListener('click', withErr(async () => {
         if (!confirm('Delete this product permanently?')) return;
         await api('DELETE', '/products/'+btn.dataset.deleteProduct);
-        toast('Product deleted'); await refreshProducts(); navigateTo('products');
+        toast('Product deleted'); navigateTo('products');
       })));
     }
   });
