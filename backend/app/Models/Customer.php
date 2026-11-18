@@ -56,4 +56,9 @@ class Customer extends AuthenticatableModel
     {
         return $this->hasMany(Review::class);
     }
+
+    public function getRouteKeyName(): string
+    {
+        return 'customer_code';
+    }
 }

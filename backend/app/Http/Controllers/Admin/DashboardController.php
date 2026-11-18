@@ -45,6 +45,15 @@ class DashboardController extends Controller
             'time' => $a->created_at->diffForHumans(),
         ]);
 
+        // A straight count-by-status across every order, for the Order
+        // Status chart -- computed here rather than on whatever page of
+        // orders the browser happens to have loaded, since that's no
+        // longer the whole order book (see Admin\OrderController::index()).
+        $orderStatusCounts = Order::query()
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status');
+
         return response()->json([
             'total_revenue' => $totalRevenue,
             'todays_orders' => $todaysOrders,
@@ -57,6 +66,7 @@ class DashboardController extends Controller
             'pending_settlements_amount' => $pendingSettlementsAmount,
             'monthly_revenue' => $monthly,
             'activities' => $activities,
+            'order_status_counts' => $orderStatusCounts,
         ]);
     }
 }

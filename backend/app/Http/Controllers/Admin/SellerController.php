@@ -30,7 +30,17 @@ class SellerController extends Controller
         $sellers = $query->orderByDesc('id')->paginate($request->integer('per_page', 20));
         $sellers->getCollection()->transform(fn (Seller $s) => $this->transform($s));
 
-        return response()->json($sellers);
+        // Marketplace-wide counts (not affected by the filters above) for
+        // the summary cards — only one page of sellers is ever loaded at a
+        // time, so these can't be derived client-side from what's on screen.
+        $stats = [
+            'total' => Seller::count(),
+            'active' => Seller::where('account_status', 'Active')->count(),
+            'pending' => Seller::where('approval_status', 'Pending')->count(),
+            'suspended' => Seller::where('account_status', 'Suspended')->count(),
+        ];
+
+        return response()->json(array_merge($sellers->toArray(), ['stats' => $stats]));
     }
 
     public function store(Request $request)

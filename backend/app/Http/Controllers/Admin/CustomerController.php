@@ -23,7 +23,23 @@ class CustomerController extends Controller
         $customers = $query->orderByDesc('id')->paginate($request->integer('per_page', 20));
         $customers->getCollection()->transform(fn (Customer $c) => $this->transform($c));
 
-        return response()->json($customers);
+        // Store-wide counts (not affected by the filters above) for the
+        // summary cards — only one page of customers is ever loaded at a
+        // time, so these can't be derived client-side from what's on screen.
+        $totalCustomers = Customer::count();
+        $stats = [
+            'total' => $totalCustomers,
+            'active' => Customer::where('status', 'Active')->count(),
+            'avgSpend' => $totalCustomers > 0 ? round((float) \App\Models\Order::sum('total') / $totalCustomers) : 0,
+            'repeatCustomers' => \App\Models\Order::query()
+                ->select('customer_id')
+                ->groupBy('customer_id')
+                ->havingRaw('COUNT(*) > 3')
+                ->get()
+                ->count(),
+        ];
+
+        return response()->json(array_merge($customers->toArray(), ['stats' => $stats]));
     }
 
     public function update(Request $request, Customer $customer)

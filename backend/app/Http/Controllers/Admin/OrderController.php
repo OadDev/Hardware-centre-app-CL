@@ -24,6 +24,12 @@ class OrderController extends Controller
     {
         $query = Order::query()->with(['customer', 'address']);
 
+        if ($search = $request->query('q')) {
+            $query->where(function ($w) use ($search) {
+                $w->where('order_no', 'like', "%{$search}%")
+                    ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', "%{$search}%"));
+            });
+        }
         if ($status = $request->query('status')) {
             $query->where('status', $status);
         }

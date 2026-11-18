@@ -49,8 +49,7 @@ function renderDashboardCharts() {
       scales: { y:{ grid:{color:cc.grid}, ticks:{ color:cc.text, callback:v=>fmtINR(v,{compact:true}) } }, x:{ grid:{display:false}, ticks:{color:cc.text} } } } });
 
   destroyChart('status');
-  const statusCounts = {};
-  (DATA.orders||[]).forEach(o => statusCounts[o.status] = (statusCounts[o.status]||0)+1);
+  const statusCounts = DATA.dashboard.order_status_counts || {};
   chartInstances['status'] = new Chart(document.getElementById('chart-orderstatus'), { type:'doughnut',
     data: { labels: Object.keys(statusCounts), datasets:[{ data: Object.values(statusCounts), backgroundColor:['#fbbf24','#38bdf8','#a78bfa','#6366f1','#3868f6','#22c55e','#f43f5e','#fb923c'], borderWidth:0 }] },
     options: { responsive:true, maintainAspectRatio:false, cutout:'68%', plugins:{ legend:{ position:'bottom', labels:{ color:cc.text, boxWidth:8, boxHeight:8, padding:10, font:{size:11} } } } } });
@@ -74,17 +73,22 @@ function renderDashboardCharts() {
 
 /* ===== SELLER MANAGEMENT ===== */
 SECTION_RENDERERS.sellers = async function(main) {
-  const totalActive = DATA.sellers.filter(s=>s.status==='Active').length;
-  const totalPending = DATA.sellers.filter(s=>s.approval==='Pending').length;
-  const totalSuspended = DATA.sellers.filter(s=>s.status==='Suspended').length;
+  // Seller Management no longer loads every seller into the browser up
+  // front (see the Product Management fix for why that's a problem as a
+  // list grows) -- the table fetches one page at a time, and the summary
+  // cards use marketplace-wide counts the server sends alongside each page.
+  let stats = { total: 0, active: 0, pending: 0, suspended: 0 };
+  const renderKpis = () => `
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      ${kpiCard({label:'Total Sellers', value: fmtNum(stats.total), icon:'store', accent:'brand'})}
+      ${kpiCard({label:'Active Sellers', value: fmtNum(stats.active), icon:'check-circle', accent:'emerald'})}
+      ${kpiCard({label:'Pending KYC', value: fmtNum(stats.pending), icon:'clock', accent:'amber'})}
+      ${kpiCard({label:'Suspended', value: fmtNum(stats.suspended), icon:'ban', accent:'rose'})}
+    </div>`;
+
   main.innerHTML = `
     ${pageHeader('Seller Management', 'Onboard, verify and monitor vendors on your marketplace', btnPrimary('Add Seller','plus','add-seller-btn')+btnSecondary('Export CSV','download','export-sellers-btn'))}
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      ${kpiCard({label:'Total Sellers', value: fmtNum(DATA.sellers.length), icon:'store', accent:'brand'})}
-      ${kpiCard({label:'Active Sellers', value: fmtNum(totalActive), icon:'check-circle', accent:'emerald'})}
-      ${kpiCard({label:'Pending KYC', value: fmtNum(totalPending), icon:'clock', accent:'amber'})}
-      ${kpiCard({label:'Suspended', value: fmtNum(totalSuspended), icon:'ban', accent:'rose'})}
-    </div>
+    <div id="sellers-kpis">${renderKpis()}</div>
     ${tableCard('sellers-table-inner')}
   `;
   document.getElementById('add-seller-btn').addEventListener('click', () => {
@@ -116,16 +120,31 @@ SECTION_RENDERERS.sellers = async function(main) {
         closeModal(); toast('Seller account created'); await refreshSellers(); navigateTo('sellers');
       }) });
   });
-  document.getElementById('export-sellers-btn').addEventListener('click', () => {
-    downloadCsv('sellers.csv', DATA.sellers.map(s => ({
+  document.getElementById('export-sellers-btn').addEventListener('click', withErr(async () => {
+    const all = await fetchAllSellers();
+    downloadCsv('sellers.csv', all.map(s => ({
       seller_id: s.id, store: s.store, owner: s.name, email: s.email, phone: s.phone,
       city: s.city, state: s.state, gst: s.gst||'', products: s.products, revenue: s.revenue,
       commission_pct: s.commissionPct, kyc: s.approval, status: s.status,
     })));
-  });
+  }));
   renderDataTable('sellers-table-inner', {
-    title: 'All Sellers', subtitle: `${DATA.sellers.length} sellers registered on the marketplace`,
-    data: DATA.sellers, searchKeys: ['store','name','city','email'],
+    title: 'All Sellers', subtitle: 'Search, filter and manage every seller on your marketplace',
+    serverSide: true,
+    fetchPage: async ({ page, perPage, search, filters }) => {
+      const params = new URLSearchParams({ page, per_page: perPage });
+      if (search) params.set('q', search);
+      if (filters.approval && filters.approval !== 'All') params.set('approval', filters.approval);
+      if (filters.status && filters.status !== 'All') params.set('status', filters.status);
+      const resp = await api('GET', '/sellers?' + params.toString());
+      return { rows: resp.data, total: resp.total, stats: resp.stats };
+    },
+    onStats: (s) => {
+      if (!s) return;
+      stats = s;
+      const el = document.getElementById('sellers-kpis');
+      if (el) el.innerHTML = renderKpis();
+    },
     filters: [{ key:'approval', label:'Status', options:['Approved','Pending','Rejected'] }, { key:'status', label:'Account', options:['Active','Inactive','Suspended'] }],
     columns: [
       { label:'Seller', render: s => `<div class="flex items-center gap-3">${avatarChip(s.store)}<div class="min-w-0"><p class="font-medium text-ink-800 dark:text-ink-100 truncate max-w-[160px]">${s.store}</p><p class="text-xs text-ink-400">${s.id}</p></div></div>` },
@@ -272,22 +291,40 @@ async function loadCommissionOverrides(s) {
 
 /* ===== CUSTOMER MANAGEMENT ===== */
 SECTION_RENDERERS.customers = async function(main) {
-  const activeCount = DATA.customers.filter(c=>c.status==='Active').length;
-  const avgSpend = DATA.customers.length ? Math.round(DATA.customers.reduce((a,c)=>a+c.totalSpend,0)/DATA.customers.length) : 0;
-  const repeatCustomers = DATA.customers.filter(c=>c.orders>3).length;
+  // Customer Management fetches one page at a time from the server (see
+  // the Product Management fix for why loading everything up front breaks
+  // down as a list grows), and the summary cards use store-wide counts the
+  // server sends alongside each page.
+  let stats = { total: 0, active: 0, avgSpend: 0, repeatCustomers: 0 };
+  const renderKpis = () => `
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      ${kpiCard({label:'Total Customers', value: fmtNum(stats.total), icon:'users', accent:'violet'})}
+      ${kpiCard({label:'Active', value: fmtNum(stats.active), icon:'user-check', accent:'emerald'})}
+      ${kpiCard({label:'Avg. Order Value', value: fmtINR(stats.avgSpend), icon:'wallet', accent:'brand'})}
+      ${kpiCard({label:'Repeat Customers', value: fmtNum(stats.repeatCustomers), icon:'repeat', accent:'sky'})}
+    </div>`;
+
   main.innerHTML = `
     ${pageHeader('Customer Management', 'View and manage customer accounts')}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      ${kpiCard({label:'Total Customers', value: fmtNum(DATA.customers.length), icon:'users', accent:'violet'})}
-      ${kpiCard({label:'Active', value: fmtNum(activeCount), icon:'user-check', accent:'emerald'})}
-      ${kpiCard({label:'Avg. Order Value', value: fmtINR(avgSpend), icon:'wallet', accent:'brand'})}
-      ${kpiCard({label:'Repeat Customers', value: fmtNum(repeatCustomers), icon:'repeat', accent:'sky'})}
-    </div>
+    <div id="customers-kpis">${renderKpis()}</div>
     ${tableCard('customers-table-inner')}
   `;
   renderDataTable('customers-table-inner', {
-    title: 'All Customers', subtitle: `${DATA.customers.length} registered customers`,
-    data: DATA.customers, searchKeys: ['name','email','city'],
+    title: 'All Customers', subtitle: 'Search, filter and manage every registered customer',
+    serverSide: true,
+    fetchPage: async ({ page, perPage, search, filters }) => {
+      const params = new URLSearchParams({ page, per_page: perPage });
+      if (search) params.set('q', search);
+      if (filters.status && filters.status !== 'All') params.set('status', filters.status);
+      const resp = await api('GET', '/customers?' + params.toString());
+      return { rows: resp.data, total: resp.total, stats: resp.stats };
+    },
+    onStats: (s) => {
+      if (!s) return;
+      stats = s;
+      const el = document.getElementById('customers-kpis');
+      if (el) el.innerHTML = renderKpis();
+    },
     filters: [{ key:'status', label:'Status', options:['Active','Blocked'] }],
     columns: [
       { label:'Customer', render: c => `<div class="flex items-center gap-3">${avatarChip(c.name)}<div><p class="font-medium text-ink-800 dark:text-ink-100">${c.name}</p><p class="text-xs text-ink-400">${c.id}</p></div></div>` },
@@ -298,14 +335,14 @@ SECTION_RENDERERS.customers = async function(main) {
       { label:'Status', render: c => statusBadge(c.status) },
       { label:'', render: c => `<button data-stop-row-click data-toggle-customer="${c.id}" class="text-xs font-medium text-brand-600 hover:underline">${c.status==='Active'?'Block':'Unblock'}</button>` },
     ],
-    afterRender: (container) => {
+    afterRender: (container, pageRows) => {
       container.querySelectorAll('[data-toggle-customer]').forEach(btn => btn.addEventListener('click', withErr(async () => {
         const id = btn.dataset.toggleCustomer;
-        const c = DATA.customers.find(x=>x.id===id);
+        const c = pageRows.find(x=>x.id===id);
         const newStatus = c.status==='Active' ? 'Blocked' : 'Active';
         await api('PATCH', '/customers/'+id, { status:newStatus });
         toast(`${c.name} ${newStatus==='Blocked'?'blocked':'unblocked'}`);
-        await refreshCustomers(); navigateTo('customers');
+        navigateTo('customers');
       })));
     }
   });
@@ -391,14 +428,15 @@ SECTION_RENDERERS.products = async function(main) {
     }
   });
 
-  document.getElementById('add-product-btn').addEventListener('click', () => {
+  document.getElementById('add-product-btn').addEventListener('click', withErr(async () => {
+    const sellers = await fetchAllSellers();
     openModal({
       title:'Add New Product', wide:true,
       body:`<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         ${formField('Product Name','text','e.g. Cordless Drill 18V','','np-name')}
         ${formCategorySelect('Category', DATA.categories, 'np-category')}
         ${formSelect('Brand', DATA.brands.map(b=>b.name), 0, 'np-brand')}
-        ${formSelect('Seller', DATA.sellers.map(s=>s.store), 0, 'np-seller')}
+        ${formSelect('Seller', sellers.map(s=>s.store), 0, 'np-seller')}
         ${formField('Price (₹)','number','e.g. 2499','','np-price')}
         ${formField('MRP (₹)','number','e.g. 2999','','np-mrp')}
         ${formField('Stock','number','e.g. 100','0','np-stock')}
@@ -414,7 +452,7 @@ SECTION_RENDERERS.products = async function(main) {
       onConfirm: withErr(async () => {
         const category = DATA.categories.find(c=>c.name===document.getElementById('np-category').value);
         const brand = DATA.brands.find(b=>b.name===document.getElementById('np-brand').value);
-        const seller = DATA.sellers.find(s=>s.store===document.getElementById('np-seller').value);
+        const seller = sellers.find(s=>s.store===document.getElementById('np-seller').value);
         const created = await api('POST', '/products', {
           name: document.getElementById('np-name').value,
           category_code: category ? category.id : null,
@@ -439,7 +477,7 @@ SECTION_RENDERERS.products = async function(main) {
         closeModal(); toast('Product created successfully'); await refreshProducts(); navigateTo('products');
       })
     });
-  });
+  }));
 };
 
 function renderTierGroup(label, tiers, variantId) {
@@ -581,14 +619,15 @@ function openProductProfile(p) {
     </div>
     <p class="text-[11px] text-ink-400 mt-2">Popular/Trending control what shows in those sections on the homepage — pick products here instead of leaving it to automatic ranking.</p>
   `, true);
-  document.getElementById('edit-product-btn')?.addEventListener('click', () => {
+  document.getElementById('edit-product-btn')?.addEventListener('click', withErr(async () => {
+    const sellers = await fetchAllSellers();
     openModal({
       title:'Edit Product', wide:true,
       body:`<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         ${formField('Product Name','text','e.g. Cordless Drill 18V',p.name,'ep-name')}
         ${formCategorySelect('Category', DATA.categories, 'ep-category')}
         ${formSelect('Brand', DATA.brands.map(b=>b.name), DATA.brands.findIndex(b=>b.id===p.brandCode), 'ep-brand')}
-        ${formSelect('Seller', DATA.sellers.map(s=>s.store), DATA.sellers.findIndex(s=>s.id===p.sellerCode), 'ep-seller')}
+        ${formSelect('Seller', sellers.map(s=>s.store), sellers.findIndex(s=>s.id===p.sellerCode), 'ep-seller')}
         ${formField('Price (₹)','number','e.g. 2499',p.price,'ep-price')}
         ${formField('MRP (₹)','number','e.g. 2999',p.mrp,'ep-mrp')}
         ${formField('Stock','number','e.g. 100',p.stock,'ep-stock')}
@@ -601,7 +640,7 @@ function openProductProfile(p) {
       onConfirm: withErr(async () => {
         const category = DATA.categories.find(c=>c.name===document.getElementById('ep-category').value);
         const brand = DATA.brands.find(b=>b.name===document.getElementById('ep-brand').value);
-        const seller = DATA.sellers.find(s=>s.store===document.getElementById('ep-seller').value);
+        const seller = sellers.find(s=>s.store===document.getElementById('ep-seller').value);
         await api('PATCH', '/products/'+p.id, {
           name: document.getElementById('ep-name').value,
           category_code: category ? category.id : undefined,
@@ -620,7 +659,7 @@ function openProductProfile(p) {
     });
     document.getElementById('ep-category').value = p.category;
     document.getElementById('ep-description').value = p.description || '';
-  });
+  }));
   document.getElementById('drawer-upload-images-btn')?.addEventListener('click', withErr(async () => {
     const files = document.getElementById('drawer-add-images').files;
     if (!files || !files.length) { toast('Choose at least one photo', 'warn'); return; }
@@ -864,12 +903,24 @@ SECTION_RENDERERS.brands = async function(main) {
 
 /* ===== ORDERS ===== */
 SECTION_RENDERERS.orders = async function(main) {
+  // Orders fetches one page at a time from the server (see the Product
+  // Management fix for why loading everything up front breaks down as a
+  // list grows) instead of a fixed snapshot that hid anything past it.
   main.innerHTML = `
     ${pageHeader('Orders', 'Track and fulfil orders across all sellers')}
     ${tableCard('orders-table-inner')}
   `;
   renderDataTable('orders-table-inner', {
-    title:'All Orders', subtitle:`${DATA.orders.length} orders`, data: DATA.orders, searchKeys:['id','customerName'],
+    title:'All Orders', subtitle:'Search, filter and manage every order',
+    serverSide: true,
+    fetchPage: async ({ page, perPage, search, filters }) => {
+      const params = new URLSearchParams({ page, per_page: perPage });
+      if (search) params.set('q', search);
+      if (filters.status && filters.status !== 'All') params.set('status', filters.status);
+      if (filters.payment && filters.payment !== 'All') params.set('payment', filters.payment);
+      const resp = await api('GET', '/orders?' + params.toString());
+      return { rows: resp.data, total: resp.total };
+    },
     filters: [
       { key:'status', label:'Status', options:['Pending','Confirmed','Packed','Shipped','Out for Delivery','Delivered','Cancelled','Returned'] },
       { key:'payment', label:'Payment', options:['Paid','Pending','Unpaid','Refunded'] },
@@ -1455,14 +1506,14 @@ SECTION_RENDERERS.reports = async function(main) {
       ${card(`<div class="p-5 pb-0"><h3 class="font-semibold text-ink-900 dark:text-white">Top Sellers by Revenue</h3></div><div class="p-5"><canvas id="chart-rep2" height="240"></canvas></div>`)}
     </div>`;
   const REPORT_EXPORTERS = {
-    'Revenue Report': () => downloadCsv('revenue-report.csv', (DATA.monthlyRevenue||[]).map(m => ({ month: m.month, revenue: m.revenue, commission: m.commission }))),
-    'Sales Report': () => downloadCsv('sales-report.csv', DATA.orders.map(o => ({ order_id: o.id, date: o.date, customer: o.customerName, items: o.items, amount: o.amount, payment: o.payment, status: o.status }))),
-    'Seller Report': () => downloadCsv('seller-report.csv', DATA.sellers.map(s => ({ seller_id: s.id, store: s.store, owner: s.name, city: s.city, revenue: s.revenue, commission_pct: s.commissionPct, rating: s.rating, status: s.status }))),
-    'Customer Report': () => downloadCsv('customer-report.csv', DATA.customers.map(c => ({ customer_id: c.id, name: c.name, email: c.email, city: c.city, orders: c.orders, total_spend: c.totalSpend, status: c.status }))),
-    'Commission Report': () => downloadCsv('commission-report.csv', unwrap(DATA.commission.sellers).map(s => ({ seller: s.store, revenue: s.revenue, commission_pct: s.commissionPct, marketplace_earning: s.marketplaceEarning }))),
-    'Settlement Report': () => downloadCsv('settlement-report.csv', DATA.settlements.map(s => ({ settlement_id: s.id, seller: s.sellerName, amount: s.amount, mode: s.mode, status: s.status, utr: s.utr||'', date: s.date }))),
+    'Revenue Report': async () => downloadCsv('revenue-report.csv', (DATA.monthlyRevenue||[]).map(m => ({ month: m.month, revenue: m.revenue, commission: m.commission }))),
+    'Sales Report': async () => downloadCsv('sales-report.csv', (await fetchAllOrders()).map(o => ({ order_id: o.id, date: o.date, customer: o.customerName, items: o.items, amount: o.amount, payment: o.payment, status: o.status }))),
+    'Seller Report': async () => downloadCsv('seller-report.csv', (await fetchAllSellers()).map(s => ({ seller_id: s.id, store: s.store, owner: s.name, city: s.city, revenue: s.revenue, commission_pct: s.commissionPct, rating: s.rating, status: s.status }))),
+    'Customer Report': async () => downloadCsv('customer-report.csv', (await fetchAllCustomers()).map(c => ({ customer_id: c.id, name: c.name, email: c.email, city: c.city, orders: c.orders, total_spend: c.totalSpend, status: c.status }))),
+    'Commission Report': async () => downloadCsv('commission-report.csv', unwrap(DATA.commission.sellers).map(s => ({ seller: s.store, revenue: s.revenue, commission_pct: s.commissionPct, marketplace_earning: s.marketplaceEarning }))),
+    'Settlement Report': async () => downloadCsv('settlement-report.csv', DATA.settlements.map(s => ({ settlement_id: s.id, seller: s.sellerName, amount: s.amount, mode: s.mode, status: s.status, utr: s.utr||'', date: s.date }))),
   };
-  main.querySelectorAll('[data-export]').forEach(b => b.addEventListener('click', () => REPORT_EXPORTERS[b.dataset.export]?.()));
+  main.querySelectorAll('[data-export]').forEach(b => b.addEventListener('click', withErr(async () => REPORT_EXPORTERS[b.dataset.export]?.())));
 
   const [revCommission, topSellers] = await Promise.all([
     api('GET', '/reports/revenue-vs-commission'), api('GET', '/reports/top-sellers'),

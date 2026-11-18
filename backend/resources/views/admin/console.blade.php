@@ -166,8 +166,23 @@ async function apiForm(method, path, formData) {
   return data;
 }
 
-async function refreshSellers() { DATA.sellers = unwrap(await api('GET', '/sellers?per_page=250')); }
-async function refreshCustomers() { DATA.customers = unwrap(await api('GET', '/customers?per_page=250')); }
+// Sellers, Customers and Orders fetch their own data page-by-page from the
+// server (see the matching SECTION_RENDERERS) instead of loading
+// everything into DATA.* up front -- a fixed-size snapshot used to hide
+// anything past it once a list grew past that size (see Product
+// Management, which hit this first). Kept as no-ops so the login-time
+// load list and existing "await refreshX()" call sites don't need to
+// change.
+async function refreshSellers() {}
+async function refreshCustomers() {}
+
+// A handful of places genuinely need every seller/customer/order rather
+// than one page of them -- a dropdown to assign a product to a seller, or
+// a CSV export -- so they fetch a fresh, large-but-bounded snapshot right
+// when they're used instead of relying on a preloaded DATA.* array.
+async function fetchAllSellers() { return unwrap(await api('GET', '/sellers?per_page=5000')); }
+async function fetchAllCustomers() { return unwrap(await api('GET', '/customers?per_page=5000')); }
+async function fetchAllOrders() { return unwrap(await api('GET', '/orders?per_page=5000')); }
 // Product Management fetches its own data page-by-page from the server
 // (see SECTION_RENDERERS.products) instead of loading everything into
 // DATA.products up front — the catalog can run into the thousands, and a
@@ -177,7 +192,7 @@ async function refreshCustomers() { DATA.customers = unwrap(await api('GET', '/c
 async function refreshProducts() {}
 async function refreshCategories() { DATA.categories = await api('GET', '/categories'); }
 async function refreshBrands() { DATA.brands = await api('GET', '/brands'); }
-async function refreshOrders() { DATA.orders = unwrap(await api('GET', '/orders?per_page=250')); }
+async function refreshOrders() {}
 async function refreshInvoices() { DATA.invoices = unwrap(await api('GET', '/invoices?per_page=250')); }
 async function refreshReturns() { DATA.returns = unwrap(await api('GET', '/returns?per_page=250')); }
 async function refreshCoupons() { DATA.coupons = await api('GET', '/coupons'); }
@@ -749,7 +764,7 @@ function renderDataTable(containerId, config) {
       })));
       container.querySelector('[data-bulk-clear]')?.addEventListener('click', () => { state.selected.clear(); paint(); });
     }
-    config.afterRender?.(container);
+    config.afterRender?.(container, pageRows);
   }
   refresh();
 }
