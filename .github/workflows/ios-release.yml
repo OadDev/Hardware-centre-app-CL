@@ -1,14 +1,32 @@
 name: iOS App Store release
 
 # Builds the iOS app on EAS (Expo's cloud Macs) and submits it to App Store
-# Connect / TestFlight. Run it manually from the Actions tab.
+# Connect / TestFlight. Run it manually from the Actions tab. No Mac (and no
+# local machine at all) is needed to run this -- the only machine that ever
+# touches this is a GitHub-hosted Linux runner plus Expo's own cloud Macs.
 #
-# One-time setup (see the release instructions): run
-# `eas build -p ios --profile production --auto-submit` interactively once so
-# EAS creates and stores the signing certificate, provisioning profiles and an
-# App Store Connect API key, then add:
-#   - secret   EXPO_TOKEN  (expo.dev > Account settings > Access tokens)
-#   - variable ASC_APP_ID  (App Store Connect > App > App Information > Apple ID)
+# One-time setup, all doable from Windows (see the release instructions):
+#   1. In App Store Connect (web, any OS) > Users and Access > Integrations >
+#      App Store Connect API, create a key with the Admin role. Download the
+#      .p8 file *once* (Apple only lets you download it once) and note its
+#      Key ID and Issuer ID.
+#   2. On Windows: `npm install -g eas-cli`, `eas login` (your Expo account,
+#      not Apple), then `eas credentials` > iOS > your bundle ID > production
+#      > "Set up Push Notifications"/"Build Credentials" and choose
+#      "App Store Connect API Key" (not "Apple ID") when it asks how to
+#      authenticate with Apple, pointing it at the same .p8 file. This makes
+#      EAS generate and store the distribution certificate and provisioning
+#      profile using the API key, so Apple ID + 2FA is never needed again
+#      (this also sidesteps a known Windows-only failure in the Apple-ID
+#      login path).
+#   3. Add to this repo:
+#        - secret   EXPO_TOKEN            (expo.dev > Account settings > Access tokens)
+#        - variable ASC_APP_ID            (App Store Connect > App > App Information > Apple ID)
+#        - secret   ASC_API_KEY_ID        (the Key ID from step 1)
+#        - secret   ASC_API_KEY_ISSUER_ID (the Issuer ID from step 1)
+#        - secret   ASC_API_KEY_P8        (the .p8 file from step 1, base64-encoded --
+#                                           on Windows: certutil -encode key.p8 key.b64,
+#                                           then paste the contents between the BEGIN/END lines)
 
 on:
   workflow_dispatch: {}
@@ -31,18 +49,39 @@ jobs:
 
       - run: npm ci
 
-      - name: Point submit profile at the App Store Connect app
+      - name: Write the App Store Connect API key to disk
         env:
-          ASC_APP_ID: ${{ vars.ASC_APP_ID }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
         run: |
-          if [ -z "$ASC_APP_ID" ]; then
-            echo "::error::Set the ASC_APP_ID repository variable (Settings > Secrets and variables > Actions > Variables)."
+          if [ -z "$ASC_API_KEY_P8" ]; then
+            echo "::error::Set the ASC_API_KEY_P8 repository secret (base64 of the .p8 key downloaded from App Store Connect)."
             exit 1
           fi
-          jq --arg id "$ASC_APP_ID" '.submit.production.ios.ascAppId = $id' eas.json > eas.tmp.json
+          echo "$ASC_API_KEY_P8" | base64 -d > asc-api-key.p8
+
+      - name: Point the submit profile at the App Store Connect app and API key
+        env:
+          ASC_APP_ID: ${{ vars.ASC_APP_ID }}
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_KEY_ISSUER_ID: ${{ secrets.ASC_API_KEY_ISSUER_ID }}
+        run: |
+          if [ -z "$ASC_APP_ID" ] || [ -z "$ASC_API_KEY_ID" ] || [ -z "$ASC_API_KEY_ISSUER_ID" ]; then
+            echo "::error::Set the ASC_APP_ID repository variable and the ASC_API_KEY_ID / ASC_API_KEY_ISSUER_ID repository secrets (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+          jq --arg id "$ASC_APP_ID" --arg keyId "$ASC_API_KEY_ID" --arg issuerId "$ASC_API_KEY_ISSUER_ID" '
+            .submit.production.ios.ascAppId = $id
+            | .submit.production.ios.ascApiKeyPath = "./asc-api-key.p8"
+            | .submit.production.ios.ascApiKeyId = $keyId
+            | .submit.production.ios.ascApiKeyIssuerId = $issuerId
+          ' eas.json > eas.tmp.json
           mv eas.tmp.json eas.json
 
       # --no-wait: the build and submission continue on Expo's servers, so
       # this job finishes in about a minute. Progress is shown on expo.dev.
       - name: Build and submit
         run: eas build --platform ios --profile production --non-interactive --auto-submit --no-wait
+
+      - name: Remove the API key file
+        if: always()
+        run: rm -f asc-api-key.p8
