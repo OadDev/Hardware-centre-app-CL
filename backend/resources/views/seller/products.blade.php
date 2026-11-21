@@ -47,7 +47,17 @@
   @if($products->isEmpty())
   <p class="text-sm text-ink-400">You haven't listed any products yet.</p>
   @else
-  <form method="POST" action="{{ route('seller.products.bulk-action') }}" onsubmit="return window.sellerProductsBulkSubmit(event);">
+  {{-- This form holds only the bulk-actions toolbar, not the table below.
+       Nesting the per-row Edit forms inside a single page-wide form doesn't
+       work -- browsers silently drop a <form> nested inside another <form>,
+       which merges the dropped form's fields (including its _method=PATCH
+       override) into this outer one. Submitting a row's "Save Changes" then
+       actually posts here, to /products/bulk-action, with _method=PATCH
+       attached, which 404s since no such route exists. Keeping this form to
+       just the toolbar and associating each row checkbox with it via
+       form="seller-bulk-form" (so they still submit together) keeps every
+       row's Edit form independent. --}}
+  <form id="seller-bulk-form" method="POST" action="{{ route('seller.products.bulk-action') }}" onsubmit="return window.sellerProductsBulkSubmit(event);">
     @csrf
     <div class="flex flex-wrap items-center gap-2 mb-3 p-2.5 rounded-xl bg-ink-50 border border-ink-100">
       <span class="text-xs font-semibold text-ink-500 mr-1">Bulk actions:</span>
@@ -62,6 +72,7 @@
       <button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-ink-800 text-white">Apply to selected</button>
       <span class="text-xs text-ink-400" id="seller-bulk-selected-count">0 selected</span>
     </div>
+  </form>
     <div class="overflow-x-auto">
     <table class="w-full seller-table-wide text-sm">
       <thead><tr class="text-left text-ink-400 border-b border-ink-100">
@@ -71,7 +82,7 @@
       <tbody>
         @foreach($products as $p)
         <tr class="border-b border-ink-100 last:border-0">
-          <td class="py-2.5"><input type="checkbox" name="ids[]" value="{{ $p->product_code }}" class="seller-product-checkbox" onclick="window.sellerProductsUpdateCount()"></td>
+          <td class="py-2.5"><input type="checkbox" name="ids[]" value="{{ $p->product_code }}" form="seller-bulk-form" class="seller-product-checkbox" onclick="window.sellerProductsUpdateCount()"></td>
           <td class="py-2.5">
             @if($p->images->first())
               <img src="{{ $p->images->first()->url }}" alt="" class="w-10 h-10 rounded-lg object-cover border border-ink-200">
@@ -122,7 +133,6 @@
       </tbody>
     </table>
     </div>
-  </form>
   @foreach($products as $p)
     <form id="seller-destroy-{{ $p->product_code }}" method="POST" action="{{ route('seller.products.destroy', $p) }}" class="hidden">@csrf @method('DELETE')</form>
   @endforeach

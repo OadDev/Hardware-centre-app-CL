@@ -120,7 +120,7 @@ class ProductController extends Controller
             'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['string'],
             'action' => ['required', Rule::in(['activate', 'deactivate', 'archive', 'delete', 'price'])],
-            'price_percent' => ['required_if:action,price', 'numeric'],
+            'price_percent' => ['nullable', 'required_if:action,price', 'numeric'],
         ]);
 
         $products = Product::whereIn('product_code', $data['ids'])->get();
